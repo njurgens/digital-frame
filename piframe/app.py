@@ -13,8 +13,10 @@ import pygame.freetype
 from pygame import Rect, Surface
 
 from piframe.assets import Assets
+from piframe.backlight import BacklightController
 from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
+from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
 from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, TRANS_DURATION, init_events
 
@@ -33,7 +35,6 @@ class SlideshowPlayer:
         self._in_transition: bool = False
         self._direction: int = 1
         self._paused: bool = False
-        self._trans_mode: str = "crossfade"
 
         self._slide_rect: Rect = Rect(0, 0, self._w, self._h)
         self.rescan()
@@ -116,7 +117,7 @@ class SlideshowPlayer:
     def draw_pip(self, screen: Surface):
         cx = self._w // 2
         cy = self._h - 20
-        pygame.draw.circle(screen, (255, 255, 255, 200), (cx, cy), 6)
+        pygame.draw.circle(screen, (255, 255, 255), (cx, cy), 6)
 
     @property
     def is_paused(self) -> bool:
@@ -143,6 +144,9 @@ class App:
         self._clock = pygame.time.Clock()
         self._state = AppState.SLIDESHOW
 
+        self._swipe_start_pos: tuple[int, int] | None = None
+        self._swipe_start_time: float | None = None
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--test-harness", action="store_true")
         parser.add_argument("--mock-wifi", action="store_true")
@@ -158,10 +162,22 @@ class App:
         self._clock_w = ClockWidget(self._assets)
 
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
+        self._backlight = BacklightController()
+        self._overlay = OverlayUI(self._assets, self._config)
+        self._overlay.on_brightness_change = self._on_brightness_change
+        self._overlay._slider.on_change = self._on_brightness_change
+        self._overlay.set_paused(self._player.is_paused)
+        self._overlay.set_brightness(self._config.display.brightness)
+        self._backlight.set_brightness(self._config.display.brightness)
 
         self._harness_queue: queue.SimpleQueue = queue.SimpleQueue()
         if self._args.test_harness:
             self._start_harness()
+
+    def _on_brightness_change(self, value: int) -> None:
+        self._backlight.set_brightness(value)
+        self._config.set("display", "brightness", value)
+        self._overlay.set_brightness(value)
 
     def run(self) -> None:
         prev_time = time.monotonic()
@@ -183,16 +199,100 @@ class App:
                 self._quit()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self._quit()
+            elif event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1:
+                self._swipe_start_pos = event.pos
+                self._swipe_start_time = time.monotonic()
+                if self._state == AppState.SLEEPING:
+                    self._overlay.show()
+                    self._state = AppState.OVERLAY
+            elif event.type == pygame.MOUSEMOTION and event.buttons[0] and self._state == AppState.OVERLAY:
+                self._overlay.on_drag(event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP and getattr(event, "button", 0) == 1:
+                if self._state == AppState.OVERLAY and self._overlay.is_dragging_slider():
+                    self._overlay.stop_drag()
+                    self._swipe_start_pos = None
+                    self._swipe_start_time = None
+                    continue
+                if self._state == AppState.OVERLAY:
+                    self._overlay.stop_drag()
+                self._classify_pointer_up(event.pos)
+
+    def _classify_pointer_up(self, pos: tuple[int, int]) -> None:
+        if self._swipe_start_pos is None or self._swipe_start_time is None:
+            self._dispatch_tap(pos)
+            return
+
+        dx = pos[0] - self._swipe_start_pos[0]
+        dy = pos[1] - self._swipe_start_pos[1]
+        elapsed = time.monotonic() - self._swipe_start_time
+
+        self._swipe_start_pos = None
+        self._swipe_start_time = None
+
+        if abs(dx) > 60 and abs(dy) < 40 and elapsed < 0.4:
+            if dx < 0:
+                self._player.skip()
+            else:
+                self._player.go_back()
+            return
+
+        self._dispatch_tap(pos)
+
+    def _dispatch_tap(self, pos: tuple[int, int]) -> None:
+        if self._state == AppState.SLIDESHOW:
+            self._overlay.show()
+            self._state = AppState.OVERLAY
+            return
+
+        if self._state == AppState.OVERLAY:
+            action = self._overlay.on_tap(pos)
+            if action is None:
+                self._overlay.hide()
+                self._state = AppState.SLIDESHOW
+            elif action == "play_pause":
+                self._player.is_paused = not self._player.is_paused
+                self._overlay.set_paused(self._player.is_paused)
+            elif action == "prev":
+                self._player.go_back()
+                self._overlay.dismissed = False
+                self._overlay._extend_dismiss()
+            elif action == "next":
+                self._player.skip()
+                self._overlay.dismissed = False
+                self._overlay._extend_dismiss()
+            elif action == "settings":
+                self._state = AppState.SETTINGS
+            elif action == "dismiss":
+                self._overlay.hide()
+                self._state = AppState.SLIDESHOW
+            return
+
+        if self._state == AppState.SETTINGS:
+            self._state = AppState.SLIDESHOW
+            return
+
+        if self._state == AppState.KEYBOARD:
+            return
 
     def _update(self, dt: float):
         self._player.update(dt)
-        if hasattr(self, "_config"):
-            self._config.tick(time.monotonic())
+        self._config.tick(time.monotonic())
+        if self._state == AppState.OVERLAY:
+            self._overlay.update(dt)
+            if self._overlay.dismissed:
+                self._state = AppState.SLIDESHOW
 
     def _draw(self):
         self._player.draw(self._screen)
-        if self._config.display.show_clock:
+
+        if self._config.display.show_clock and self._state in {AppState.SLIDESHOW, AppState.OVERLAY}:
             self._clock_w.draw(self._screen)
+
+        if self._player.is_paused and self._state == AppState.SLIDESHOW:
+            self._player.draw_pip(self._screen)
+
+        if self._state == AppState.OVERLAY:
+            self._overlay.draw(self._screen)
 
     def _quit(self):
         self._clock_w.stop()
@@ -228,8 +328,7 @@ class App:
                     if b"\n" in data:
                         break
                 msg = json.loads(data.strip())
-                result = self._handle_harness_cmd(msg, conn)
-                _ = result
+                _ = self._handle_harness_cmd(msg, conn)
             except Exception as e:
                 if conn is not None:
                     try:
@@ -273,14 +372,14 @@ class App:
     def _exec_harness_cmd(self, cmd: str, msg: dict) -> dict:
         if cmd == "state":
             return {"ok": True, "state": self._state.name}
-        elif cmd == "tap":
+        if cmd == "tap":
             x, y = msg["x"], msg["y"]
             ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1)
             pygame.event.post(ev)
             ev2 = pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x, y), button=1)
             pygame.event.post(ev2)
             return {"ok": True}
-        elif cmd == "swipe":
+        if cmd == "swipe":
             x, y, dx, dy, ms = msg["x"], msg["y"], msg["dx"], msg["dy"], msg.get("ms", 300)
             steps = max(5, ms // 16)
             down = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1)
@@ -298,19 +397,34 @@ class App:
             up = pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x + dx, y + dy), button=1)
             pygame.event.post(up)
             return {"ok": True}
-        elif cmd == "screenshot":
+        if cmd == "play_pause":
+            self._player.is_paused = not self._player.is_paused
+            self._overlay.set_paused(self._player.is_paused)
+            return {"ok": True, "paused": self._player.is_paused}
+        if cmd == "prev":
+            self._player.go_back()
+            if self._state == AppState.OVERLAY:
+                self._overlay.dismissed = False
+                self._overlay._extend_dismiss()
+            return {"ok": True}
+        if cmd == "next":
+            self._player.skip()
+            if self._state == AppState.OVERLAY:
+                self._overlay.dismissed = False
+                self._overlay._extend_dismiss()
+            return {"ok": True}
+        if cmd == "screenshot":
             path = msg["path"]
             pygame.image.save(self._screen, path)
             return {"ok": True}
-        elif cmd == "quit":
+        if cmd == "quit":
             self._quit()
             return {"ok": True}
-        elif cmd == "set_config":
+        if cmd == "set_config":
             self._config.set(msg["section"], msg["key"], msg["value"])
             return {"ok": True}
-        elif cmd == "trigger_sync":
+        if cmd == "trigger_sync":
             if hasattr(self, "_sync"):
                 self._sync.trigger()
             return {"ok": True}
-        else:
-            return {"ok": False, "error": f"unknown command: {cmd}"}
+        return {"ok": False, "error": f"unknown command: {cmd}"}
