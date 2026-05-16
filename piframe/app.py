@@ -32,7 +32,25 @@ from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DU
 
 class MockWifiManager:
     def scan(self):
-        return None
+        import threading as _threading
+        from piframe.types import WifiNetwork, WifiResult
+        from piframe import types as _types
+
+        def _post() -> None:
+            import time as _time
+            _time.sleep(0.2)
+            networks = [
+                WifiNetwork(ssid="MockNetwork-WPA2", security="WPA2", signal=85),
+                WifiNetwork(ssid="MockNetwork-Open", security="--", signal=60),
+            ]
+            result = WifiResult("scan", True, data=networks)
+            try:
+                if _types.EVT_WIFI_RESULT is not None:
+                    pygame.event.post(pygame.event.Event(_types.EVT_WIFI_RESULT, result=result))
+            except Exception:
+                pass
+
+        _threading.Thread(target=_post, daemon=True).start()
 
     def connect(self, ssid, password=None):
         _ = ssid, password
@@ -211,6 +229,7 @@ class App:
 
         self._swipe_start_pos: tuple[int, int] | None = None
         self._swipe_start_time: float | None = None
+        self._suppress_next_tap: bool = False
 
         parser = argparse.ArgumentParser()
         parser.add_argument("--test-harness", action="store_true")
@@ -273,10 +292,10 @@ class App:
             prev_time = now
 
             self._process_pygame_events()
+            self._drain_harness_queue()  # drain even when sleeping
             if self._state == AppState.SLEEPING:
                 time.sleep(0.25)
                 continue
-            self._drain_harness_queue()
             self._update(dt)
             self._draw()
             pygame.display.flip()
@@ -325,6 +344,7 @@ class App:
                 ):
                     self._settings.close()
                     self._state = AppState.SLIDESHOW
+                    self._suppress_next_tap = True
                 else:
                     self._settings.on_tap(event)
                 continue
@@ -338,9 +358,15 @@ class App:
                 self._swipe_start_time = time.monotonic()
                 if self._state == AppState.SLEEPING:
                     self._exit_sleep()
+                    self._suppress_next_tap = True
             elif event.type == pygame.MOUSEMOTION and event.buttons[0] and self._state == AppState.OVERLAY:
                 self._overlay.on_drag(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and getattr(event, "button", 0) == 1:
+                if self._suppress_next_tap:
+                    self._suppress_next_tap = False
+                    self._swipe_start_pos = None
+                    self._swipe_start_time = None
+                    continue
                 if self._state == AppState.OVERLAY and self._overlay.is_dragging_slider():
                     self._overlay.stop_drag()
                     self._swipe_start_pos = None
@@ -601,6 +627,8 @@ class App:
             return {"ok": True}
         if cmd == "set_config":
             self._config.set(msg["section"], msg["key"], msg["value"])
+            if msg.get("section") == "sleep":
+                self._sleep.kick()
             return {"ok": True}
         if cmd == "trigger_sync":
             if hasattr(self, "_sync"):

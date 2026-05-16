@@ -54,6 +54,13 @@ class SyncService:
                 logging.info("SyncService: no share_url configured, skipping sync")
                 with self._status_lock:
                     self._status.in_progress = False
+                    self._status.last_sync_time = datetime.datetime.now()
+                    self._status.last_error = "No share URL configured"
+                try:
+                    if types.EVT_SYNC_COMPLETE is not None:
+                        pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
+                except Exception as exc:
+                    logging.warning("EVT_SYNC_COMPLETE post failed: %s", exc)
                 return
 
             framesync_sync(cfg.share_url, cfg.password, cfg.output_dir)
@@ -77,7 +84,13 @@ class SyncService:
             with self._status_lock:
                 self._status.in_progress = False
                 self._status.last_error = str(exc)
+                self._status.last_sync_time = datetime.datetime.now()
             logging.error("SyncService error: %s", exc)
+            try:
+                if types.EVT_SYNC_COMPLETE is not None:
+                    pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
+            except Exception as post_exc:
+                logging.warning("EVT_SYNC_COMPLETE post failed: %s", post_exc)
 
     def trigger(self) -> None:
         self._trigger_event.set()

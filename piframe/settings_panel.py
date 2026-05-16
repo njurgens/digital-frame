@@ -641,7 +641,8 @@ class SettingsPanel:
             self._sync_status = "Sync in progress..."
             return
         if status.last_error:
-            self._sync_status = f"Sync error: {status.last_error}"
+            ts = status.last_sync_time.strftime("%H:%M:%S") if status.last_sync_time else "?"
+            self._sync_status = f"Sync error at {ts}: {status.last_error}"
             return
         if status.last_sync_time is None:
             self._sync_status = "Never synced"
