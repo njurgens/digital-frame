@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Frame — Settings panel mockup</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0f0f; color: #e0ddd6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 24px; gap: 16px;
+  }
+  h1 { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.35); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .frame-wrap { background: #1a1a1a; border-radius: 12px; padding: 12px; width: 100%; max-width: 800px; }
+  .sp {
+    position: relative; width: 100%; aspect-ratio: 16/10;
+    background: #111; border-radius: 6px; overflow: hidden;
+    display: flex; font-size: 13px; color: #e0ddd6;
+  }
+
+  .sidebar {
+    width: 26%; flex-shrink: 0; background: #181818;
+    border-right: 0.5px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column; padding: 14px 0 10px;
+  }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 14px 14px; color: rgba(255,255,255,0.5);
+    font-size: 12px; cursor: pointer; border: none; background: none;
+    border-bottom: 0.5px solid rgba(255,255,255,0.08); margin-bottom: 8px;
+    transition: color 0.15s; width: 100%; text-align: left;
+  }
+  .back-btn:hover { color: rgba(255,255,255,0.85); }
+  .back-btn i { font-size: 15px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    transition: background 0.12s;
+    color: rgba(255,255,255,0.5); font-size: 13px; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item i { font-size: 17px; flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); }
+  .nav-item.active { background: rgba(255,255,255,0.09); color: #fff; }
+  .nav-item.active i { color: #85b7eb; }
+
+  .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 16px 18px; }
+  .content-section { display: none; flex-direction: column; gap: 0; height: 100%; }
+  .content-section.visible { display: flex; }
+
+  .section-title { font-size: 14px; font-weight: 500; color: #fff; margin-bottom: 14px; flex-shrink: 0; }
+
+  .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 0.5px solid rgba(255,255,255,0.07); gap: 12px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-label { color: rgba(255,255,255,0.75); font-size: 12px; flex-shrink: 0; }
+  .row-sub { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+
+  .tog-track {
+    position: relative; width: 34px; height: 19px; flex-shrink: 0;
+    background: rgba(255,255,255,0.15); border-radius: 10px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .tog-track.on { background: #378ADD; }
+  .tog-thumb {
+    position: absolute; top: 2px; left: 2px; width: 15px; height: 15px;
+    background: white; border-radius: 50%; transition: transform 0.2s; pointer-events: none;
+  }
+  .tog-track.on .tog-thumb { transform: translateX(15px); }
+
+  .seg {
+    display: flex; border-radius: 6px; overflow: hidden;
+    border: 0.5px solid rgba(255,255,255,0.15); flex-shrink: 0;
+  }
+  .seg-btn {
+    padding: 5px 9px; font-size: 11px; cursor: pointer; border: none;
+    background: transparent; color: rgba(255,255,255,0.45);
+    border-right: 0.5px solid rgba(255,255,255,0.15); transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+  }
+  .seg-btn:last-child { border-right: none; }
+  .seg-btn.active { background: rgba(255,255,255,0.15); color: #fff; }
+  .seg-btn:hover:not(.active) { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); }
+
+  .wifi-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    border: 0.5px solid rgba(255,255,255,0.08); margin-bottom: 5px;
+    background: rgba(255,255,255,0.04); transition: background 0.12s;
+  }
+  .wifi-item:hover { background: rgba(255,255,255,0.08); }
+  .wifi-item.connected { border-color: rgba(83,74,183,0.5); background: rgba(83,74,183,0.12); }
+  .wifi-name { font-size: 12px; color: rgba(255,255,255,0.85); }
+  .wifi-meta { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+  .wifi-right { display: flex; align-items: center; gap: 8px; }
+  .connected-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; background: rgba(83,74,183,0.3); color: #afa9ec; }
+  .forget-btn {
+    font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+    background: rgba(226,75,74,0.15); color: #f09595; border: 0.5px solid rgba(226,75,74,0.25);
+    transition: background 0.12s;
+  }
+  .forget-btn:hover { background: rgba(226,75,74,0.25); }
+
+  .action-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer; border: none;
+    background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8);
+    font-size: 12px; transition: background 0.12s; width: 100%; text-align: left;
+  }
+  .action-btn i { font-size: 16px; }
+  .action-btn:hover { background: rgba(255,255,255,0.12); }
+  .action-btn.danger { background: rgba(226,75,74,0.1); color: #f09595; }
+  .action-btn.danger:hover { background: rgba(226,75,74,0.2); }
+  .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; }
+  .info-key { font-size: 11px; color: rgba(255,255,255,0.35); padding: 3px 0; }
+  .info-val { font-size: 11px; color: rgba(255,255,255,0.7); padding: 3px 0; font-family: monospace; }
+
+  .sleep-times { display: flex; gap: 8px; align-items: center; }
+  .time-pill {
+    background: rgba(255,255,255,0.08); border: 0.5px solid rgba(255,255,255,0.15);
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; color: rgba(255,255,255,0.7);
+    cursor: pointer;
+  }
+  .time-pill:hover { background: rgba(255,255,255,0.14); }
+  .time-sep { color: rgba(255,255,255,0.3); font-size: 11px; }
+
+  .group-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.06em; text-transform: uppercase; margin: 10px 0 4px; }
+  .group-label:first-child { margin-top: 0; }
+
+  .annotation {
+    width: 100%; max-width: 800px; font-size: 12px; color: rgba(255,255,255,0.35);
+    line-height: 1.6; border-top: 0.5px solid rgba(255,255,255,0.08); padding-top: 16px;
+  }
+  .annotation strong { color: rgba(255,255,255,0.55); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<h1>Pi Frame · Settings panel design</h1>
+
+<div class="frame-wrap">
+  <div class="sp">
+    <nav class="sidebar">
+      <button class="back-btn">
+        <i class="ti ti-arrow-left" aria-hidden="true"></i> Back to frame
+      </button>
+      <button class="nav-item active" id="nav-slideshow" onclick="showSection('slideshow')">
+        <i class="ti ti-slideshow" aria-hidden="true"></i> Slideshow
+      </button>
+      <button class="nav-item" id="nav-display" onclick="showSection('display')">
+        <i class="ti ti-brightness" aria-hidden="true"></i> Display
+      </button>
+      <button class="nav-item" id="nav-wifi" onclick="showSection('wifi')">
+        <i class="ti ti-wifi" aria-hidden="true"></i> Wi-Fi
+      </button>
+      <button class="nav-item" id="nav-system" onclick="showSection('system')">
+        <i class="ti ti-settings-2" aria-hidden="true"></i> System
+      </button>
+    </nav>
+
+    <div class="content">
+
+      <div class="content-section visible" id="sec-slideshow">
+        <div class="section-title">Slideshow</div>
+        <div class="row">
+          <div><div class="row-label">Interval</div></div>
+          <div class="seg" id="seg-interval">
+            <button class="seg-btn" onclick="setSeg('seg-interval',this)">5 s</button>
+            <button class="seg-btn" onclick="setSeg('seg-interval',this)">15 s</button>
+            <button class="seg-btn active" onclick="setSeg('seg-interval',this)">30 s</button>
+            <button class="seg-btn" onclick="setSeg('seg-interval',this)">1 m</button>
+            <button class="seg-btn" onclick="setSeg('seg-interval',this)">5 m</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-label">Shuffle</div>
+          <div class="tog-track on" onclick="toggleTrack(this)"><div class="tog-thumb"></div></div>
+        </div>
+        <div class="row">
+          <div><div class="row-label">Fit mode</div></div>
+          <div class="seg" id="seg-fit">
+            <button class="seg-btn active" onclick="setSeg('seg-fit',this)">Fit</button>
+            <button class="seg-btn" onclick="setSeg('seg-fit',this)">Fill</button>
+          </div>
+        </div>
+        <div class="row">
+          <div><div class="row-label">Transition</div></div>
+          <div class="seg" id="seg-trans">
+            <button class="seg-btn active" onclick="setSeg('seg-trans',this)">Crossfade</button>
+            <button class="seg-btn" onclick="setSeg('seg-trans',this)">Cut</button>
+            <button class="seg-btn" onclick="setSeg('seg-trans',this)">Slide</button>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row-label">OneDrive sync</div>
+            <div class="row-sub">Last synced 4 min ago · 1,042 photos</div>
+          </div>
+          <button class="action-btn" style="width:auto;padding:5px 10px;">
+            <i class="ti ti-refresh" aria-hidden="true"></i> Sync now
+          </button>
+        </div>
+      </div>
+
+      <div class="content-section" id="sec-display">
+        <div class="section-title">Display</div>
+        <div class="row">
+          <div class="row-label">Show clock</div>
+          <div class="tog-track on" onclick="toggleTrack(this)"><div class="tog-thumb"></div></div>
+        </div>
+        <div class="row">
+          <div class="row-label">Sleep schedule</div>
+          <div class="tog-track" id="sleep-tog" onclick="toggleSleep()"><div class="tog-thumb"></div></div>
+        </div>
+        <div class="row" id="sleep-times-row" style="opacity:0.3;pointer-events:none;">
+          <div class="row-label">Sleep window</div>
+          <div class="sleep-times">
+            <div class="time-pill">10:00 PM</div>
+            <span class="time-sep">to</span>
+            <div class="time-pill">7:00 AM</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-label">Timezone</div>
+          <div class="seg" id="seg-tz">
+            <button class="seg-btn active" onclick="setSeg('seg-tz',this)">Auto</button>
+            <button class="seg-btn" onclick="setSeg('seg-tz',this)">Manual</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-section" id="sec-wifi">
+        <div class="section-title">Wi-Fi</div>
+        <div class="wifi-item connected">
+          <div>
+            <div class="wifi-name">SnoHome-5G</div>
+            <div class="wifi-meta">Connected · 192.168.1.42</div>
+          </div>
+          <div class="wifi-right">
+            <span class="connected-badge">connected</span>
+            <button class="forget-btn">Forget</button>
+          </div>
+        </div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:0.05em;text-transform:uppercase;margin:8px 0 5px;">Available networks</div>
+        <div class="wifi-item">
+          <div><div class="wifi-name">SnoHome-2.4G</div></div>
+          <div class="wifi-right"><i class="ti ti-wifi" style="font-size:14px;color:rgba(255,255,255,0.4);" aria-hidden="true"></i></div>
+        </div>
+        <div class="wifi-item">
+          <div><div class="wifi-name">Neighbor-WiFi</div></div>
+          <div class="wifi-right"><i class="ti ti-wifi-2" style="font-size:14px;color:rgba(255,255,255,0.3);" aria-hidden="true"></i></div>
+        </div>
+        <div class="wifi-item">
+          <div><div class="wifi-name">AndroidAP</div></div>
+          <div class="wifi-right"><i class="ti ti-wifi-1" style="font-size:14px;color:rgba(255,255,255,0.2);" aria-hidden="true"></i></div>
+        </div>
+      </div>
+
+      <div class="content-section" id="sec-system">
+        <div class="section-title">System</div>
+        <div class="group-label">Device</div>
+        <div class="info-grid" style="margin-bottom:10px;">
+          <span class="info-key">Version</span><span class="info-val">v0.4.1</span>
+          <span class="info-key">IP address</span><span class="info-val">192.168.1.42</span>
+          <span class="info-key">Uptime</span><span class="info-val">3 d 14 h</span>
+          <span class="info-key">Storage</span><span class="info-val">3.2 GB / 28 GB</span>
+        </div>
+        <div class="group-label">Actions</div>
+        <div class="actions-grid">
+          <button class="action-btn"><i class="ti ti-cloud-download" aria-hidden="true"></i> Check for updates</button>
+          <button class="action-btn"><i class="ti ti-refresh" aria-hidden="true"></i> Restart app</button>
+          <button class="action-btn danger"><i class="ti ti-power" aria-hidden="true"></i> Shutdown</button>
+          <button class="action-btn danger"><i class="ti ti-rotate-clockwise" aria-hidden="true"></i> Reboot</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="annotation">
+  <strong>Navigation:</strong> Left sidebar with four sections — Slideshow, Display, Wi-Fi, System.
+  Back button returns to slideshow. No nested navigation; all settings fit one level deep.
+  <br><br>
+  <strong>Slideshow:</strong> Fixed interval segmented control (easier touch targets than free slider).
+  Sync status shown inline with manual trigger button.
+  <br>
+  <strong>Display:</strong> Sleep schedule times are grayed out / non-interactive until the schedule toggle is enabled.
+  <br>
+  <strong>Wi-Fi:</strong> Connected network pinned at top with destructive Forget. Available networks listed below with signal-strength icons.
+  <br>
+  <strong>System:</strong> Shutdown and Reboot are destructive-styled (red). Both require a confirmation dialog before executing.
+</div>
+
+<script>
+  function showSection(id) {
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('sec-' + id).classList.add('visible');
+    document.getElementById('nav-' + id).classList.add('active');
+  }
+  function toggleTrack(el) { el.classList.toggle('on'); }
+  function setSeg(groupId, btn) {
+    document.querySelectorAll('#' + groupId + ' .seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function toggleSleep() {
+    const tog = document.getElementById('sleep-tog');
+    const row = document.getElementById('sleep-times-row');
+    tog.classList.toggle('on');
+    const on = tog.classList.contains('on');
+    row.style.opacity = on ? '1' : '0.3';
+    row.style.pointerEvents = on ? 'auto' : 'none';
+  }
+</script>
+</body>
+</html>
