@@ -1,0 +1,14 @@
+[Unit]
+Description=Sync photos from OneDrive share
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=frame
+WorkingDirectory=/home/frame/framesync
+ExecStart=/usr/bin/python3 /home/frame/framesync/framesync.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,12 @@
+# Force LF line endings for all text files in this repo.
+# This ensures scripts and configs deploy correctly to the Raspberry Pi.
+
+* text=auto eol=lf
+
+# Explicitly mark binary files
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.bmp binary
