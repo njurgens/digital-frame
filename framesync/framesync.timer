@@ -1,0 +1,10 @@
+[Unit]
+Description=Run OneDrive photo sync nightly
+
+[Timer]
+OnCalendar=hourly
+AccuracySec=1m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

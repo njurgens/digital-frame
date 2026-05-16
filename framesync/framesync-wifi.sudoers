@@ -1,0 +1,9 @@
+# /etc/sudoers.d/framesync-wifi
+# Allows user 'frame' to run specific nmcli WiFi commands without a password.
+# Flask server calls these to connect/disconnect WiFi on behalf of the kiosk UI.
+#
+# Install with: sudo visudo -f /etc/sudoers.d/framesync-wifi
+# or: sudo cp framesync-wifi /etc/sudoers.d/ && sudo chmod 440 /etc/sudoers.d/framesync-wifi
+
+frame ALL=(ALL) NOPASSWD: /usr/bin/nmcli dev wifi connect *
+frame ALL=(ALL) NOPASSWD: /usr/bin/nmcli dev disconnect *
