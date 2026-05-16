@@ -24,6 +24,7 @@ from piframe.types import (
 )
 from piframe.widgets.nav_item import NavItem
 from piframe.widgets.segmented_control import SegmentedControl
+from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
 
 
@@ -35,14 +36,15 @@ class Section(Enum):
 
 
 class SettingsPanel:
-    def __init__(self, assets: Assets, config: ConfigStore):
+    def __init__(self, assets: Assets, config: ConfigStore, on_brightness_change=None):
         self._assets = assets
         self._config = config
+        self._on_brightness_change = on_brightness_change
         self._active_section = Section.SLIDESHOW
         self._visible = False
         self._build_nav()
         self._build_slideshow_widgets()
-        self._display_widgets = []
+        self._build_display_widgets()
         self._wifi_widgets = []
         self._system_widgets = []
         self._update_result = None
@@ -128,6 +130,67 @@ class SettingsPanel:
             self._transition_ctrl,
         ]
 
+    def _build_display_widgets(self):
+        cfg = self._config.display
+        sleep_cfg = self._config.sleep
+        content_x = SETTINGS_CONTENT_X + 18
+        content_w = SCREEN_W - content_x - 18
+
+        brightness_options = [25, 50, 75, 100]
+        labels = [f"{v}%" for v in brightness_options]
+        try:
+            brightness_selected = brightness_options.index(int(cfg.brightness))
+        except ValueError:
+            brightness_selected = min(range(len(brightness_options)), key=lambda i: abs(brightness_options[i] - int(cfg.brightness)))
+        self._brightness_ctrl = SegmentedControl(
+            rect=pygame.Rect(content_x, 80, content_w, 36),
+            segments=labels,
+            selected=brightness_selected,
+            assets=self._assets,
+            on_change=lambda i, _: self._set_brightness(brightness_options[i]),
+        )
+
+        self._show_clock_toggle = Toggle(
+            rect=pygame.Rect(SCREEN_W - 68, 162, 50, 28),
+            initial=cfg.show_clock,
+            on_change=lambda v: self._config.set("display", "show_clock", v),
+        )
+        self._sleep_enabled_toggle = Toggle(
+            rect=pygame.Rect(SCREEN_W - 68, 234, 50, 28),
+            initial=sleep_cfg.enabled,
+            on_change=lambda v: self._config.set("sleep", "enabled", v),
+        )
+
+        sleep_hour, sleep_min = [int(x) for x in sleep_cfg.sleep_time.split(":")]
+        wake_hour, wake_min = [int(x) for x in sleep_cfg.wake_time.split(":")]
+        self._sleep_time_picker = TimePicker(
+            rect=pygame.Rect(content_x, 288, 168, 44),
+            initial_hour=sleep_hour,
+            initial_minute=sleep_min,
+            assets=self._assets,
+            on_change=lambda h, m: self._config.set("sleep", "sleep_time", f"{h:02d}:{m:02d}"),
+        )
+        self._wake_time_picker = TimePicker(
+            rect=pygame.Rect(content_x, 360, 168, 44),
+            initial_hour=wake_hour,
+            initial_minute=wake_min,
+            assets=self._assets,
+            on_change=lambda h, m: self._config.set("sleep", "wake_time", f"{h:02d}:{m:02d}"),
+        )
+
+        self._display_widgets = [
+            self._brightness_ctrl,
+            self._show_clock_toggle,
+            self._sleep_enabled_toggle,
+            self._sleep_time_picker,
+            self._wake_time_picker,
+        ]
+
+    def _set_brightness(self, value: int) -> None:
+        self._config.set("display", "brightness", value)
+        if self._on_brightness_change is not None:
+            self._on_brightness_change(value)
+
     def _select_section(self, section: Section):
         self._active_section = section
         for item in self._nav_items:
@@ -169,6 +232,8 @@ class SettingsPanel:
     def _draw_section(self, screen: pygame.Surface):
         if self._active_section == Section.SLIDESHOW:
             self._draw_slideshow(screen)
+        elif self._active_section == Section.DISPLAY:
+            self._draw_display(screen)
 
     def _draw_slideshow(self, screen: pygame.Surface):
         body_font = self._assets.font(FONT_SIZE_BODY)
@@ -184,21 +249,58 @@ class SettingsPanel:
             screen.blit(surf, (content_x, y_offset))
             widget.draw(screen)
 
+    def _draw_display(self, screen: pygame.Surface):
+        body_font = self._assets.font(FONT_SIZE_BODY)
+        content_x = SETTINGS_CONTENT_X + 18
+        rows = [
+            ("Brightness", self._brightness_ctrl, 62),
+            ("Show clock", self._show_clock_toggle, 144),
+            ("Sleep schedule", self._sleep_enabled_toggle, 216),
+        ]
+        for label, widget, y_offset in rows:
+            surf, _ = body_font.render(label, COLOUR_TEXT_SECONDARY[:3])
+            screen.blit(surf, (content_x, y_offset))
+            widget.draw(screen)
+
+        tz_surf, _ = body_font.render(f"Timezone: {self._config.system.timezone}", COLOUR_TEXT_SECONDARY[:3])
+        screen.blit(tz_surf, (content_x, 432))
+
+        if self._sleep_enabled_toggle.value:
+            sleep_surf, _ = body_font.render("Sleep time", COLOUR_TEXT_SECONDARY[:3])
+            wake_surf, _ = body_font.render("Wake time", COLOUR_TEXT_SECONDARY[:3])
+            screen.blit(sleep_surf, (content_x, 270))
+            screen.blit(wake_surf, (content_x, 342))
+            self._sleep_time_picker.draw(screen)
+            self._wake_time_picker.draw(screen)
+
     def _active_widgets(self):
         if self._active_section == Section.SLIDESHOW:
             return self._slideshow_widgets
+        if self._active_section == Section.DISPLAY:
+            widgets = [self._brightness_ctrl, self._show_clock_toggle, self._sleep_enabled_toggle]
+            if self._sleep_enabled_toggle.value:
+                widgets.extend([self._sleep_time_picker, self._wake_time_picker])
+            return widgets
         return []
 
-    def on_tap(self, pos: tuple[int, int]) -> bool:
+    def on_tap(self, event_or_pos) -> bool:
+        if isinstance(event_or_pos, tuple):
+            event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=event_or_pos, button=1)
+        else:
+            event = event_or_pos
+        pos = getattr(event, "pos", None)
+        if pos is None:
+            return False
+
         if pygame.Rect(0, 0, SIDEBAR_W, 58).collidepoint(pos):
             return False
 
         for item in self._nav_items:
-            if item.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1)):
+            if item.handle_event(event):
                 return True
 
         for w in self._active_widgets():
-            if w.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1)):
+            if w.handle_event(event):
                 return True
         return False
 

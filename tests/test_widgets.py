@@ -5,9 +5,12 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import pygame
 import pytest
+from unittest.mock import MagicMock
 
 from piframe.widgets.vertical_slider import VerticalSlider
 from piframe.widgets.segmented_control import SegmentedControl
+from piframe.widgets.scroll_picker import ScrollPicker
+from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
 
 
@@ -96,3 +99,61 @@ def test_segmented_control_callback_fires():
     sc.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(250, 18), button=1))
     assert results[0][0] == 2
     assert results[0][1] == "Z"
+
+
+def make_mock_assets():
+    mock_assets = MagicMock()
+    surf = pygame.Surface((60, 20))
+    mock_assets.font.return_value.render.return_value = (surf, pygame.Rect(0, 0, 60, 20))
+    mock_assets.font_bold.return_value.render.return_value = (surf, pygame.Rect(0, 0, 60, 20))
+    return mock_assets
+
+
+def test_scroll_picker_drag_scroll():
+    rect = pygame.Rect(100, 100, 200, 308)
+    items = [f"Item {i}" for i in range(30)]
+    assets = make_mock_assets()
+    sp = ScrollPicker(rect=rect, items=items, selected=0, assets=assets)
+    initial_offset = sp._scroll_offset
+    sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
+    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 156), rel=(0, -44), buttons=(1, 0, 0)))
+    assert sp._scroll_offset > initial_offset
+
+
+def test_scroll_picker_snap_on_release():
+    rect = pygame.Rect(100, 100, 200, 308)
+    items = [f"TZ {i}" for i in range(50)]
+    assets = make_mock_assets()
+    sp = ScrollPicker(rect=rect, items=items, selected=5, assets=assets)
+    sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
+    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 178), rel=(0, -22), buttons=(1, 0, 0)))
+    sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(200, 178), button=1))
+    assert sp._scroll_offset == int(sp._scroll_offset)
+
+
+def test_scroll_picker_clamp_min():
+    rect = pygame.Rect(100, 100, 200, 308)
+    items = [f"Item {i}" for i in range(10)]
+    assets = make_mock_assets()
+    sp = ScrollPicker(rect=rect, items=items, selected=0, assets=assets)
+    sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
+    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 500), rel=(0, 300), buttons=(1, 0, 0)))
+    assert sp._scroll_offset >= 0
+
+
+def test_time_picker_open_done_updates_time():
+    changes = []
+    assets = make_mock_assets()
+    tp = TimePicker(
+        rect=pygame.Rect(100, 100, 168, 44),
+        initial_hour=10,
+        initial_minute=30,
+        assets=assets,
+        on_change=lambda h, m: changes.append((h, m)),
+    )
+    tp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(110, 110), button=1))
+    tp._hour_picker.set_selected(12)
+    tp._min_picker.set_selected(45)
+    done_pos = (tp._popup_rect.right - 24, tp._popup_rect.y + 24)
+    tp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=done_pos, button=1))
+    assert changes == [(12, 45)]

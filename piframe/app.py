@@ -19,7 +19,9 @@ from piframe.config_store import ConfigStore
 from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
 from piframe.settings_panel import SettingsPanel
-from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, init_events
+from piframe.sleep_scheduler import SleepScheduler
+from piframe import types as app_types
+from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, WAKE_GRACE, init_events
 
 
 class SlideshowPlayer:
@@ -165,7 +167,8 @@ class App:
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
-        self._settings = SettingsPanel(self._assets, self._config)
+        self._settings = SettingsPanel(self._assets, self._config, on_brightness_change=self._on_brightness_change)
+        self._sleep = SleepScheduler(self._config)
         self._keyboard = None
         self._dialog = None
         self._overlay.on_brightness_change = self._on_brightness_change
@@ -191,6 +194,9 @@ class App:
             prev_time = now
 
             self._process_pygame_events()
+            if self._state == AppState.SLEEPING:
+                time.sleep(0.25)
+                continue
             self._drain_harness_queue()
             self._update(dt)
             self._draw()
@@ -199,6 +205,29 @@ class App:
 
     def _process_pygame_events(self):
         for event in pygame.event.get():
+            if event.type == app_types.EVT_SLEEP:
+                self._enter_sleep()
+                continue
+            if event.type == app_types.EVT_WAKE:
+                self._exit_sleep()
+                continue
+
+            if self._state == AppState.SETTINGS and event.type in {
+                pygame.MOUSEBUTTONDOWN,
+                pygame.MOUSEMOTION,
+                pygame.MOUSEBUTTONUP,
+            }:
+                if (
+                    event.type == pygame.MOUSEBUTTONDOWN
+                    and getattr(event, "button", 0) == 1
+                    and pygame.Rect(0, 0, SIDEBAR_W, 58).collidepoint(event.pos)
+                ):
+                    self._settings.close()
+                    self._state = AppState.SLIDESHOW
+                else:
+                    self._settings.on_tap(event)
+                continue
+
             if event.type == pygame.QUIT:
                 self._quit()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -207,8 +236,7 @@ class App:
                 self._swipe_start_pos = event.pos
                 self._swipe_start_time = time.monotonic()
                 if self._state == AppState.SLEEPING:
-                    self._overlay.show()
-                    self._state = AppState.OVERLAY
+                    self._exit_sleep()
             elif event.type == pygame.MOUSEMOTION and event.buttons[0] and self._state == AppState.OVERLAY:
                 self._overlay.on_drag(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and getattr(event, "button", 0) == 1:
@@ -273,11 +301,6 @@ class App:
             return
 
         if self._state == AppState.SETTINGS:
-            if pygame.Rect(0, 0, SIDEBAR_W, 58).collidepoint(pos):
-                self._settings.close()
-                self._state = AppState.SLIDESHOW
-            else:
-                self._settings.on_tap(pos)
             return
 
         if self._state == AppState.KEYBOARD:
@@ -315,7 +338,18 @@ class App:
         sys.exit(0)
 
     def _cleanup(self):
+        self._sleep.stop()
         self._config.flush_now()
+
+    def _enter_sleep(self) -> None:
+        self._backlight.set_brightness(0)
+        self._state = AppState.SLEEPING
+
+    def _exit_sleep(self) -> None:
+        self._backlight.set_brightness(self._config.display.brightness)
+        self._state = AppState.OVERLAY
+        self._overlay.show()
+        self._sleep.set_grace(time.monotonic() + WAKE_GRACE)
 
     def _start_harness(self):
         import socket as sock_mod
