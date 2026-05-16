@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 from enum import Enum
+import zoneinfo
 
 import pygame
 
@@ -31,10 +32,13 @@ from piframe.types import (
 )
 from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe.widgets.nav_item import NavItem
+from piframe.widgets.scroll_picker import ScrollPicker
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.text_input import TextInput
 from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
+from piframe.widgets.vertical_slider import VerticalSlider
+from piframe.widgets.wifi_list_item import WifiListItem
 
 
 class Section(Enum):
@@ -77,6 +81,7 @@ class SettingsPanel:
         self._system_message = ""
         self._sync_status = "Never synced"
         self._install_update_rect: pygame.Rect | None = None
+        self._pending_dialog: ConfirmDialog | None = None
         self.refresh_sync_status()
 
     def _build_nav(self):
@@ -166,18 +171,10 @@ class SettingsPanel:
         content_x = CONTENT_X
         content_w = CONTENT_W
 
-        brightness_options = [25, 50, 75, 100]
-        labels = [f"{v}%" for v in brightness_options]
-        try:
-            brightness_selected = brightness_options.index(int(cfg.brightness))
-        except ValueError:
-            brightness_selected = min(range(len(brightness_options)), key=lambda i: abs(brightness_options[i] - int(cfg.brightness)))
-        self._brightness_ctrl = SegmentedControl(
-            rect=pygame.Rect(content_x, 80, content_w, 36),
-            segments=labels,
-            selected=brightness_selected,
-            assets=self._assets,
-            on_change=lambda i, _: self._set_brightness(brightness_options[i]),
+        self._brightness_slider = VerticalSlider(
+            rect=pygame.Rect(content_x + content_w - 64, 80, 40, 200),
+            initial_value=cfg.brightness,
+            on_change=self._on_brightness_change_display,
         )
 
         self._show_clock_toggle = Toggle(
@@ -208,16 +205,29 @@ class SettingsPanel:
             on_change=lambda h, m: self._config.set("sleep", "wake_time", f"{h:02d}:{m:02d}"),
         )
 
+        timezones = sorted(zoneinfo.available_timezones())
+        current_tz = self._config.system.timezone
+        current_idx = timezones.index(current_tz) if current_tz in timezones else 0
+        self._tz_picker = ScrollPicker(
+            rect=pygame.Rect(content_x, 400, content_w - 24, 308),
+            items=timezones,
+            selected=current_idx,
+            assets=self._assets,
+            on_change=lambda idx, tz: self._on_timezone_change(tz),
+        )
+
         self._display_widgets = [
-            self._brightness_ctrl,
+            self._brightness_slider,
             self._show_clock_toggle,
             self._sleep_enabled_toggle,
             self._sleep_time_picker,
             self._wake_time_picker,
+            self._tz_picker,
         ]
 
     def _build_wifi_section(self):
         self._wifi_networks: list = []
+        self._wifi_items: list[WifiListItem] = []
         self._wifi_status: WifiStatus | None = None
         self._wifi_connecting = False
         self._wifi_password_ssid: str | None = None
@@ -232,10 +242,15 @@ class SettingsPanel:
         self._wifi_forget_rect = pygame.Rect(CONTENT_X + 212, 136, 200, 44)
         self._wifi_connect_rect = pygame.Rect(CONTENT_X, 356, 200, 44)
 
-    def _set_brightness(self, value: int) -> None:
+    def _on_brightness_change_display(self, value: int) -> None:
         self._config.set("display", "brightness", value)
         if self._on_brightness_change is not None:
             self._on_brightness_change(value)
+
+    def _on_timezone_change(self, tz: str) -> None:
+        self._config.set("system", "timezone", tz)
+        if self._app_ref is not None and hasattr(self._app_ref, "_clock_w"):
+            self._app_ref._clock_w.update_timezone(tz)
 
     def _select_section(self, section: Section):
         self._active_section = section
@@ -306,7 +321,7 @@ class SettingsPanel:
         body_font = self._assets.font(FONT_SIZE_BODY)
         content_x = SETTINGS_CONTENT_X + 18
         rows = [
-            ("Brightness", self._brightness_ctrl, 62),
+            ("Brightness", self._brightness_slider, 62),
             ("Show clock", self._show_clock_toggle, 144),
             ("Sleep schedule", self._sleep_enabled_toggle, 216),
         ]
@@ -315,8 +330,9 @@ class SettingsPanel:
             screen.blit(surf, (content_x, y_offset))
             widget.draw(screen)
 
-        tz_surf, _ = body_font.render(f"Timezone: {self._config.system.timezone}", COLOUR_TEXT_SECONDARY[:3])
-        screen.blit(tz_surf, (content_x, 432))
+        tz_label, _ = body_font.render("Timezone", COLOUR_TEXT_SECONDARY[:3])
+        screen.blit(tz_label, (content_x, 370))
+        self._tz_picker.draw(screen)
 
         if self._sleep_enabled_toggle.value:
             sleep_surf, _ = body_font.render("Sleep time", COLOUR_TEXT_SECONDARY[:3])
@@ -359,23 +375,8 @@ class SettingsPanel:
                 ),
             )
 
-        for i, network in enumerate(self._wifi_networks):
-            row = pygame.Rect(content_x, 200 + i * 56, CONTENT_W - 24, 56)
-            connected = (
-                self._wifi_status is not None
-                and self._wifi_status.connected
-                and self._wifi_status.ssid == network.ssid
-            )
-            if connected:
-                pygame.draw.rect(screen, COLOUR_DIVIDER[:3], row, border_radius=6)
-            label_surf, _ = body_font.render(network.ssid, COLOUR_TEXT_PRIMARY[:3])
-            sec_label = network.security if network.security and network.security != "--" else "Open"
-            sub_surf, _ = caption_font.render(
-                f"{sec_label} • {network.signal}%",
-                COLOUR_TEXT_SECONDARY[:3],
-            )
-            screen.blit(label_surf, (row.x + 8, row.y + 10))
-            screen.blit(sub_surf, (row.x + 8, row.y + 32))
+        for item in self._wifi_items:
+            item.draw(screen)
 
         if self._wifi_password_ssid:
             prompt_surf, _ = caption_font.render(
@@ -466,7 +467,12 @@ class SettingsPanel:
         if self._active_section == Section.SLIDESHOW:
             return self._slideshow_widgets
         if self._active_section == Section.DISPLAY:
-            widgets = [self._brightness_ctrl, self._show_clock_toggle, self._sleep_enabled_toggle]
+            widgets = [
+                self._brightness_slider,
+                self._show_clock_toggle,
+                self._sleep_enabled_toggle,
+                self._tz_picker,
+            ]
             if self._sleep_enabled_toggle.value:
                 widgets.extend([self._sleep_time_picker, self._wake_time_picker])
             return widgets
@@ -505,10 +511,8 @@ class SettingsPanel:
                 self._wifi_forget_rect.collidepoint(pos)
                 and self._wifi_status is not None
                 and self._wifi_status.connected
-                and self._wifi_manager is not None
             ):
-                self._wifi_connecting = True
-                self._wifi_manager.forget(self._wifi_status.ssid)
+                self._on_forget_tap()
                 return True
             if self._wifi_password_ssid and self._wifi_connect_rect.collidepoint(pos):
                 self._wifi_connecting = True
@@ -517,15 +521,9 @@ class SettingsPanel:
                     self._wifi_manager.connect(self._wifi_password_ssid, password)
                 return True
 
-            for i, network in enumerate(self._wifi_networks):
-                row = pygame.Rect(CONTENT_X, 200 + i * 56, CONTENT_W - 24, 56)
-                if row.collidepoint(pos):
-                    if network.security and network.security != "--":
-                        self._wifi_password_ssid = network.ssid
-                        self._wifi_password_input.clear()
-                    elif self._wifi_manager is not None:
-                        self._wifi_connecting = True
-                        self._wifi_manager.connect(network.ssid, None)
+        if self._active_section == Section.WIFI:
+            for item in self._wifi_items:
+                if item.handle_event(event):
                     return True
 
         if self._active_section == Section.SYSTEM and event.type == pygame.MOUSEBUTTONDOWN:
@@ -558,6 +556,7 @@ class SettingsPanel:
         if result.operation == "scan":
             if result.success:
                 self._wifi_networks = result.data or []
+                self._rebuild_wifi_items()
             self._wifi_connecting = False
         elif result.operation == "connect":
             self._wifi_connecting = False
@@ -567,9 +566,62 @@ class SettingsPanel:
         elif result.operation == "status":
             if result.success:
                 self._wifi_status = result.data
+                self._rebuild_wifi_items()
         elif result.operation == "forget":
             if result.success and self._wifi_manager is not None:
                 self._wifi_manager.get_status()
+
+    def _rebuild_wifi_items(self) -> None:
+        current_ssid = self._wifi_status.ssid if self._wifi_status and self._wifi_status.connected else ""
+        self._wifi_items = []
+        y = 200
+        for net in self._wifi_networks[:8]:
+            item = WifiListItem(
+                rect=pygame.Rect(CONTENT_X, y, CONTENT_W - 24, 56),
+                network=net,
+                current_ssid=current_ssid,
+                assets=self._assets,
+                on_tap=self._on_wifi_network_tap,
+            )
+            self._wifi_items.append(item)
+            y += 56
+
+    def _on_wifi_network_tap(self, network) -> None:
+        if network.security and network.security != "--":
+            self._wifi_password_ssid = network.ssid
+            self._wifi_password_input.clear()
+            return
+        if self._wifi_manager is not None:
+            self._wifi_connecting = True
+            self._wifi_manager.connect(network.ssid, None)
+
+    def _on_forget_tap(self) -> None:
+        if not self._wifi_status or not self._wifi_status.ssid:
+            return
+        ssid = self._wifi_status.ssid
+
+        def _confirm() -> None:
+            if self._app_ref is not None:
+                self._app_ref._dialog = None
+            if self._wifi_manager is not None:
+                self._wifi_connecting = True
+                self._wifi_manager.forget(ssid)
+
+        def _cancel() -> None:
+            if self._app_ref is not None:
+                self._app_ref._dialog = None
+
+        self._pending_dialog = ConfirmDialog(
+            title="Forget Network?",
+            body=f'Remove "{ssid}" from saved networks?',
+            confirm_label="Forget",
+            destructive=True,
+            on_confirm=_confirm,
+            on_cancel=_cancel,
+            assets=self._assets,
+        )
+        if self._app_ref is not None:
+            self._app_ref._dialog = self._pending_dialog
 
     def on_update_result(self, result: UpdateResult) -> None:
         self._update_result = result

@@ -39,19 +39,23 @@ class TimePicker(Widget):
         popup_x = max(0, min(rect.centerx - 160, SCREEN_W - 320))
         self._popup_rect = pygame.Rect(popup_x, popup_y, 320, 280)
 
-        picker_top = self._popup_rect.y + 44
-        picker_h = self._popup_rect.height - 52
+        picker_top = self._popup_rect.y + 32
+        picker_h = 240
         self._hour_picker = ScrollPicker(
             pygame.Rect(self._popup_rect.x + 12, picker_top, 140, picker_h),
             [f"{h:02d}" for h in range(24)],
             selected=self._hour,
             assets=assets,
+            row_h=40,
+            visible_rows=6,
         )
         self._min_picker = ScrollPicker(
             pygame.Rect(self._popup_rect.x + 168, picker_top, 140, picker_h),
             [f"{m:02d}" for m in range(60)],
             selected=self._minute,
             assets=assets,
+            row_h=40,
+            visible_rows=6,
         )
 
     def _draw_pill(self, screen: pygame.Surface, rect: pygame.Rect, text: str) -> None:

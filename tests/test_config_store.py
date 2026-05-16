@@ -23,7 +23,7 @@ def test_load_missing_file_uses_defaults(tmp_path):
     p = tmp_path / "nonexistent.toml"
     cfg = ConfigStore(p)
     assert cfg.slideshow.interval == 30.0
-    assert cfg.display.brightness == 80
+    assert cfg.display.brightness == 72
 
 
 def test_load_malformed_toml_creates_backup(tmp_path):

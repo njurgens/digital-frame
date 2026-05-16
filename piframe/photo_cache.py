@@ -19,18 +19,42 @@ except AttributeError:
 
 
 class PhotoCache:
-    def __init__(self, screen_size: tuple[int, int]):
+    def __init__(
+        self,
+        screen_size: tuple[int, int] = (SCREEN_W, SCREEN_H),
+        cache_dir: Path | None = None,
+    ):
         self._w, self._h = screen_size
+        self._cache_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "framesync"
+        self._fit_mode = "fit"
         self._cache: OrderedDict[str, pygame.Surface] = OrderedDict()
         self._last_path: Path | None = None
 
-    def get(self, path: Path, fit_mode: str) -> pygame.Surface:
+    def get(
+        self,
+        path: Path,
+        fit_mode: str,
+        screen_w: int | None = None,
+        screen_h: int | None = None,
+    ) -> pygame.Surface:
+        if screen_w is not None and screen_h is not None:
+            self._w, self._h = screen_w, screen_h
+        self._fit_mode = fit_mode
         key = self._key(path, fit_mode)
         surf = self._cache.get(key)
         if surf is not None:
             self._cache.move_to_end(key)
             return surf
-        surf = self._compose(path, fit_mode)
+
+        disk_path = self._cache_dir / f"{key}.png"
+        if disk_path.exists():
+            surf = pygame.image.load(str(disk_path)).convert()
+            self._put(key, surf)
+            return surf
+
+        surf = self._render(path, fit_mode)
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        pygame.image.save(surf, str(disk_path))
         self._put(key, surf)
         return surf
 
@@ -68,7 +92,7 @@ class PhotoCache:
             img = img.transpose(Image.Transpose.ROTATE_90)
         return img
 
-    def _compose(self, path: Path, fit_mode: str) -> pygame.Surface:
+    def _render(self, path: Path, fit_mode: str) -> pygame.Surface:
         img = Image.open(path)
         img = self._apply_exif_orientation(img)
         img = img.convert("RGB")
@@ -103,3 +127,21 @@ class PhotoCache:
             final_img.paste(fg, (paste_x, paste_y))
 
         return pygame.image.frombuffer(final_img.tobytes(), final_img.size, "RGB")
+
+    def invalidate(self) -> None:
+        self._cache.clear()
+
+    def invalidate_disk(self) -> None:
+        if self._cache_dir.exists():
+            for f in self._cache_dir.glob("*.png"):
+                f.unlink(missing_ok=True)
+
+    def set_fit_mode(self, mode: str) -> None:
+        self._fit_mode = mode
+        self.invalidate_disk()
+        self.invalidate()
+
+    def prefetch(self, path: Path, fit_mode: str, screen_w: int, screen_h: int) -> None:
+        key = self._key(path, fit_mode)
+        if key not in self._cache:
+            self.get(path, fit_mode, screen_w, screen_h)

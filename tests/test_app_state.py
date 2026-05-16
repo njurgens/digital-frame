@@ -35,6 +35,7 @@ def make_app(tmp_path: Path):
     app._config = ConfigStore(cfg_path)
     app._player = MagicMock()
     app._player.is_paused = False
+    app._clock_w = MagicMock()
     app._overlay = MagicMock()
     app._overlay.dismissed = False
     app._harness_queue = SimpleQueue()

@@ -4,14 +4,12 @@ from collections.abc import Callable
 
 import pygame
 
+from piframe.assets import IC_LOCK, IC_WIFI, IC_WIFI_OFF
 from piframe.types import (
     COLOUR_CONNECTED,
     COLOUR_NAV_ACTIVE_BG,
     COLOUR_TEXT_PRIMARY,
     COLOUR_TEXT_SECONDARY,
-    IC_LOCK,
-    IC_WIFI,
-    IC_WIFI_OFF,
 )
 from piframe.widgets.base import Widget
 

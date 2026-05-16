@@ -93,6 +93,7 @@ class Keyboard:
         self._visible = False
         self._active_key = None
 
+    @property
     def is_visible(self) -> bool:
         return self._visible
 

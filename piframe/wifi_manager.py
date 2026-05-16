@@ -38,7 +38,7 @@ class WifiManager:
     def scan(self) -> None:
         def _thread() -> None:
             ok, output = self._run_cmd(
-                "sudo nmcli -t -f SSID,SECURITY,SIGNAL dev wifi list",
+                "sudo nmcli -t -f SSID,SECURITY,SIGNAL dev wifi list --rescan yes",
                 timeout=10,
             )
             if not ok:

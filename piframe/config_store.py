@@ -17,7 +17,7 @@ _PROTECTED = {
 
 _DEFAULTS = {
     "slideshow": {"interval": 30.0, "fit_mode": "fit", "shuffle": True, "transition": "crossfade"},
-    "display": {"brightness": 80, "show_clock": True, "timezone_auto": True},
+    "display": {"brightness": 72, "show_clock": True, "timezone_auto": True},
     "sleep": {"enabled": False, "sleep_time": "22:00", "wake_time": "07:00"},
     "sync": {
         "share_url": "",

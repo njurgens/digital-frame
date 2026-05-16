@@ -13,7 +13,7 @@ import pygame
 import pygame.freetype
 from pygame import Rect, Surface
 
-from piframe.assets import Assets
+from piframe.assets import Assets, IC_PAUSE
 from piframe.backlight import BacklightController
 from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
@@ -50,9 +50,10 @@ class MockWifiManager:
 
 
 class SlideshowPlayer:
-    def __init__(self, config: ConfigStore, cache: PhotoCache, screen_size):
+    def __init__(self, config: ConfigStore, cache: PhotoCache, screen_size, assets: Assets | None = None):
         self._config = config
         self._cache = cache
+        self._assets = assets
         self._w, self._h = screen_size
         self._playlist: list[Path] = []
         self._index: int = 0
@@ -61,6 +62,7 @@ class SlideshowPlayer:
         self._elapsed: float = 0.0
         self._trans_t: float = 0.0
         self._in_transition: bool = False
+        self._trans_start: float = 0.0
         self._direction: int = 1
         self._paused: bool = False
 
@@ -70,11 +72,18 @@ class SlideshowPlayer:
     def rescan(self):
         output_dir = Path(self._config.sync.output_dir)
         exts = {".jpg", ".jpeg", ".png", ".gif"}
-        files = [p for p in output_dir.iterdir() if p.suffix.lower() in exts] if output_dir.exists() else []
-        self._playlist = self._fisher_yates(files)
+        files = sorted([p for p in output_dir.iterdir() if p.suffix.lower() in exts]) if output_dir.exists() else []
+        self._playlist = files
+        if self._config.slideshow.shuffle:
+            self._playlist = self._fisher_yates(self._playlist)
         self._index = 0
         if self._playlist:
-            self._current_surf = self._cache.get(self._playlist[0], self._config.slideshow.fit_mode)
+            self._current_surf = self._cache.get(
+                self._playlist[0],
+                self._config.slideshow.fit_mode,
+                self._w,
+                self._h,
+            )
         else:
             self._current_surf = None
 
@@ -94,13 +103,10 @@ class SlideshowPlayer:
         trans_dur = TRANS_DURATION
 
         if self._in_transition:
-            self._trans_t += dt / trans_dur
+            elapsed = time.monotonic() - self._trans_start
+            self._trans_t = min(1.0, elapsed / trans_dur)
             if self._trans_t >= 1.0:
-                self._trans_t = 1.0
-                self._current_surf = self._next_surf
-                self._next_surf = None
-                self._in_transition = False
-                self._elapsed = 0.0
+                self._commit_transition()
         else:
             self._elapsed += dt
             if self._elapsed >= interval:
@@ -111,16 +117,35 @@ class SlideshowPlayer:
             return
         self._direction = direction
         next_idx = (self._index + direction) % len(self._playlist)
-        self._next_surf = self._cache.get(self._playlist[next_idx], self._config.slideshow.fit_mode)
+        self._next_surf = self._cache.get(
+            self._playlist[next_idx],
+            self._config.slideshow.fit_mode,
+            self._w,
+            self._h,
+        )
         self._index = next_idx
+        self._start_transition()
+
+    def _start_transition(self) -> None:
+        self._trans_start = time.monotonic()
         self._in_transition = True
         self._trans_t = 0.0
+
+    def _commit_transition(self) -> None:
+        self._trans_t = 1.0
+        self._current_surf = self._next_surf
+        self._next_surf = None
+        self._in_transition = False
+        self._elapsed = 0.0
 
     def go_back(self):
         self.advance(direction=-1)
 
     def skip(self):
         self.advance(direction=1)
+
+    def skip_next(self):
+        return self.skip()
 
     def draw(self, screen: Surface):
         if self._current_surf is None:
@@ -134,18 +159,30 @@ class SlideshowPlayer:
                 alpha_surf.set_alpha(int(self._trans_t * 255))
                 screen.blit(alpha_surf, (0, 0))
             elif trans == "slide":
-                offset = int(self._trans_t * self._w) * self._direction
-                screen.blit(self._current_surf, (-offset, 0))
-                screen.blit(self._next_surf, (self._w * self._direction - offset, 0))
+                cur_x = int(-self._direction * self._trans_t * self._w)
+                next_x = int(self._direction * (1.0 - self._trans_t) * self._w)
+                screen.blit(self._current_surf, (cur_x, 0))
+                screen.blit(self._next_surf, (next_x, 0))
             else:
                 screen.blit(self._next_surf if self._trans_t >= 0.5 else self._current_surf, (0, 0))
         else:
             screen.blit(self._current_surf, (0, 0))
 
     def draw_pip(self, screen: Surface):
-        cx = self._w // 2
-        cy = self._h - 20
-        pygame.draw.circle(screen, (255, 255, 255), (cx, cy), 6)
+        if not self._paused:
+            return
+        pill_rect = pygame.Rect(12, 762, 26, 26)
+        pygame.draw.rect(screen, (0, 0, 0), pill_rect, border_radius=13)
+        if self._assets is not None:
+            icon_font = self._assets.icon(24)
+            icon_surf, _ = icon_font.render(IC_PAUSE, (255, 255, 255))
+            screen.blit(
+                icon_surf,
+                (
+                    pill_rect.centerx - icon_surf.get_width() // 2,
+                    pill_rect.centery - icon_surf.get_height() // 2,
+                ),
+            )
 
     @property
     def is_paused(self) -> bool:
@@ -185,12 +222,12 @@ class App:
         config_path = Path(__file__).parent.parent / "config.toml"
         self._config = ConfigStore(config_path)
 
-        self._cache = PhotoCache((SCREEN_W, SCREEN_H))
+        self._cache = PhotoCache(cache_dir=Path(self._config.sync.cache_dir))
 
         self._clock_w = ClockWidget(self._assets)
 
         self._sync: SyncService | None = SyncService(self._config)
-        self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
+        self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H), self._assets)
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
         self._wifi = MockWifiManager() if self._args.mock_wifi else WifiManager()
@@ -372,6 +409,7 @@ class App:
 
     def _update(self, dt: float):
         self._player.update(dt)
+        self._clock_w.update(dt)
         self._config.tick(time.monotonic())
         if self._state == AppState.OVERLAY:
             self._overlay.update(dt)
@@ -401,7 +439,6 @@ class App:
 
     def _quit(self):
         self._cleanup()
-        self._clock_w.stop()
         pygame.quit()
         sys.exit(0)
 
@@ -409,6 +446,7 @@ class App:
         if getattr(self, "_sync", None) is not None:
             self._sync.stop()
         self._sleep.stop()
+        self._clock_w.stop()
         self._config.flush_now()
 
     def restart(self) -> None:

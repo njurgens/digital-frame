@@ -31,19 +31,18 @@ def test_time_and_date_format_strings():
         now = datetime(2025, 5, 16, 9, 5, tzinfo=ZoneInfo("America/Los_Angeles"))
         clock._render_surfaces(now)
 
-        assert bold_font.render.call_args[0][0] == "9:05"
+        assert bold_font.render.call_args[0][0] == "9:05 AM"
         assert body_font.render.call_args[0][0] == "Friday, May 16"
     finally:
         clock.stop()
 
 
-def test_set_timezone_resets_last_minute():
+def test_update_timezone_changes_timezone():
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
-        clock._last_minute = 12
-        clock.set_timezone("UTC")
-        assert clock._last_minute == -1
+        clock.update_timezone("UTC")
+        assert clock._timezone.key == "UTC"
     finally:
         clock.stop()
 

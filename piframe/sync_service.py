@@ -42,20 +42,13 @@ class SyncService:
             self._status.in_progress = True
             self._status.last_error = None
         try:
-            framesync_dir = str(Path(__file__).resolve().parent.parent / "framesync")
+            framesync_dir = str(Path(__file__).parent.parent / "framesync")
             if framesync_dir not in sys.path:
                 sys.path.insert(0, framesync_dir)
-            from framesync import (
-                encode_url,
-                get_badger_token,
-                redeem_share,
-                sync_folder,
-                validate_password,
-            )
+            from framesync import sync as framesync_sync
 
             cfg = self._config.sync
             share_url = cfg.share_url
-            password = cfg.password
             output_dir = Path(cfg.output_dir)
             if not share_url:
                 logging.info("SyncService: no share_url configured, skipping sync")
@@ -63,13 +56,7 @@ class SyncService:
                     self._status.in_progress = False
                 return
 
-            token = get_badger_token()
-            encoded = encode_url(share_url)
-            validate_password(encoded, share_url, password, token)
-            root = redeem_share(encoded, token)
-            drive_id = root["parentReference"]["driveId"]
-            folder_id = root["id"]
-            sync_folder(drive_id, folder_id, token, output_dir)
+            framesync_sync(cfg.share_url, cfg.password, cfg.output_dir)
 
             photo_count = sum(
                 1

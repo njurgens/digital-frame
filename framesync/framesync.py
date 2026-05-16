@@ -98,6 +98,27 @@ def sync_folder(drive_id: str, folder_id: str, token: str, dest: Path) -> list[P
 
     return new_files
 
+
+def sync(share_url: str, password: str, output_dir) -> None:
+    """High-level entry point for SyncService. Runs the full sync flow."""
+    dest = Path(output_dir)
+    token = get_badger_token()
+    encoded = encode_url(share_url)
+    validate_password(encoded, share_url, password, token)
+    root = redeem_share(encoded, token)
+    if "file" in root:
+        dest.mkdir(parents=True, exist_ok=True)
+        dest_file = dest / root["name"]
+        r = requests.get(root["@content.downloadUrl"], stream=True)
+        r.raise_for_status()
+        with open(dest_file, "wb") as f:
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+    else:
+        drive_id = root["parentReference"]["driveId"]
+        folder_id = root["id"]
+        sync_folder(drive_id, folder_id, token, dest)
+
 def main():
     with open(Path(__file__).parent / "config.toml", "rb") as f:
         config = tomllib.load(f)

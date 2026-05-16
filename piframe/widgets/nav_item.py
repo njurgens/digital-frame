@@ -63,6 +63,7 @@ class NavItem(Widget):
             and getattr(event, "button", 0) == 1
             and self.rect.collidepoint(event.pos)
         ):
+            self.active = True
             if self.on_select is not None:
                 self.on_select()
             return True

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -72,10 +73,12 @@ def test_transition_progress_and_clamp(tmp_path: Path):
     assert player._trans_t == 0.0
     assert player._in_transition is True
 
-    player.update(TRANS_DURATION / 2)
+    player._trans_start = time.monotonic() - (TRANS_DURATION / 2)
+    player.update(0.0)
     assert 0.45 <= player._trans_t <= 0.55
 
-    player.update(TRANS_DURATION)
+    player._trans_start = time.monotonic() - TRANS_DURATION
+    player.update(0.0)
     assert player._trans_t == 1.0
     assert player._in_transition is False
     assert player._next_surf is None
