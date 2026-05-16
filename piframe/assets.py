@@ -35,6 +35,8 @@ IC_BRIGHTNESS = "\ue896"
 IC_SCHEDULE = "\ue8b5"
 IC_PERSON = "\ue7ef"
 IC_DELETE = "\ue872"
+IC_VISIBILITY = "\ue8f4"      # visibility (show password)
+IC_VISIBILITY_OFF = "\ue8f5"  # visibility_off (hide password)
 
 _FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 _REGULAR = str(_FONT_DIR / "NotoSans-Regular.ttf")
@@ -58,7 +60,7 @@ class Assets:
         inst._bold = {
             size: pygame.freetype.Font(_BOLD, size) for size in [14, 16, 18, 20, 24, 48]
         }
-        inst._icons = {size: pygame.freetype.Font(_ICONS, size) for size in [24, 32]}
+        inst._icons = {size: pygame.freetype.Font(_ICONS, size) for size in [20, 24, 32]}
         return inst
 
     def font(self, size: int) -> pygame.freetype.Font:
