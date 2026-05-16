@@ -448,7 +448,9 @@ class App:
         if self._state not in {AppState.SETTINGS, AppState.KEYBOARD}:
             self._player.draw(self._screen)
 
-            if self._config.display.show_clock and self._state in {AppState.SLIDESHOW, AppState.OVERLAY}:
+            # Draw clock before overlay in SLIDESHOW; it is re-drawn after the
+            # overlay scrim in OVERLAY so it appears on top (OV-05).
+            if self._config.display.show_clock and self._state == AppState.SLIDESHOW:
                 self._clock_w.draw(self._screen)
 
             if self._player.is_paused and self._state == AppState.SLIDESHOW:
@@ -456,6 +458,8 @@ class App:
 
         if self._state == AppState.OVERLAY:
             self._overlay.draw(self._screen)
+            if self._config.display.show_clock:
+                self._clock_w.draw(self._screen)
         if self._state in {AppState.SETTINGS, AppState.KEYBOARD}:
             self._settings.draw(self._screen)
             if self._state == AppState.KEYBOARD:
@@ -575,12 +579,15 @@ class App:
                     pass
 
     def _exec_harness_cmd(self, cmd: str, msg: dict) -> dict:
+        import time as _time
+
         if cmd == "state":
             return {"ok": True, "state": self._state.name}
         if cmd == "tap":
             x, y = msg["x"], msg["y"]
             ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1)
             pygame.event.post(ev)
+            _time.sleep(0.05)
             ev2 = pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x, y), button=1)
             pygame.event.post(ev2)
             return {"ok": True}
@@ -589,6 +596,7 @@ class App:
             steps = max(5, ms // 16)
             down = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1)
             pygame.event.post(down)
+            delay_s = max(0.001, (ms / 1000.0) / float(steps))
             for i in range(1, steps + 1):
                 fx = x + dx * i // steps
                 fy = y + dy * i // steps
@@ -599,6 +607,7 @@ class App:
                     buttons=(1, 0, 0),
                 )
                 pygame.event.post(mv)
+                _time.sleep(delay_s)
             up = pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x + dx, y + dy), button=1)
             pygame.event.post(up)
             return {"ok": True}
@@ -629,6 +638,8 @@ class App:
             self._config.set(msg["section"], msg["key"], msg["value"])
             if msg.get("section") == "sleep":
                 self._sleep.kick()
+            if hasattr(self, "_settings"):
+                self._settings.sync_from_config()
             return {"ok": True}
         if cmd == "trigger_sync":
             if hasattr(self, "_sync"):

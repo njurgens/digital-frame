@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+import socket
 import threading
 from enum import Enum
 import zoneinfo
@@ -250,7 +252,7 @@ class SettingsPanel:
     def _on_timezone_change(self, tz: str) -> None:
         self._config.set("system", "timezone", tz)
         if self._app_ref is not None and hasattr(self._app_ref, "_clock_w"):
-            self._app_ref._clock_w.update_timezone(tz)
+            self._app_ref._clock_w.set_timezone(tz)
 
     def _select_section(self, section: Section):
         self._active_section = section
@@ -265,6 +267,26 @@ class SettingsPanel:
 
     def close(self):
         self._visible = False
+
+    def sync_from_config(self):
+        """Re-sync all widget visual states from current config values.
+        Call this after any programmatic config change so widgets stay in sync."""
+        cfg = self._config.slideshow
+        disp = self._config.display
+        sleep = self._config.sleep
+        try:
+            self._interval_ctrl.set_selected(self._interval_values.index(int(cfg.interval)))
+        except ValueError:
+            pass
+        self._fit_ctrl.set_selected(1 if cfg.fit_mode == "fill" else 0)
+        try:
+            trans_map = {"crossfade": 0, "cut": 1, "slide": 2}
+            self._transition_ctrl.set_selected(trans_map.get(cfg.transition, 0))
+        except Exception:
+            pass
+        self._shuffle_toggle.set_value(cfg.shuffle)
+        self._show_clock_toggle.set_value(disp.show_clock)
+        self._sleep_enabled_toggle.set_value(sleep.enabled)
 
     def update(self, dt: float):
         for w in self._active_widgets():
@@ -316,6 +338,19 @@ class SettingsPanel:
             surf, _ = body_font.render(label, COLOUR_TEXT_SECONDARY[:3])
             screen.blit(surf, (content_x, y_offset))
             widget.draw(screen)
+
+        # Sync status row (belongs with slideshow content)
+        self.refresh_sync_status()
+        y = 340
+        sync_label, _ = body_font.render("Sync status", COLOUR_TEXT_SECONDARY[:3])
+        screen.blit(sync_label, (content_x, y))
+        sync_value, _ = body_font.render(self._sync_status, COLOUR_TEXT_PRIMARY[:3])
+        screen.blit(sync_value, (content_x + 150, y))
+
+        y += 56
+        sync_now_rect = pygame.Rect(content_x, y, 200, 44)
+        self._draw_button(screen, sync_now_rect, "Sync now")
+        self._sync_now_rect = sync_now_rect
 
     def _draw_display(self, screen: pygame.Surface):
         body_font = self._assets.font(FONT_SIZE_BODY)
@@ -409,25 +444,28 @@ class SettingsPanel:
         )
 
     def _draw_system(self, screen: pygame.Surface) -> None:
-        self.refresh_sync_status()
         body_font = self._assets.font(FONT_SIZE_BODY)
         caption_font = self._assets.font(14)
         content_x = CONTENT_X
-        y = 80
+        y = 62
 
-        sync_label, _ = body_font.render("Sync status", COLOUR_TEXT_SECONDARY[:3])
-        screen.blit(sync_label, (content_x, y))
-        sync_value, _ = body_font.render(self._sync_status, COLOUR_TEXT_PRIMARY[:3])
-        screen.blit(sync_value, (content_x + 150, y))
+        # Device info rows
+        for label, value in self._get_device_info():
+            label_surf, _ = body_font.render(label, COLOUR_TEXT_SECONDARY[:3])
+            value_surf, _ = body_font.render(value, COLOUR_TEXT_PRIMARY[:3])
+            screen.blit(label_surf, (content_x, y))
+            screen.blit(value_surf, (content_x + 150, y))
+            y += 44
 
-        y += 56
-        sync_now_rect = pygame.Rect(content_x, y, 200, 44)
-        self._draw_button(screen, sync_now_rect, "Sync now")
-        self._sync_now_rect = sync_now_rect
+        y += 12  # extra gap before buttons
 
-        check_rect = pygame.Rect(content_x + 220, y, 220, 44)
+        # OTA check + restart buttons
+        check_rect = pygame.Rect(content_x, y, 220, 44)
+        restart_rect = pygame.Rect(content_x + 240, y, 180, 44)
         self._draw_button(screen, check_rect, "Check for update")
+        self._draw_button(screen, restart_rect, "Restart app")
         self._check_update_rect = check_rect
+        self._restart_rect = restart_rect
 
         y += 64
         if self._update_result is not None:
@@ -462,6 +500,60 @@ class SettingsPanel:
         if self._system_message:
             info_surf, _ = caption_font.render(self._system_message, COLOUR_TEXT_SECONDARY[:3])
             screen.blit(info_surf, (content_x, y + 64))
+
+    def _get_device_info(self) -> list[tuple[str, str]]:
+        """Return [(label, value)] rows for the System section device info block."""
+        rows = []
+
+        # App version from git tag; falls back to a hardcoded constant
+        try:
+            import subprocess
+            tag = subprocess.check_output(
+                ["git", "-C", "/home/frame/digital-frame", "describe", "--tags", "--abbrev=0"],
+                stderr=subprocess.DEVNULL,
+                timeout=2,
+            ).decode().strip()
+        except Exception:
+            tag = getattr(self, "_APP_VERSION", "dev")
+        rows.append(("Version", tag))
+
+        # IP address via UDP connect trick (no packets sent)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+        except Exception:
+            ip = "unknown"
+        rows.append(("IP address", ip))
+
+        # Uptime from /proc/uptime
+        try:
+            with open("/proc/uptime") as f:
+                secs = float(f.read().split()[0])
+            days, rem = divmod(int(secs), 86400)
+            hours, rem = divmod(rem, 3600)
+            mins = rem // 60
+            if days:
+                uptime = f"{days}d {hours}h {mins}m"
+            else:
+                uptime = f"{hours}h {mins}m"
+        except Exception:
+            uptime = "unknown"
+        rows.append(("Uptime", uptime))
+
+        # Storage usage for the photos directory
+        try:
+            photos_dir = self._config.sync.output_dir if self._config else "/home/frame/Pictures/slideshow"
+            usage = shutil.disk_usage(photos_dir)
+            used_gb = usage.used / (1024 ** 3)
+            total_gb = usage.total / (1024 ** 3)
+            storage = f"{used_gb:.1f} / {total_gb:.0f} GB"
+        except Exception:
+            storage = "unknown"
+        rows.append(("Storage", storage))
+
+        return rows
 
     def _active_widgets(self):
         if self._active_section == Section.SLIDESHOW:
@@ -526,7 +618,7 @@ class SettingsPanel:
                 if item.handle_event(event):
                     return True
 
-        if self._active_section == Section.SYSTEM and event.type == pygame.MOUSEBUTTONDOWN:
+        if self._active_section == Section.SLIDESHOW and event.type == pygame.MOUSEBUTTONDOWN:
             if hasattr(self, "_sync_now_rect") and self._sync_now_rect.collidepoint(pos):
                 if self._sync_service is not None:
                     self._sync_service.trigger()
@@ -534,11 +626,17 @@ class SettingsPanel:
                 else:
                     self._system_message = "Sync service unavailable"
                 return True
+
+        if self._active_section == Section.SYSTEM and event.type == pygame.MOUSEBUTTONDOWN:
             if hasattr(self, "_check_update_rect") and self._check_update_rect.collidepoint(pos):
                 self._check_update_async()
                 return True
             if self._install_update_rect and self._install_update_rect.collidepoint(pos) and self._update_result is not None:
                 self._apply_update_async(self._update_result.tarball_url)
+                return True
+            if hasattr(self, "_restart_rect") and self._restart_rect.collidepoint(pos):
+                if self._app_ref is not None:
+                    self._app_ref.restart()
                 return True
             if hasattr(self, "_reboot_rect") and self._reboot_rect.collidepoint(pos):
                 self._show_reboot_confirm()

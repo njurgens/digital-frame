@@ -65,7 +65,7 @@ class _DisplayCfg:
 
     @property
     def brightness(self) -> int:
-        return int(self._d.get("brightness", 80))
+        return int(self._d.get("brightness", 72))
 
     @property
     def show_clock(self) -> bool:

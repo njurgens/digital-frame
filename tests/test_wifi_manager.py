@@ -112,3 +112,18 @@ def test_get_status_timeout():
             run_async_inline(manager, "get_status")
             result = mock_post.call_args[0][0]
             assert result.success is False
+
+
+def test_operations_pass_expected_timeout():
+    manager = WifiManager()
+    cases = [
+        ("scan", (), 10),
+        ("connect", ("MySSID", "pw"), 15),
+        ("forget", ("MySSID",), 5),
+        ("get_status", (), 5),
+    ]
+    for method_name, args, timeout in cases:
+        with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
+            with patch.object(manager, "_post"):
+                run_async_inline(manager, method_name, *args)
+                assert run_mock.call_args.kwargs["timeout"] == timeout

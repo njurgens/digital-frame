@@ -95,7 +95,12 @@ class OverlayUI:
         scrim.fill(COLOUR_OVERLAY_SCRIM)
         screen.blit(scrim, (0, 0))
 
-        pygame.draw.rect(screen, COLOUR_OVERLAY_BTN_BD[:3], DISMISS_BAR)
+        # Drain the dismiss bar proportionally; hide entirely when paused
+        if not self._paused and self._dismiss_at is not None:
+            remaining = max(0.0, self._dismiss_at - time.monotonic())
+            bar_w = int(SCREEN_W * remaining / OVERLAY_DISMISS)
+            if bar_w > 0:
+                pygame.draw.rect(screen, COLOUR_OVERLAY_BTN_BD[:3], pygame.Rect(0, 0, bar_w, 3))
 
         self._draw_overlay_button(screen, GEAR_RECT)
         self._draw_icon_centered(screen, IC_SETTINGS, ICON_SIZE_NORMAL, GEAR_CENTER)
