@@ -18,7 +18,8 @@ from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
 from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
-from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, TRANS_DURATION, init_events
+from piframe.settings_panel import SettingsPanel
+from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, init_events
 
 
 class SlideshowPlayer:
@@ -164,6 +165,9 @@ class App:
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
+        self._settings = SettingsPanel(self._assets, self._config)
+        self._keyboard = None
+        self._dialog = None
         self._overlay.on_brightness_change = self._on_brightness_change
         self._overlay._slider.on_change = self._on_brightness_change
         self._overlay.set_paused(self._player.is_paused)
@@ -261,6 +265,7 @@ class App:
                 self._overlay.dismissed = False
                 self._overlay._extend_dismiss()
             elif action == "settings":
+                self._settings.open()
                 self._state = AppState.SETTINGS
             elif action == "dismiss":
                 self._overlay.hide()
@@ -268,7 +273,11 @@ class App:
             return
 
         if self._state == AppState.SETTINGS:
-            self._state = AppState.SLIDESHOW
+            if pygame.Rect(0, 0, SIDEBAR_W, 58).collidepoint(pos):
+                self._settings.close()
+                self._state = AppState.SLIDESHOW
+            else:
+                self._settings.on_tap(pos)
             return
 
         if self._state == AppState.KEYBOARD:
@@ -281,23 +290,32 @@ class App:
             self._overlay.update(dt)
             if self._overlay.dismissed:
                 self._state = AppState.SLIDESHOW
+        elif self._state == AppState.SETTINGS:
+            self._settings.update(dt)
 
     def _draw(self):
-        self._player.draw(self._screen)
+        if self._state not in {AppState.SETTINGS, AppState.KEYBOARD}:
+            self._player.draw(self._screen)
 
-        if self._config.display.show_clock and self._state in {AppState.SLIDESHOW, AppState.OVERLAY}:
-            self._clock_w.draw(self._screen)
+            if self._config.display.show_clock and self._state in {AppState.SLIDESHOW, AppState.OVERLAY}:
+                self._clock_w.draw(self._screen)
 
-        if self._player.is_paused and self._state == AppState.SLIDESHOW:
-            self._player.draw_pip(self._screen)
+            if self._player.is_paused and self._state == AppState.SLIDESHOW:
+                self._player.draw_pip(self._screen)
 
         if self._state == AppState.OVERLAY:
             self._overlay.draw(self._screen)
+        if self._state in {AppState.SETTINGS, AppState.KEYBOARD}:
+            self._settings.draw(self._screen)
 
     def _quit(self):
+        self._cleanup()
         self._clock_w.stop()
         pygame.quit()
         sys.exit(0)
+
+    def _cleanup(self):
+        self._config.flush_now()
 
     def _start_harness(self):
         import socket as sock_mod
