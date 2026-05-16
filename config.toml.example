@@ -1,0 +1,31 @@
+# Copy this file to config.toml and fill in your OneDrive credentials.
+# config.toml is excluded from version control (it contains secrets).
+
+[slideshow]
+interval    = 30        # seconds between slides
+fit_mode    = "fit"     # "fit" = blurred bars, "fill" = cropped
+shuffle     = true
+transition  = "crossfade"  # "crossfade" | "cut" | "slide"
+
+[display]
+brightness    = 72      # 0–100
+show_clock    = true
+timezone_auto = true
+
+[sleep]
+enabled    = false
+sleep_time = "22:00"   # 24-hour HH:MM
+wake_time  = "07:00"   # 24-hour HH:MM
+
+[sync]
+share_url        = "https://1drv.ms/f/YOUR_SHARE_URL_HERE"
+password         = ""
+output_dir       = "/home/frame/Pictures/slideshow"
+cache_dir        = "/home/frame/.cache/framesync"
+interval_minutes = 60
+
+[system]
+timezone = "America/Los_Angeles"
+
+[update]
+repo = "njurgens/digital-frame"

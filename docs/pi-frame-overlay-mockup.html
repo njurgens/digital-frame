@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Frame — Overlay mockup</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0f0f; color: #e0ddd6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 24px; gap: 16px;
+  }
+  h1 { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.35); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .frame-wrap { background: #1a1a1a; border-radius: 12px; padding: 12px; width: 100%; max-width: 800px; }
+  .frame-screen {
+    position: relative; width: 100%; aspect-ratio: 16/10;
+    background: #2a3a2a; border-radius: 6px; overflow: hidden;
+    cursor: pointer; user-select: none;
+  }
+  .photo-bg { position: absolute; inset: 0; background: #3d5a3e; }
+  .photo-bg::before {
+    content: ''; position: absolute;
+    top: 15%; left: 20%; right: 20%; bottom: 20%;
+    background: #6b8f4a; border-radius: 4px; opacity: 0.5;
+  }
+  .photo-bg::after {
+    content: ''; position: absolute;
+    top: 35%; left: 30%; right: 30%; bottom: 30%;
+    background: #8aab62; border-radius: 3px; opacity: 0.4;
+  }
+  .photo-label {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255,255,255,0.18); font-size: 12px; letter-spacing: 0.08em; pointer-events: none;
+  }
+
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.55); opacity: 0; transition: opacity 0.2s; }
+  .frame-screen.active .scrim { opacity: 1; }
+
+  .dismiss-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.15); opacity: 0; transition: opacity 0.2s; z-index: 30; }
+  .dismiss-progress { height: 100%; background: rgba(255,255,255,0.7); width: 100%; transition: width 5s linear; }
+  .frame-screen.active .dismiss-bar { opacity: 1; }
+  .frame-screen.counting .dismiss-progress { width: 0%; }
+
+  .clock-display {
+    position: absolute; top: 14px; left: 14px;
+    color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 500; line-height: 1.3;
+    z-index: 10; transition: opacity 0.3s;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+  .clock-display.hidden { opacity: 0; pointer-events: none; }
+  .clock-display .date-line { font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.6); }
+
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 8px;
+    background: rgba(255,255,255,0.12); border: 0.5px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.9); font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.22); }
+  .icon-btn:active { transform: scale(0.95); }
+
+  .right-chrome {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 52px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: space-between; padding: 14px 0 56px;
+    opacity: 0; transition: opacity 0.2s; z-index: 20;
+  }
+  .frame-screen.active .right-chrome { opacity: 1; }
+
+  .bright-col {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 8px; margin-top: 48px;
+  }
+  .bright-icon { color: rgba(255,255,255,0.55); font-size: 15px; }
+  .bright-icon.hi { color: rgba(255,255,255,0.85); }
+  .bright-val { color: rgba(255,255,255,0.5); font-size: 11px; }
+
+  .vert-slider-wrap { flex: 1; display: flex; align-items: center; justify-content: center; width: 40px; overflow: visible; }
+  .vert-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.2); outline: none; cursor: pointer;
+    transform: rotate(-90deg); transform-origin: center center; display: block;
+  }
+  .vert-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: white; cursor: pointer; border: none; }
+  .vert-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: white; cursor: pointer; border: none; }
+
+  .bottom-chrome {
+    position: absolute; bottom: 0; left: 0; right: 52px;
+    opacity: 0; transition: opacity 0.2s; padding: 0 0 14px; z-index: 20;
+  }
+  .frame-screen.active .bottom-chrome { opacity: 1; }
+
+  .playback-row { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .play-btn {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(255,255,255,0.14); border: 0.5px solid rgba(255,255,255,0.22);
+    color: rgba(255,255,255,0.95); font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .play-btn.primary { width: 56px; height: 56px; background: rgba(255,255,255,0.2); font-size: 26px; }
+  .play-btn:hover { background: rgba(255,255,255,0.26); }
+  .play-btn:active { transform: scale(0.95); }
+
+  .paused-pip {
+    position: absolute; bottom: 10px; left: 12px; width: 26px; height: 26px; border-radius: 6px;
+    background: rgba(0,0,0,0.4); border: 0.5px solid rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.65); font-size: 13px;
+    opacity: 0; transition: opacity 0.2s; z-index: 5;
+  }
+  .frame-screen.paused .paused-pip { opacity: 1; }
+
+  .ui-controls {
+    display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center;
+    font-size: 13px; color: rgba(255,255,255,0.45);
+  }
+  .toggle-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .toggle-track { position: relative; width: 32px; height: 18px; background: rgba(255,255,255,0.2); border-radius: 9px; transition: background 0.2s; display: inline-block; flex-shrink: 0; }
+  .toggle-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: transform 0.2s; pointer-events: none; }
+  .toggle-track.on { background: #378ADD; }
+  .toggle-track.on .toggle-thumb { transform: translateX(14px); }
+  .state-label { font-size: 12px; color: rgba(255,255,255,0.3); text-align: center; }
+
+  .annotation {
+    width: 100%; max-width: 800px; font-size: 12px; color: rgba(255,255,255,0.35);
+    line-height: 1.6; border-top: 0.5px solid rgba(255,255,255,0.08); padding-top: 16px;
+  }
+  .annotation strong { color: rgba(255,255,255,0.55); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<h1>Pi Frame · Overlay design</h1>
+
+<div class="frame-wrap">
+  <div class="frame-screen" id="frame" onclick="handleTap()">
+    <div class="photo-bg"></div>
+    <div class="photo-label">photo</div>
+    <div class="scrim"></div>
+    <div class="dismiss-bar"><div class="dismiss-progress" id="dprog"></div></div>
+
+    <div class="clock-display" id="clockdisp">
+      <div id="clock-time">10:42</div>
+      <div class="date-line" id="clock-date">Friday, May 15</div>
+    </div>
+
+    <div class="right-chrome">
+      <button class="icon-btn" aria-label="Settings">
+        <i class="ti ti-settings" aria-hidden="true"></i>
+      </button>
+      <div class="bright-col">
+        <i class="ti ti-sun bright-icon hi" aria-hidden="true"></i>
+        <div class="vert-slider-wrap">
+          <input class="vert-slider" type="range" min="0" max="100" step="1" value="72" id="bslider"
+            oninput="updateBright(this.value)" onclick="event.stopPropagation()">
+        </div>
+        <i class="ti ti-sun-low bright-icon" aria-hidden="true"></i>
+        <span class="bright-val" id="bval">72%</span>
+      </div>
+    </div>
+
+    <div class="bottom-chrome">
+      <div class="playback-row">
+        <button class="play-btn" aria-label="Previous" onclick="event.stopPropagation(); skipDir('← Previous photo')">
+          <i class="ti ti-player-skip-back" aria-hidden="true"></i>
+        </button>
+        <button class="play-btn primary" aria-label="Play/pause" onclick="event.stopPropagation(); togglePlay()">
+          <i class="ti ti-player-pause" aria-hidden="true" id="playicon"></i>
+        </button>
+        <button class="play-btn" aria-label="Next" onclick="event.stopPropagation(); skipDir('→ Next photo')">
+          <i class="ti ti-player-skip-forward" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="paused-pip" id="pausedpip">
+      <i class="ti ti-player-pause" aria-hidden="true"></i>
+    </div>
+  </div>
+</div>
+
+<div class="ui-controls">
+  <p class="state-label" id="statelabel">Tap the frame to show the overlay</p>
+  <label class="toggle-label" onclick="toggleClock()">
+    <div class="toggle-track on" id="clocktrack"><div class="toggle-thumb"></div></div>
+    Show clock
+  </label>
+</div>
+
+<div class="annotation">
+  <strong>Overlay behaviour:</strong> Single tap anywhere → dark scrim + controls appear.
+  Auto-dismisses after 5 s (progress bar at top edge). Timer suspends while paused.
+  Swipe left/right navigates photos independent of overlay state.
+  <br><br>
+  <strong>Right column:</strong> Settings gear (top) → vertical brightness slider with sun icons → brightness % readout.
+  <br>
+  <strong>Bottom bar:</strong> Previous · Play/Pause (larger) · Next — centred in the area left of the right column.
+  <br>
+  <strong>Clock:</strong> Always visible on the photo, above the scrim layer. Toggled via Display settings.
+  Paused pip (bottom-left) persists after overlay dismisses.
+</div>
+
+<script>
+  let overlayActive = false, paused = false, timer = null, clockVisible = true;
+
+  function updateClock() {
+    const now = new Date();
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('clock-time').textContent = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('clock-date').textContent = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate();
+  }
+  updateClock();
+  setInterval(updateClock, 10000);
+
+  function showOverlay() {
+    const f = document.getElementById('frame');
+    f.classList.add('active'); overlayActive = true;
+    clearTimeout(timer);
+    const prog = document.getElementById('dprog');
+    prog.style.transition = 'none'; prog.style.width = '100%';
+    if (!paused) {
+      setTimeout(() => { prog.style.transition = 'width 5s linear'; prog.style.width = '0%'; f.classList.add('counting'); }, 30);
+      timer = setTimeout(hideOverlay, 5000);
+    }
+    document.getElementById('statelabel').textContent = paused ? 'Overlay visible — paused (timer suspended)' : 'Overlay visible — auto-dismisses in 5 s';
+  }
+
+  function hideOverlay() {
+    const f = document.getElementById('frame');
+    f.classList.remove('active','counting'); overlayActive = false;
+    document.getElementById('statelabel').textContent = paused ? 'Paused — tap to show overlay' : 'Playing — tap to show overlay';
+  }
+
+  function handleTap() { overlayActive ? hideOverlay() : showOverlay(); }
+
+  function togglePlay() {
+    paused = !paused;
+    document.getElementById('playicon').className = paused ? 'ti ti-player-play' : 'ti ti-player-pause';
+    document.getElementById('pausedpip').style.opacity = paused ? '1' : '0';
+    if (paused) {
+      clearTimeout(timer);
+      const prog = document.getElementById('dprog');
+      prog.style.transition = 'none'; prog.style.width = '100%';
+      document.getElementById('frame').classList.remove('counting');
+      document.getElementById('statelabel').textContent = 'Paused — overlay timer suspended';
+    } else {
+      if (overlayActive) showOverlay();
+      document.getElementById('statelabel').textContent = 'Playing — overlay will dismiss in 5 s';
+    }
+  }
+
+  function skipDir(msg) {
+    document.getElementById('statelabel').textContent = msg;
+    setTimeout(() => {
+      document.getElementById('statelabel').textContent = paused ? 'Paused — overlay timer suspended' : 'Playing — overlay will dismiss in 5 s';
+    }, 1200);
+  }
+
+  function updateBright(v) { document.getElementById('bval').textContent = Math.round(v) + '%'; }
+
+  function toggleClock() {
+    clockVisible = !clockVisible;
+    document.getElementById('clocktrack').classList.toggle('on', clockVisible);
+    document.getElementById('clockdisp').classList.toggle('hidden', !clockVisible);
+  }
+</script>
+</body>
+</html>
