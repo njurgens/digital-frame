@@ -22,6 +22,7 @@ from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
 from piframe.settings_panel import SettingsPanel
 from piframe.sleep_scheduler import SleepScheduler
+from piframe.sync_service import SyncService
 from piframe.updater import apply_update, check_update
 from piframe.wifi_manager import WifiManager
 from piframe.widgets.confirm_dialog import ConfirmDialog
@@ -188,7 +189,7 @@ class App:
 
         self._clock_w = ClockWidget(self._assets)
 
-        self._sync = None
+        self._sync: SyncService | None = SyncService(self._config)
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
@@ -199,6 +200,7 @@ class App:
             on_brightness_change=self._on_brightness_change,
             on_focus_text=self._on_focus_text,
             wifi_manager=self._wifi,
+            sync_service=self._sync,
             app_ref=self,
         )
         self._sleep = SleepScheduler(self._config)
@@ -258,6 +260,10 @@ class App:
                 continue
             if event.type == app_types.EVT_UPDATE_RESULT:
                 self._settings.on_update_result(event.result)
+                continue
+            if event.type == app_types.EVT_SYNC_COMPLETE:
+                self._player.rescan()
+                self._settings.refresh_sync_status()
                 continue
 
             if self._state == AppState.KEYBOARD:

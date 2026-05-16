@@ -103,6 +103,9 @@ print('autostart updated')
 PYEOF
 "
 
+echo "==> Disabling retired framesync systemd units..."
+ssh "$PI" 'sudo systemctl disable --now framesync.service framesync.timer 2>/dev/null || true'
+
 echo ""
 echo "==> Installation complete."
 echo ""
