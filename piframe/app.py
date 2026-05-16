@@ -16,6 +16,7 @@ from piframe.assets import Assets
 from piframe.backlight import BacklightController
 from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
+from piframe.keyboard import Keyboard
 from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
 from piframe.settings_panel import SettingsPanel
@@ -167,9 +168,14 @@ class App:
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
-        self._settings = SettingsPanel(self._assets, self._config, on_brightness_change=self._on_brightness_change)
+        self._settings = SettingsPanel(
+            self._assets,
+            self._config,
+            on_brightness_change=self._on_brightness_change,
+            on_focus_text=self._on_focus_text,
+        )
         self._sleep = SleepScheduler(self._config)
-        self._keyboard = None
+        self._keyboard = Keyboard(self._assets, on_done=self._on_keyboard_done)
         self._dialog = None
         self._overlay.on_brightness_change = self._on_brightness_change
         self._overlay._slider.on_change = self._on_brightness_change
@@ -185,6 +191,13 @@ class App:
         self._backlight.set_brightness(value)
         self._config.set("display", "brightness", value)
         self._overlay.set_brightness(value)
+
+    def _on_focus_text(self, field) -> None:
+        self._keyboard.attach(field)
+        self._state = AppState.KEYBOARD
+
+    def _on_keyboard_done(self) -> None:
+        self._state = AppState.SETTINGS
 
     def run(self) -> None:
         prev_time = time.monotonic()
@@ -211,6 +224,16 @@ class App:
             if event.type == app_types.EVT_WAKE:
                 self._exit_sleep()
                 continue
+
+            if self._state == AppState.KEYBOARD:
+                if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                    kb_rect = pygame.Rect(0, 450, SCREEN_W, 350)
+                    if event.type == pygame.MOUSEBUTTONDOWN and not kb_rect.collidepoint(event.pos):
+                        self._keyboard.detach()
+                        self._state = AppState.SETTINGS
+                        continue
+                if self._keyboard.handle_event(event):
+                    continue
 
             if self._state == AppState.SETTINGS and event.type in {
                 pygame.MOUSEBUTTONDOWN,
@@ -330,6 +353,8 @@ class App:
             self._overlay.draw(self._screen)
         if self._state in {AppState.SETTINGS, AppState.KEYBOARD}:
             self._settings.draw(self._screen)
+            if self._state == AppState.KEYBOARD:
+                self._keyboard.draw(self._screen)
 
     def _quit(self):
         self._cleanup()

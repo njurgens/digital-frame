@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 from piframe.widgets.vertical_slider import VerticalSlider
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.scroll_picker import ScrollPicker
+from piframe.widgets.text_input import TextInput
 from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
 
@@ -157,3 +158,45 @@ def test_time_picker_open_done_updates_time():
     done_pos = (tp._popup_rect.right - 24, tp._popup_rect.y + 24)
     tp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=done_pos, button=1))
     assert changes == [(12, 45)]
+
+
+def test_text_input_append():
+    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44))
+    ti.append("h")
+    ti.append("i")
+    assert ti.text == "hi"
+
+
+def test_text_input_backspace():
+    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44))
+    ti.append("hello")
+    ti.backspace()
+    assert ti.text == "hell"
+
+
+def test_text_input_backspace_empty():
+    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44))
+    ti.backspace()
+    assert ti.text == ""
+
+
+def test_text_input_on_change_callback():
+    changes = []
+    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), on_change=changes.append)
+    ti.append("x")
+    assert changes == ["x"]
+
+
+def test_text_input_password_mode():
+    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True)
+    ti.append("abc")
+    assert ti._password_mode is True
+    assert ti.text == "abc"
+
+
+def test_text_input_focus():
+    focused = []
+    ti = TextInput(rect=pygame.Rect(100, 100, 200, 44), on_focus=lambda: focused.append(True))
+    ti.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(150, 122), button=1))
+    assert ti._focused is True
+    assert focused == [True]

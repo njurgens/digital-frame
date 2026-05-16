@@ -24,6 +24,7 @@ from piframe.types import (
 )
 from piframe.widgets.nav_item import NavItem
 from piframe.widgets.segmented_control import SegmentedControl
+from piframe.widgets.text_input import TextInput
 from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
 
@@ -36,16 +37,17 @@ class Section(Enum):
 
 
 class SettingsPanel:
-    def __init__(self, assets: Assets, config: ConfigStore, on_brightness_change=None):
+    def __init__(self, assets: Assets, config: ConfigStore, on_brightness_change=None, on_focus_text=None):
         self._assets = assets
         self._config = config
         self._on_brightness_change = on_brightness_change
+        self._on_focus_text = on_focus_text
         self._active_section = Section.SLIDESHOW
         self._visible = False
         self._build_nav()
         self._build_slideshow_widgets()
         self._build_display_widgets()
-        self._wifi_widgets = []
+        self._build_wifi_widgets()
         self._system_widgets = []
         self._update_result = None
 
@@ -186,6 +188,18 @@ class SettingsPanel:
             self._wake_time_picker,
         ]
 
+    def _build_wifi_widgets(self):
+        content_x = SETTINGS_CONTENT_X + 18
+        content_w = SCREEN_W - content_x - 18
+        self._wifi_password_input = TextInput(
+            rect=pygame.Rect(content_x, 152, content_w, 44),
+            placeholder="Wi-Fi password",
+            password_mode=True,
+            assets=self._assets,
+            on_focus=lambda: self._on_focus_text(self._wifi_password_input) if self._on_focus_text else None,
+        )
+        self._wifi_widgets = [self._wifi_password_input]
+
     def _set_brightness(self, value: int) -> None:
         self._config.set("display", "brightness", value)
         if self._on_brightness_change is not None:
@@ -234,6 +248,8 @@ class SettingsPanel:
             self._draw_slideshow(screen)
         elif self._active_section == Section.DISPLAY:
             self._draw_display(screen)
+        elif self._active_section == Section.WIFI:
+            self._draw_wifi(screen)
 
     def _draw_slideshow(self, screen: pygame.Surface):
         body_font = self._assets.font(FONT_SIZE_BODY)
@@ -273,6 +289,13 @@ class SettingsPanel:
             self._sleep_time_picker.draw(screen)
             self._wake_time_picker.draw(screen)
 
+    def _draw_wifi(self, screen: pygame.Surface):
+        body_font = self._assets.font(FONT_SIZE_BODY)
+        content_x = SETTINGS_CONTENT_X + 18
+        label_surf, _ = body_font.render("Wi-Fi password", COLOUR_TEXT_SECONDARY[:3])
+        screen.blit(label_surf, (content_x, 124))
+        self._wifi_password_input.draw(screen)
+
     def _active_widgets(self):
         if self._active_section == Section.SLIDESHOW:
             return self._slideshow_widgets
@@ -281,6 +304,8 @@ class SettingsPanel:
             if self._sleep_enabled_toggle.value:
                 widgets.extend([self._sleep_time_picker, self._wake_time_picker])
             return widgets
+        if self._active_section == Section.WIFI:
+            return self._wifi_widgets
         return []
 
     def on_tap(self, event_or_pos) -> bool:
