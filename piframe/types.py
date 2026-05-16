@@ -131,3 +131,8 @@ COLOUR_WIFI_STRENGTH_0 = (80, 80, 80, 255)
 COLOUR_WIFI_STRENGTH_1 = (255, 255, 255, 255)
 COLOUR_CLOCK_TEXT = (255, 255, 255, 220)
 COLOUR_OVERLAY_SCRIM = (0, 0, 0, 90)
+
+# Material icon codepoints used in non-nav widgets.
+IC_WIFI = "\ue63e"
+IC_WIFI_OFF = "\ue648"
+IC_LOCK = "\ue897"

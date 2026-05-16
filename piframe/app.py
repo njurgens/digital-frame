@@ -21,8 +21,28 @@ from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
 from piframe.settings_panel import SettingsPanel
 from piframe.sleep_scheduler import SleepScheduler
+from piframe.wifi_manager import WifiManager
 from piframe import types as app_types
 from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, WAKE_GRACE, init_events
+
+
+class MockWifiManager:
+    def scan(self):
+        return None
+
+    def connect(self, ssid, password=None):
+        _ = ssid, password
+        return None
+
+    def forget(self, ssid):
+        _ = ssid
+        return None
+
+    def disconnect(self):
+        return None
+
+    def get_status(self):
+        return None
 
 
 class SlideshowPlayer:
@@ -168,11 +188,13 @@ class App:
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
+        self._wifi = MockWifiManager() if self._args.mock_wifi else WifiManager()
         self._settings = SettingsPanel(
             self._assets,
             self._config,
             on_brightness_change=self._on_brightness_change,
             on_focus_text=self._on_focus_text,
+            wifi_manager=self._wifi,
         )
         self._sleep = SleepScheduler(self._config)
         self._keyboard = Keyboard(self._assets, on_done=self._on_keyboard_done)
@@ -223,6 +245,9 @@ class App:
                 continue
             if event.type == app_types.EVT_WAKE:
                 self._exit_sleep()
+                continue
+            if event.type == app_types.EVT_WIFI_RESULT:
+                self._settings.on_wifi_result(event.result)
                 continue
 
             if self._state == AppState.KEYBOARD:

@@ -10,9 +10,12 @@ from unittest.mock import MagicMock
 from piframe.widgets.vertical_slider import VerticalSlider
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.scroll_picker import ScrollPicker
+from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe.widgets.text_input import TextInput
 from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
+from piframe.widgets.wifi_list_item import WifiListItem
+from piframe.types import WifiNetwork
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -200,3 +203,70 @@ def test_text_input_focus():
     ti.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(150, 122), button=1))
     assert ti._focused is True
     assert focused == [True]
+
+
+def test_confirm_dialog_cancel():
+    cancelled = []
+    dlg = ConfirmDialog(
+        title="Delete?",
+        body="This cannot be undone.",
+        on_cancel=lambda: cancelled.append(True),
+        on_confirm=lambda: None,
+    )
+    dlg.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            pos=(dlg._cancel_rect.centerx, dlg._cancel_rect.centery),
+            button=1,
+        )
+    )
+    assert cancelled == [True]
+
+
+def test_confirm_dialog_confirm():
+    confirmed = []
+    dlg = ConfirmDialog(
+        title="Delete?",
+        body="This cannot be undone.",
+        on_confirm=lambda: confirmed.append(True),
+        on_cancel=lambda: None,
+    )
+    dlg.handle_event(
+        pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            pos=(dlg._confirm_rect.centerx, dlg._confirm_rect.centery),
+            button=1,
+        )
+    )
+    assert confirmed == [True]
+
+
+def test_confirm_dialog_outside_cancels():
+    cancelled = []
+    dlg = ConfirmDialog(
+        title="Test",
+        body="Body",
+        on_cancel=lambda: cancelled.append(True),
+        on_confirm=lambda: None,
+    )
+    dlg.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(0, 0), button=1))
+    assert cancelled == [True]
+
+
+def test_wifi_list_item_tap_callback():
+    net = WifiNetwork(ssid="TestNet", security="WPA2", signal=75)
+    tapped = []
+    item = WifiListItem(
+        rect=pygame.Rect(200, 100, 800, 56),
+        network=net,
+        on_tap=lambda n: tapped.append(n),
+    )
+    item.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(400, 128), button=1))
+    item.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(400, 128), button=1))
+    assert tapped == [net]
+
+
+def test_wifi_network_signal_level():
+    assert WifiNetwork("x", "", 90).signal_level == 2
+    assert WifiNetwork("x", "", 50).signal_level == 1
+    assert WifiNetwork("x", "", 10).signal_level == 0

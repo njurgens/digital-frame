@@ -12,11 +12,13 @@ from piframe.assets import (
 )
 from piframe.config_store import ConfigStore
 from piframe.types import (
+    COLOUR_BTN_PRIMARY,
     COLOUR_CONTENT_BG,
     COLOUR_DIVIDER,
     COLOUR_SIDEBAR_BG,
     COLOUR_TEXT_PRIMARY,
     COLOUR_TEXT_SECONDARY,
+    WifiStatus,
     SCREEN_H,
     SCREEN_W,
     SETTINGS_CONTENT_X,
@@ -36,18 +38,30 @@ class Section(Enum):
     SYSTEM = "System"
 
 
+CONTENT_X = SETTINGS_CONTENT_X + 18
+CONTENT_W = SCREEN_W - CONTENT_X - 18
+
+
 class SettingsPanel:
-    def __init__(self, assets: Assets, config: ConfigStore, on_brightness_change=None, on_focus_text=None):
+    def __init__(
+        self,
+        assets: Assets,
+        config: ConfigStore,
+        on_brightness_change=None,
+        on_focus_text=None,
+        wifi_manager=None,
+    ):
         self._assets = assets
         self._config = config
         self._on_brightness_change = on_brightness_change
         self._on_focus_text = on_focus_text
+        self._wifi_manager = wifi_manager
         self._active_section = Section.SLIDESHOW
         self._visible = False
         self._build_nav()
         self._build_slideshow_widgets()
         self._build_display_widgets()
-        self._build_wifi_widgets()
+        self._build_wifi_section()
         self._system_widgets = []
         self._update_result = None
 
@@ -76,8 +90,8 @@ class SettingsPanel:
 
     def _build_slideshow_widgets(self):
         cfg = self._config.slideshow
-        content_x = SETTINGS_CONTENT_X + 18
-        content_w = SCREEN_W - content_x - 18
+        content_x = CONTENT_X
+        content_w = CONTENT_W
 
         interval_options = [("5s", 5), ("15s", 15), ("30s", 30), ("1m", 60), ("5m", 300)]
         interval_labels = [x[0] for x in interval_options]
@@ -135,8 +149,8 @@ class SettingsPanel:
     def _build_display_widgets(self):
         cfg = self._config.display
         sleep_cfg = self._config.sleep
-        content_x = SETTINGS_CONTENT_X + 18
-        content_w = SCREEN_W - content_x - 18
+        content_x = CONTENT_X
+        content_w = CONTENT_W
 
         brightness_options = [25, 50, 75, 100]
         labels = [f"{v}%" for v in brightness_options]
@@ -188,17 +202,21 @@ class SettingsPanel:
             self._wake_time_picker,
         ]
 
-    def _build_wifi_widgets(self):
-        content_x = SETTINGS_CONTENT_X + 18
-        content_w = SCREEN_W - content_x - 18
+    def _build_wifi_section(self):
+        self._wifi_networks: list = []
+        self._wifi_status: WifiStatus | None = None
+        self._wifi_connecting = False
+        self._wifi_password_ssid: str | None = None
         self._wifi_password_input = TextInput(
-            rect=pygame.Rect(content_x, 152, content_w, 44),
-            placeholder="Wi-Fi password",
+            rect=pygame.Rect(CONTENT_X, 300, CONTENT_W - 24, 44),
+            placeholder="Password",
             password_mode=True,
             assets=self._assets,
             on_focus=lambda: self._on_focus_text(self._wifi_password_input) if self._on_focus_text else None,
         )
-        self._wifi_widgets = [self._wifi_password_input]
+        self._wifi_scan_rect = pygame.Rect(CONTENT_X, 136, 200, 44)
+        self._wifi_forget_rect = pygame.Rect(CONTENT_X + 212, 136, 200, 44)
+        self._wifi_connect_rect = pygame.Rect(CONTENT_X, 356, 200, 44)
 
     def _set_brightness(self, value: int) -> None:
         self._config.set("display", "brightness", value)
@@ -209,6 +227,9 @@ class SettingsPanel:
         self._active_section = section
         for item in self._nav_items:
             item.active = item._label == section.value
+        if section == Section.WIFI and self._wifi_manager is not None:
+            self._wifi_manager.get_status()
+            self._wifi_manager.scan()
 
     def open(self):
         self._visible = True
@@ -291,10 +312,71 @@ class SettingsPanel:
 
     def _draw_wifi(self, screen: pygame.Surface):
         body_font = self._assets.font(FONT_SIZE_BODY)
-        content_x = SETTINGS_CONTENT_X + 18
-        label_surf, _ = body_font.render("Wi-Fi password", COLOUR_TEXT_SECONDARY[:3])
-        screen.blit(label_surf, (content_x, 124))
-        self._wifi_password_input.draw(screen)
+        caption_font = self._assets.font(14)
+        content_x = CONTENT_X
+
+        status_text = "Not connected"
+        if self._wifi_status and self._wifi_status.connected:
+            ip = f" ({self._wifi_status.ip_address})" if self._wifi_status.ip_address else ""
+            status_text = f"{self._wifi_status.ssid}{ip}"
+        status_surf, _ = body_font.render(status_text, COLOUR_TEXT_PRIMARY[:3])
+        screen.blit(status_surf, (content_x, 80))
+
+        pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_scan_rect, border_radius=6)
+        scan_surf, _ = body_font.render("Scan for networks", COLOUR_TEXT_PRIMARY[:3])
+        screen.blit(
+            scan_surf,
+            (
+                self._wifi_scan_rect.centerx - scan_surf.get_width() // 2,
+                self._wifi_scan_rect.centery - scan_surf.get_height() // 2,
+            ),
+        )
+
+        if self._wifi_status and self._wifi_status.connected:
+            pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_forget_rect, border_radius=6)
+            forget_surf, _ = body_font.render("Forget current", COLOUR_TEXT_PRIMARY[:3])
+            screen.blit(
+                forget_surf,
+                (
+                    self._wifi_forget_rect.centerx - forget_surf.get_width() // 2,
+                    self._wifi_forget_rect.centery - forget_surf.get_height() // 2,
+                ),
+            )
+
+        for i, network in enumerate(self._wifi_networks):
+            row = pygame.Rect(content_x, 200 + i * 56, CONTENT_W - 24, 56)
+            connected = (
+                self._wifi_status is not None
+                and self._wifi_status.connected
+                and self._wifi_status.ssid == network.ssid
+            )
+            if connected:
+                pygame.draw.rect(screen, COLOUR_DIVIDER[:3], row, border_radius=6)
+            label_surf, _ = body_font.render(network.ssid, COLOUR_TEXT_PRIMARY[:3])
+            sec_label = network.security if network.security and network.security != "--" else "Open"
+            sub_surf, _ = caption_font.render(
+                f"{sec_label} • {network.signal}%",
+                COLOUR_TEXT_SECONDARY[:3],
+            )
+            screen.blit(label_surf, (row.x + 8, row.y + 10))
+            screen.blit(sub_surf, (row.x + 8, row.y + 32))
+
+        if self._wifi_password_ssid:
+            prompt_surf, _ = caption_font.render(
+                f"Password for {self._wifi_password_ssid}",
+                COLOUR_TEXT_SECONDARY[:3],
+            )
+            screen.blit(prompt_surf, (content_x, 276))
+            self._wifi_password_input.draw(screen)
+            pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_connect_rect, border_radius=6)
+            connect_surf, _ = body_font.render("Connect", COLOUR_TEXT_PRIMARY[:3])
+            screen.blit(
+                connect_surf,
+                (
+                    self._wifi_connect_rect.centerx - connect_surf.get_width() // 2,
+                    self._wifi_connect_rect.centery - connect_surf.get_height() // 2,
+                ),
+            )
 
     def _active_widgets(self):
         if self._active_section == Section.SLIDESHOW:
@@ -305,7 +387,10 @@ class SettingsPanel:
                 widgets.extend([self._sleep_time_picker, self._wake_time_picker])
             return widgets
         if self._active_section == Section.WIFI:
-            return self._wifi_widgets
+            widgets = []
+            if self._wifi_password_ssid:
+                widgets.append(self._wifi_password_input)
+            return widgets
         return []
 
     def on_tap(self, event_or_pos) -> bool:
@@ -324,13 +409,60 @@ class SettingsPanel:
             if item.handle_event(event):
                 return True
 
+        if self._active_section == Section.WIFI and event.type == pygame.MOUSEBUTTONDOWN:
+            if self._wifi_scan_rect.collidepoint(pos):
+                self._wifi_connecting = True
+                if self._wifi_manager is not None:
+                    self._wifi_manager.scan()
+                return True
+            if (
+                self._wifi_forget_rect.collidepoint(pos)
+                and self._wifi_status is not None
+                and self._wifi_status.connected
+                and self._wifi_manager is not None
+            ):
+                self._wifi_connecting = True
+                self._wifi_manager.forget(self._wifi_status.ssid)
+                return True
+            if self._wifi_password_ssid and self._wifi_connect_rect.collidepoint(pos):
+                self._wifi_connecting = True
+                if self._wifi_manager is not None:
+                    password = self._wifi_password_input.text or None
+                    self._wifi_manager.connect(self._wifi_password_ssid, password)
+                return True
+
+            for i, network in enumerate(self._wifi_networks):
+                row = pygame.Rect(CONTENT_X, 200 + i * 56, CONTENT_W - 24, 56)
+                if row.collidepoint(pos):
+                    if network.security and network.security != "--":
+                        self._wifi_password_ssid = network.ssid
+                        self._wifi_password_input.clear()
+                    elif self._wifi_manager is not None:
+                        self._wifi_connecting = True
+                        self._wifi_manager.connect(network.ssid, None)
+                    return True
+
         for w in self._active_widgets():
             if w.handle_event(event):
                 return True
         return False
 
     def on_wifi_result(self, result):
-        pass
+        if result.operation == "scan":
+            if result.success:
+                self._wifi_networks = result.data or []
+            self._wifi_connecting = False
+        elif result.operation == "connect":
+            self._wifi_connecting = False
+            self._wifi_password_ssid = None
+            if result.success and self._wifi_manager is not None:
+                self._wifi_manager.get_status()
+        elif result.operation == "status":
+            if result.success:
+                self._wifi_status = result.data
+        elif result.operation == "forget":
+            if result.success and self._wifi_manager is not None:
+                self._wifi_manager.get_status()
 
     def on_update_result(self, result):
         self._update_result = result
