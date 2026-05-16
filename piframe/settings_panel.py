@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from enum import Enum
 
 import pygame
@@ -11,19 +12,24 @@ from piframe.assets import (
     Assets,
 )
 from piframe.config_store import ConfigStore
+from piframe.updater import apply_update, check_update
 from piframe.types import (
     COLOUR_BTN_PRIMARY,
     COLOUR_CONTENT_BG,
     COLOUR_DIVIDER,
+    COLOUR_DESTRUCTIVE,
     COLOUR_SIDEBAR_BG,
     COLOUR_TEXT_PRIMARY,
     COLOUR_TEXT_SECONDARY,
+    EVT_UPDATE_RESULT,
+    UpdateResult,
     WifiStatus,
     SCREEN_H,
     SCREEN_W,
     SETTINGS_CONTENT_X,
     SIDEBAR_W,
 )
+from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe.widgets.nav_item import NavItem
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.text_input import TextInput
@@ -50,12 +56,16 @@ class SettingsPanel:
         on_brightness_change=None,
         on_focus_text=None,
         wifi_manager=None,
+        sync_service=None,
+        app_ref=None,
     ):
         self._assets = assets
         self._config = config
         self._on_brightness_change = on_brightness_change
         self._on_focus_text = on_focus_text
         self._wifi_manager = wifi_manager
+        self._sync_service = sync_service
+        self._app_ref = app_ref
         self._active_section = Section.SLIDESHOW
         self._visible = False
         self._build_nav()
@@ -63,7 +73,11 @@ class SettingsPanel:
         self._build_display_widgets()
         self._build_wifi_section()
         self._system_widgets = []
-        self._update_result = None
+        self._update_result: UpdateResult | None = None
+        self._system_message = ""
+        self._sync_status = "Never synced"
+        self._install_update_rect: pygame.Rect | None = None
+        self.refresh_sync_status()
 
     def _build_nav(self):
         from piframe.assets import IC_INFO, IC_SCHEDULE, IC_SETTINGS, IC_WIFI
@@ -271,6 +285,8 @@ class SettingsPanel:
             self._draw_display(screen)
         elif self._active_section == Section.WIFI:
             self._draw_wifi(screen)
+        elif self._active_section == Section.SYSTEM:
+            self._draw_system(screen)
 
     def _draw_slideshow(self, screen: pygame.Surface):
         body_font = self._assets.font(FONT_SIZE_BODY)
@@ -378,6 +394,74 @@ class SettingsPanel:
                 ),
             )
 
+    def _draw_button(self, screen: pygame.Surface, rect: pygame.Rect, label: str, destructive: bool = False) -> None:
+        body_font = self._assets.font(FONT_SIZE_BODY)
+        bg = COLOUR_DESTRUCTIVE[:3] if destructive else COLOUR_BTN_PRIMARY[:3]
+        pygame.draw.rect(screen, bg, rect, border_radius=6)
+        surf, _ = body_font.render(label, COLOUR_TEXT_PRIMARY[:3])
+        screen.blit(
+            surf,
+            (
+                rect.centerx - surf.get_width() // 2,
+                rect.centery - surf.get_height() // 2,
+            ),
+        )
+
+    def _draw_system(self, screen: pygame.Surface) -> None:
+        self.refresh_sync_status()
+        body_font = self._assets.font(FONT_SIZE_BODY)
+        caption_font = self._assets.font(14)
+        content_x = CONTENT_X
+        y = 80
+
+        sync_label, _ = body_font.render("Sync status", COLOUR_TEXT_SECONDARY[:3])
+        screen.blit(sync_label, (content_x, y))
+        sync_value, _ = body_font.render(self._sync_status, COLOUR_TEXT_PRIMARY[:3])
+        screen.blit(sync_value, (content_x + 150, y))
+
+        y += 56
+        sync_now_rect = pygame.Rect(content_x, y, 200, 44)
+        self._draw_button(screen, sync_now_rect, "Sync now")
+        self._sync_now_rect = sync_now_rect
+
+        check_rect = pygame.Rect(content_x + 220, y, 220, 44)
+        self._draw_button(screen, check_rect, "Check for update")
+        self._check_update_rect = check_rect
+
+        y += 64
+        if self._update_result is not None:
+            if self._update_result.error:
+                msg = f"Update check failed: {self._update_result.error}"
+                colour = COLOUR_DESTRUCTIVE[:3]
+            elif self._update_result.available:
+                msg = f"Update available: {self._update_result.tag_name}"
+                colour = COLOUR_TEXT_PRIMARY[:3]
+            else:
+                msg = "App is up to date"
+                colour = COLOUR_TEXT_PRIMARY[:3]
+            msg_surf, _ = body_font.render(msg, colour)
+            screen.blit(msg_surf, (content_x, y))
+            if self._update_result.available and self._update_result.tarball_url:
+                install_rect = pygame.Rect(content_x + 360, y - 10, 140, 44)
+                self._draw_button(screen, install_rect, "Install")
+                self._install_update_rect = install_rect
+            else:
+                self._install_update_rect = None
+        else:
+            self._install_update_rect = None
+
+        y += 72
+        reboot_rect = pygame.Rect(content_x, y, 180, 44)
+        shutdown_rect = pygame.Rect(content_x + 200, y, 180, 44)
+        self._draw_button(screen, reboot_rect, "Reboot")
+        self._draw_button(screen, shutdown_rect, "Shutdown", destructive=True)
+        self._reboot_rect = reboot_rect
+        self._shutdown_rect = shutdown_rect
+
+        if self._system_message:
+            info_surf, _ = caption_font.render(self._system_message, COLOUR_TEXT_SECONDARY[:3])
+            screen.blit(info_surf, (content_x, y + 64))
+
     def _active_widgets(self):
         if self._active_section == Section.SLIDESHOW:
             return self._slideshow_widgets
@@ -391,6 +475,8 @@ class SettingsPanel:
             if self._wifi_password_ssid:
                 widgets.append(self._wifi_password_input)
             return widgets
+        if self._active_section == Section.SYSTEM:
+            return self._system_widgets
         return []
 
     def on_tap(self, event_or_pos) -> bool:
@@ -442,6 +528,27 @@ class SettingsPanel:
                         self._wifi_manager.connect(network.ssid, None)
                     return True
 
+        if self._active_section == Section.SYSTEM and event.type == pygame.MOUSEBUTTONDOWN:
+            if hasattr(self, "_sync_now_rect") and self._sync_now_rect.collidepoint(pos):
+                if self._sync_service is not None:
+                    self._sync_service.trigger()
+                    self._system_message = "Sync triggered"
+                else:
+                    self._system_message = "Sync service unavailable"
+                return True
+            if hasattr(self, "_check_update_rect") and self._check_update_rect.collidepoint(pos):
+                self._check_update_async()
+                return True
+            if self._install_update_rect and self._install_update_rect.collidepoint(pos) and self._update_result is not None:
+                self._apply_update_async(self._update_result.tarball_url)
+                return True
+            if hasattr(self, "_reboot_rect") and self._reboot_rect.collidepoint(pos):
+                self._show_reboot_confirm()
+                return True
+            if hasattr(self, "_shutdown_rect") and self._shutdown_rect.collidepoint(pos):
+                self._show_shutdown_confirm()
+                return True
+
         for w in self._active_widgets():
             if w.handle_event(event):
                 return True
@@ -464,8 +571,111 @@ class SettingsPanel:
             if result.success and self._wifi_manager is not None:
                 self._wifi_manager.get_status()
 
-    def on_update_result(self, result):
+    def on_update_result(self, result: UpdateResult) -> None:
         self._update_result = result
+        if result.error:
+            self._system_message = f"Update check failed: {result.error}"
+        elif result.available:
+            self._system_message = f"Update available: {result.tag_name}"
+        else:
+            self._system_message = "No updates available"
 
-    def refresh_sync_status(self):
-        pass
+    def refresh_sync_status(self) -> None:
+        if self._sync_service is None:
+            self._sync_status = "Never synced"
+            return
+        status = self._sync_service.status
+        if status.in_progress:
+            self._sync_status = "Sync in progress..."
+            return
+        if status.last_error:
+            self._sync_status = f"Sync error: {status.last_error}"
+            return
+        if status.last_sync_time is None:
+            self._sync_status = "Never synced"
+            return
+        last_sync = status.last_sync_time.strftime("%Y-%m-%d %H:%M")
+        self._sync_status = f"Last sync: {last_sync} ({status.photo_count} photos)"
+
+    def _check_update_async(self) -> None:
+        repo = self._config.update.repo
+        self._system_message = "Checking for updates..."
+
+        def _worker() -> None:
+            try:
+                tag_name, tarball_url = check_update(repo)
+                result = UpdateResult(available=bool(tarball_url), tag_name=tag_name, tarball_url=tarball_url)
+            except Exception as exc:
+                result = UpdateResult(available=False, error=str(exc))
+            if EVT_UPDATE_RESULT is not None:
+                try:
+                    pygame.event.post(pygame.event.Event(EVT_UPDATE_RESULT, result=result))
+                except pygame.error:
+                    self.on_update_result(result)
+            else:
+                self.on_update_result(result)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _apply_update_async(self, tarball_url: str) -> None:
+        self._system_message = "Installing update..."
+
+        def _worker() -> None:
+            try:
+                apply_update(tarball_url)
+                self._system_message = "Update installed. Restarting..."
+                if self._app_ref is not None:
+                    self._app_ref.restart()
+            except Exception as exc:
+                self._system_message = f"Update failed: {exc}"
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _set_dialog(self, dialog: ConfirmDialog) -> None:
+        if self._app_ref is not None:
+            self._app_ref._dialog = dialog
+
+    def _show_reboot_confirm(self) -> None:
+        if self._app_ref is None:
+            return
+
+        def _confirm() -> None:
+            self._app_ref._dialog = None
+            self._app_ref._reboot()
+
+        def _cancel() -> None:
+            self._app_ref._dialog = None
+
+        self._set_dialog(
+            ConfirmDialog(
+                title="Reboot?",
+                body="Restart the frame now.",
+                confirm_label="Reboot",
+                on_confirm=_confirm,
+                on_cancel=_cancel,
+                assets=self._assets,
+            )
+        )
+
+    def _show_shutdown_confirm(self) -> None:
+        if self._app_ref is None:
+            return
+
+        def _confirm() -> None:
+            self._app_ref._dialog = None
+            self._app_ref._shutdown()
+
+        def _cancel() -> None:
+            self._app_ref._dialog = None
+
+        self._set_dialog(
+            ConfirmDialog(
+                title="Shutdown?",
+                body="Power off the frame now.",
+                confirm_label="Shutdown",
+                destructive=True,
+                on_confirm=_confirm,
+                on_cancel=_cancel,
+                assets=self._assets,
+            )
+        )

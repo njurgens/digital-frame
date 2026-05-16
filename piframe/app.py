@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import subprocess
 import sys
 import time
 
@@ -21,7 +22,9 @@ from piframe.overlay_ui import OverlayUI
 from piframe.photo_cache import PhotoCache
 from piframe.settings_panel import SettingsPanel
 from piframe.sleep_scheduler import SleepScheduler
+from piframe.updater import apply_update, check_update
 from piframe.wifi_manager import WifiManager
+from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe import types as app_types
 from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, WAKE_GRACE, init_events
 
@@ -185,6 +188,7 @@ class App:
 
         self._clock_w = ClockWidget(self._assets)
 
+        self._sync = None
         self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H))
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
@@ -195,10 +199,11 @@ class App:
             on_brightness_change=self._on_brightness_change,
             on_focus_text=self._on_focus_text,
             wifi_manager=self._wifi,
+            app_ref=self,
         )
         self._sleep = SleepScheduler(self._config)
         self._keyboard = Keyboard(self._assets, on_done=self._on_keyboard_done)
-        self._dialog = None
+        self._dialog: ConfirmDialog | None = None
         self._overlay.on_brightness_change = self._on_brightness_change
         self._overlay._slider.on_change = self._on_brightness_change
         self._overlay.set_paused(self._player.is_paused)
@@ -240,6 +245,8 @@ class App:
 
     def _process_pygame_events(self):
         for event in pygame.event.get():
+            if self._dialog is not None and self._dialog.handle_event(event):
+                continue
             if event.type == app_types.EVT_SLEEP:
                 self._enter_sleep()
                 continue
@@ -248,6 +255,9 @@ class App:
                 continue
             if event.type == app_types.EVT_WIFI_RESULT:
                 self._settings.on_wifi_result(event.result)
+                continue
+            if event.type == app_types.EVT_UPDATE_RESULT:
+                self._settings.on_update_result(event.result)
                 continue
 
             if self._state == AppState.KEYBOARD:
@@ -380,6 +390,8 @@ class App:
             self._settings.draw(self._screen)
             if self._state == AppState.KEYBOARD:
                 self._keyboard.draw(self._screen)
+        if self._dialog is not None:
+            self._dialog.draw(self._screen)
 
     def _quit(self):
         self._cleanup()
@@ -388,8 +400,29 @@ class App:
         sys.exit(0)
 
     def _cleanup(self):
+        if getattr(self, "_sync", None) is not None:
+            self._sync.stop()
         self._sleep.stop()
         self._config.flush_now()
+
+    def restart(self) -> None:
+        self._cleanup()
+        env = os.environ.copy()
+        env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+        env["WAYLAND_DISPLAY"] = "wayland-0"
+        os.execve(sys.executable, [sys.executable] + sys.argv, env)
+
+    def _shutdown(self) -> None:
+        self._cleanup()
+        subprocess.run(["sudo", "shutdown", "-h", "now"], check=False)
+        pygame.quit()
+        sys.exit(0)
+
+    def _reboot(self) -> None:
+        self._cleanup()
+        subprocess.run(["sudo", "reboot"], check=False)
+        pygame.quit()
+        sys.exit(0)
 
     def _enter_sleep(self) -> None:
         self._backlight.set_brightness(0)
