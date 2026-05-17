@@ -1,5 +1,39 @@
 # Pi Frame — Agent Instructions
 
+## Working in Git Worktrees
+
+**All issue work must be done in a dedicated git worktree, not in the main checkout.**
+
+A worktree gives each issue its own working directory on disk while sharing the same `.git` database. This means multiple issues can be in-progress simultaneously without branch-switching, and the main checkout stays clean for reading reference code or running the app.
+
+### Create a worktree for an issue
+
+```bash
+# From the repo root:
+git worktree add ../digital-frame-issue-$ISSUE -b fix/issue-$ISSUE-<slug>
+# e.g.
+git worktree add ../digital-frame-issue-13 -b fix/issue-13-nav-icon-alignment
+```
+
+Work entirely inside `../digital-frame-issue-$ISSUE/` for that issue. Do not carry changes back into the main checkout.
+
+### List and remove worktrees
+
+```bash
+git worktree list                          # see all active worktrees
+git worktree remove ../digital-frame-issue-$ISSUE   # clean up after merge
+```
+
+Remove the worktree only after the PR is merged. If the branch was deleted remotely, pass `--force`.
+
+### Why worktrees matter for agents
+
+- Sub-agents spawned for review rounds should be pointed at the worktree path, not `main`, so they read the actual changed files.
+- The test harness (`--test-harness` flag) can be run inside the worktree without disturbing the primary app instance.
+- Never run `git checkout` inside a worktree to switch branches — create a new worktree instead.
+
+---
+
 ## Code Review Gauntlet
 
 **All code changes must pass a five-round sequential review before merge.** Each round is handled by a dedicated sub-agent in `.claude/agents/`. The top-level agent resolves all critical, high, and medium findings between rounds and re-runs the reviewer until it signs off.
