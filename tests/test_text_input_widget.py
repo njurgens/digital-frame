@@ -83,6 +83,7 @@ def test_draw_password_icon_uses_visibility_off_when_masked():
     ti.draw(screen)
 
     assert assets.icon.return_value.render.call_args[0][0] == IC_VISIBILITY_OFF
+    assert assets.icon.call_args[0][0] == 20
 
 
 def test_draw_password_icon_uses_visibility_when_shown():
@@ -105,6 +106,38 @@ def test_handle_event_eye_toggle_consumes_and_toggles():
     assert ti._show_text is True
     assert ti.handle_event(evt) is True
     assert ti._show_text is False
+
+
+def test_handle_event_eye_toggle_consumes_expanded_hit_target():
+    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=_make_assets())
+    eye = ti._eye_rect()
+    assert eye.size == (44, 44)
+
+    evt = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(eye.left + 1, eye.centery), button=1)
+    assert ti.handle_event(evt) is True
+    assert ti._show_text is True
+
+
+def test_handle_event_eye_toggle_does_not_consume_outside_input_for_narrow_field():
+    ti = TextInput(rect=pygame.Rect(0, 0, 40, 44), password_mode=True, assets=_make_assets())
+    eye = ti._eye_rect()
+    assert eye.left < ti.rect.left
+
+    evt = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(eye.left + 1, eye.centery), button=1)
+    assert ti.handle_event(evt) is False
+    assert ti._show_text is False
+
+
+def test_draw_password_narrow_field_uses_clamped_clip_width():
+    assets = _make_assets()
+    ti = TextInput(rect=pygame.Rect(0, 0, 40, 44), password_mode=True, assets=assets)
+    ti.append("abc")
+    screen = pygame.Surface((60, 60), pygame.SRCALPHA)
+
+    ti.draw(screen)
+
+    rendered = [c.args[0] for c in assets.font.return_value.render.call_args_list]
+    assert "•••" in rendered
 
 
 def test_handle_event_focus_inside_and_outside():

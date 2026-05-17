@@ -179,6 +179,7 @@ of 44 px. QWERTY layout.
 When the focused field is a password field:
 - Characters are replaced with `•` immediately after entry.
 - A show/hide toggle (eye icon) in the input field reveals/obscures the plaintext.
+- The eye toggle tap target is at least 44×44 px while the rendered icon remains 20 px.
 - The keyboard itself is identical to normal alpha mode.
 
 ---
