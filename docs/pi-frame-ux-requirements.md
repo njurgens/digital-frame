@@ -45,9 +45,9 @@ The default application state is a fullscreen photo slideshow. No UI chrome is v
 during normal playback.
 
 ### SH-02 — Tap to show overlay
-A single tap anywhere on the screen surfaces the transient control overlay
-(see Section 3). There is no gesture qualification — any tap triggers it. The display
-is a picture frame; accidental touches are not a concern.
+A single short tap anywhere on the screen surfaces the transient control overlay
+(see Section 3). Tap recognition is low-movement only; drag gestures do not trigger
+the overlay.
 
 ### SH-03 — Swipe navigation
 A horizontal swipe gesture (left or right) during slideshow advances to the next or

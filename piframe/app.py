@@ -29,6 +29,11 @@ from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe import types as app_types
 from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, WAKE_GRACE, init_events
 
+_SWIPE_MIN_DX = 60
+_SWIPE_MAX_DT = 0.4
+_SWIPE_MAX_SLOPE = 0.5
+_TAP_MAX_DIST = 20.0
+
 
 class MockWifiManager:
     def scan(self):
@@ -378,7 +383,6 @@ class App:
 
     def _classify_pointer_up(self, pos: tuple[int, int]) -> None:
         if self._swipe_start_pos is None or self._swipe_start_time is None:
-            self._dispatch_tap(pos)
             return
 
         dx = pos[0] - self._swipe_start_pos[0]
@@ -388,11 +392,16 @@ class App:
         self._swipe_start_pos = None
         self._swipe_start_time = None
 
-        if abs(dx) > 60 and abs(dy) < 40 and elapsed < 0.4:
+        abs_dx = abs(dx)
+        abs_dy = abs(dy)
+        if elapsed < _SWIPE_MAX_DT and abs_dx > _SWIPE_MIN_DX and abs_dy <= abs_dx * _SWIPE_MAX_SLOPE:
             if dx < 0:
                 self._player.skip()
             else:
                 self._player.go_back()
+            return
+
+        if (dx * dx + dy * dy) > (_TAP_MAX_DIST * _TAP_MAX_DIST):
             return
 
         self._dispatch_tap(pos)

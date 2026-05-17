@@ -135,3 +135,104 @@ def test_sleeping_tap_wakes_to_overlay(tmp_path):
     app._overlay.show.assert_called_once()
     app._backlight.set_brightness.assert_called_once_with(app._config.display.brightness)
     app._sleep.set_grace.assert_called_once()
+
+
+def test_pointer_up_diagonal_drag_does_not_dispatch_tap(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (100, 100)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.2)
+
+    app._classify_pointer_up((250, 180))
+
+    app._dispatch_tap.assert_not_called()
+    app._player.skip.assert_not_called()
+    app._player.go_back.assert_not_called()
+
+
+def test_pointer_up_allows_diagonal_horizontal_swipe(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (400, 300)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.2)
+
+    app._classify_pointer_up((180, 341))
+
+    app._player.skip.assert_called_once()
+    app._dispatch_tap.assert_not_called()
+
+
+def test_pointer_up_short_movement_dispatches_tap(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (100, 100)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.2)
+
+    app._classify_pointer_up((110, 112))
+
+    app._dispatch_tap.assert_called_once_with((110, 112))
+
+
+def test_pointer_up_without_start_tracking_is_noop(tmp_path):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = None
+    app._swipe_start_time = None
+    app._dispatch_tap = MagicMock()
+
+    app._classify_pointer_up((640, 400))
+
+    app._dispatch_tap.assert_not_called()
+
+
+def test_pointer_up_accepts_swipe_at_slope_boundary(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (100, 100)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.2)
+
+    app._classify_pointer_up((161, 130))  # dx=61, dy=30 => dy <= dx*0.5
+
+    app._player.go_back.assert_called_once()
+    app._dispatch_tap.assert_not_called()
+
+
+def test_pointer_up_rejects_swipe_just_over_slope_boundary(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (100, 100)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.2)
+
+    app._classify_pointer_up((161, 131))  # dx=61, dy=31 => dy > dx*0.5
+
+    app._player.go_back.assert_not_called()
+    app._dispatch_tap.assert_not_called()
+
+
+def test_pointer_up_tap_distance_boundary_dispatches_tap(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (100, 100)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.2)
+
+    app._classify_pointer_up((120, 100))  # distance == 20
+
+    app._dispatch_tap.assert_called_once_with((120, 100))
+
+
+def test_pointer_up_rejects_swipe_at_elapsed_boundary(tmp_path, monkeypatch):
+    app = make_app(tmp_path)
+    app._swipe_start_pos = (100, 100)
+    app._swipe_start_time = 10.0
+    app._dispatch_tap = MagicMock()
+    monkeypatch.setattr("piframe.app.time.monotonic", lambda: 10.4)
+
+    app._classify_pointer_up((180, 120))
+
+    app._player.go_back.assert_not_called()
+    app._dispatch_tap.assert_not_called()

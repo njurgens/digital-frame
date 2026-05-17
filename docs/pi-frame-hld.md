@@ -304,10 +304,9 @@ transition (type, surfaces, progress).
 - `update(delta_seconds)` — advances the interval timer and transition progress; returns when a transition completes.
 - `draw(surface)` — blits the current photo layer (or blended crossfade/slide pair) onto the given surface.
 - `draw_pip(surface)` — blits the paused pip if playback is paused.
-- `play()` / `pause()` / `toggle_pause()` — control playback state.
-- `skip_next()` / `skip_prev()` — immediately advance or retreat one photo, aborting any in-progress transition.
-- `is_paused` — read-only property.
-- `on_config_changed()` — re-reads interval, shuffle, fit mode, and transition type from `ConfigStore`.
+- `advance(direction=1)` — advances one photo in the given direction and starts transition work.
+- `skip()` / `go_back()` — immediately advance or retreat one photo, aborting any in-progress transition.
+- `is_paused` — read/write property used by `App` and `OverlayUI`.
 - `rescan()` — re-reads the photo directory (triggered after a sync).
 
 **Dependencies:** `PhotoCache`, `ConfigStore`.
@@ -546,23 +545,28 @@ multi-touch — only the first contact point is processed.
 **Routing order (strict top-to-bottom, stops at first consumer):**
 
 1. `ConfirmDialog` — if a dialog is active, it intercepts all events regardless of state.
-2. `Keyboard` — if `Keyboard.is_visible`, it intercepts all events regardless of section.
-3. `SettingsPanel` — if state is `SETTINGS` or `KEYBOARD`, all remaining events go here.
-4. `OverlayUI` — if state is `OVERLAY`, non-consumed events go here.
-5. `App` (gesture detection) — all remaining events are inspected for tap vs swipe.
+2. `App` keyboard-state gate — if state is `KEYBOARD`, a `MOUSEBUTTONDOWN` outside the
+   keyboard rect detaches keyboard and returns to `SETTINGS`.
+3. `Keyboard` — while state is `KEYBOARD`, keyboard-targeted events are routed to
+   `Keyboard.handle_event()`.
+4. `SettingsPanel` — if state is `SETTINGS`, all remaining events go here.
+5. `OverlayUI` — if state is `OVERLAY`, non-consumed events go here.
+6. `App` (gesture detection) — all remaining events are inspected for tap vs swipe.
 
-**Swipe vs tap detection** is performed in step 5 by tracking `MOUSEBUTTONDOWN`
+**Swipe vs tap detection** is performed in step 6 by tracking `MOUSEBUTTONDOWN`
 position and comparing to `MOUSEBUTTONUP` position:
-- If `|Δx| > 60 px` and `|Δy| < 40 px` within a 400 ms window → **swipe**
-  (left = `skip_next`, right = `skip_prev`).
-- Otherwise → **tap** (triggers overlay show or dismiss depending on current state).
+- If `|Δx| > 60 px` within a 400 ms window and vertical drift is shallow
+  (`|Δy| <= |Δx| * 0.5`) → **swipe** (left = `skip()`, right = `go_back()`).
+- Else if total pointer travel is short (`sqrt(Δx² + Δy²) <= 20 px`) → **tap**
+  (triggers overlay show or dismiss depending on current state).
+- Else → **drag/no-op** (suppresses tap dispatch so drags do not open/dismiss overlay).
 - `MOUSEMOTION` with button held is dispatched to `OverlayUI` (for slider drag) during
   `OVERLAY` state.
 
-**Keyboard intercept:** While `Keyboard.is_visible`, `Keyboard.handle_event()` returns
-`True` for every event (consuming unconditionally). Taps outside the keyboard's
-bounding rect are detected inside `Keyboard.handle_event()` and trigger `detach()`,
-transitioning the app from `KEYBOARD` to `SETTINGS`.
+**Keyboard intercept:** In `KEYBOARD` state, `App` first checks for
+`MOUSEBUTTONDOWN` outside the keyboard rect and calls `detach()`, transitioning to
+`SETTINGS`. Remaining keyboard-targeted events are then routed to
+`Keyboard.handle_event()`.
 
 ---
 
