@@ -79,8 +79,11 @@ class OverlayUI:
             self.hide()
 
     def _draw_overlay_button(self, screen: pygame.Surface, rect: pygame.Rect) -> None:
-        pygame.draw.rect(screen, COLOUR_OVERLAY_BTN_BG[:3], rect, border_radius=12)
-        pygame.draw.rect(screen, COLOUR_OVERLAY_BTN_BD[:3], rect, width=1, border_radius=12)
+        button = pygame.Surface(rect.size, pygame.SRCALPHA)
+        button_rect = button.get_rect()
+        pygame.draw.rect(button, COLOUR_OVERLAY_BTN_BG, button_rect, border_radius=12)
+        pygame.draw.rect(button, COLOUR_OVERLAY_BTN_BD, button_rect, width=1, border_radius=12)
+        screen.blit(button, rect.topleft)
 
     def _draw_icon_centered(self, screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]) -> None:
         surf, r = self._assets.icon(size).render(icon, (255, 255, 255))
@@ -117,7 +120,7 @@ class OverlayUI:
 
         for rect, icon, size in [
             (PREV_RECT, IC_SKIP_PREV, ICON_SIZE_NORMAL),
-            (PLAY_RECT, IC_PAUSE if self._paused else IC_PLAY, ICON_SIZE_OVERLAY),
+            (PLAY_RECT, IC_PLAY if self._paused else IC_PAUSE, ICON_SIZE_OVERLAY),
             (NEXT_RECT, IC_SKIP_NEXT, ICON_SIZE_NORMAL),
         ]:
             self._draw_overlay_button(screen, rect)
