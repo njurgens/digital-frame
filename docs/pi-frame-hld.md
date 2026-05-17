@@ -898,7 +898,7 @@ timezone region entry), `App` (KEYBOARD state)
 4. Typed characters appear in the focused text field.
 5. The `Done` key commits the input and dismisses the keyboard.
 6. Tapping outside the keyboard area dismisses the keyboard.
-7. The keyboard correctly handles a password-mode text field: characters are masked with `●` immediately after entry; a show/hide toggle in the input field reveals or obscures the plaintext.
+7. The keyboard correctly handles a password-mode text field: characters are masked with `•` immediately after entry; a show/hide toggle in the input field reveals or obscures the plaintext.
 8. The timezone region field accepts free-text input via the keyboard as an alternative
    to the scroll picker.
 
