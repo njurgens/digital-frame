@@ -8,7 +8,8 @@ from piframe.assets import IC_VISIBILITY, IC_VISIBILITY_OFF
 from piframe.types import COLOUR_BTN_PRIMARY, COLOUR_DIVIDER, COLOUR_TEXT_CAPTION, COLOUR_TEXT_PRIMARY
 from piframe.widgets.base import Widget
 
-_EYE_SIZE = 20  # icon size in px
+_EYE_ICON_SIZE = 20
+_EYE_HIT_SIZE = 44
 _EYE_PADDING = 8  # gap from right edge
 _MASK_CHAR = "•"
 
@@ -59,10 +60,10 @@ class TextInput(Widget):
         """Hit-target for the show/hide password toggle icon."""
         rect = self.rect
         return pygame.Rect(
-            rect.right - _EYE_SIZE - _EYE_PADDING,
-            rect.centery - _EYE_SIZE // 2,
-            _EYE_SIZE,
-            _EYE_SIZE,
+            rect.right - _EYE_HIT_SIZE - _EYE_PADDING,
+            rect.centery - _EYE_HIT_SIZE // 2,
+            _EYE_HIT_SIZE,
+            _EYE_HIT_SIZE,
         )
 
     def _masked(self) -> bool:
@@ -83,7 +84,8 @@ class TextInput(Widget):
         font = self._assets.font(18)
 
         # Reserve space for the eye icon when in password mode
-        text_right = rect.right - (_EYE_SIZE + _EYE_PADDING * 2) if self._password_mode else rect.right - 8
+        text_right = rect.right - (_EYE_HIT_SIZE + _EYE_PADDING * 2) if self._password_mode else rect.right - 8
+        text_right = max(rect.x + 8, text_right)
 
         if not self._text:
             surf, _ = font.render(self._placeholder, COLOUR_TEXT_CAPTION[:3])
@@ -92,7 +94,7 @@ class TextInput(Widget):
             display = self._display_text()
             surf, _ = font.render(display, COLOUR_TEXT_PRIMARY[:3])
             # Clip text to available width
-            clip = pygame.Rect(rect.x + 8, rect.y, text_right - rect.x - 8, rect.height)
+            clip = pygame.Rect(rect.x + 8, rect.y, max(1, text_right - rect.x - 8), rect.height)
             screen.set_clip(clip)
             screen.blit(surf, (rect.x + 8, rect.centery - surf.get_height() // 2))
             screen.set_clip(None)
@@ -107,7 +109,7 @@ class TextInput(Widget):
 
         if self._password_mode:
             icon = IC_VISIBILITY if self._show_text else IC_VISIBILITY_OFF
-            icon_surf, icon_rect = self._assets.icon(_EYE_SIZE).render(icon, (160, 160, 160))
+            icon_surf, icon_rect = self._assets.icon(_EYE_ICON_SIZE).render(icon, (160, 160, 160))
             eye = self._eye_rect()
             icon_rect.center = eye.center
             screen.blit(icon_surf, icon_rect)
@@ -118,7 +120,7 @@ class TextInput(Widget):
             if pos is None:
                 return False
             # Eye icon tap toggles password visibility
-            if self._password_mode and self._eye_rect().collidepoint(pos):
+            if self._password_mode and self.rect.collidepoint(pos) and self._eye_rect().collidepoint(pos):
                 self._show_text = not self._show_text
                 return True
             if self.rect.collidepoint(pos):

@@ -1975,11 +1975,13 @@ if on_change: on_change(_text)
 2. If empty: draw placeholder in `COLOUR_TEXT_CAPTION`.
 3. Else: draw text (`•` per char if `_password_mode` and visibility toggle is off).
 4. If focused: draw cursor at text end.
+5. In password mode, draw the eye icon at 20 px centered inside a 44×44 px hit target.
 
 #### `handle_event(event) -> bool`
 
-`MOUSEBUTTONDOWN` in `rect`: `_focused = True`; call `on_focus()`; return True.
-Click outside: `_focused = False`; return False.
+If `MOUSEBUTTONDOWN` lands inside both the `TextInput` rect and the password eye hit target (44×44 px), toggle show/hide and return `True`.
+Else if `MOUSEBUTTONDOWN` in `rect`: `_focused = True`; call `on_focus()`; return `True`.
+Click outside: `_focused = False`; return `False`.
 
 ---
 

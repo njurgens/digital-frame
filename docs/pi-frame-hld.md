@@ -528,7 +528,7 @@ will formalise this as a base class, but the interface is defined here at the HL
 | `SegmentedControl` | `SettingsPanel` — interval, fit mode, transition, timezone mode | Row of tappable segments; exactly one active at a time; active segment has filled background; emits `on_select(index, value)` |
 | `Toggle` | `SettingsPanel` — shuffle, show clock, sleep schedule enable | Pill-shaped track + sliding thumb; `on` / `off` state; animated transition; emits `on_toggle(state)` |
 | `IconButton` | `OverlayUI` — gear, playback controls; `SettingsPanel` — Sync now, action buttons | Fixed-size tap target; icon rendered at centre; press feedback (scale / highlight); emits `on_tap()` |
-| `TextInput` | `SettingsPanel` — Wi-Fi password, timezone region | Single-line text display; focus ring when active; password mode (bullet masking + eye-icon toggle); tapping focuses and triggers `Keyboard.attach()` |
+| `TextInput` | `SettingsPanel` — Wi-Fi password, timezone region | Single-line text display; focus ring when active; password mode (bullet masking + eye-icon toggle); eye toggle uses a 44×44 px minimum tap target with a 20 px rendered icon; tapping focuses and triggers `Keyboard.attach()` |
 | `Keyboard` | Anywhere a `TextInput` is focused | Three switchable layers; QWERTY layout; 44 px minimum key tap target; `Done` key commits and calls `Keyboard.detach()`; slides up/down with animation |
 | `WifiListItem` | `SettingsPanel` — Wi-Fi section | Displays SSID + signal-strength icon (3 levels); connected variant shows IP, "Connected" badge, "Forget" button; tapping an unconnected item triggers connect flow |
 | `ConfirmDialog` | `SettingsPanel` — Shutdown, Reboot, Forget network | Modal overlay; title + body text; "Cancel" and "Confirm" buttons; confirm callback is destructive-styled (red); rendered in Dialog layer (z=8) |
@@ -898,7 +898,7 @@ timezone region entry), `App` (KEYBOARD state)
 4. Typed characters appear in the focused text field.
 5. The `Done` key commits the input and dismisses the keyboard.
 6. Tapping outside the keyboard area dismisses the keyboard.
-7. The keyboard correctly handles a password-mode text field: characters are masked with `•` immediately after entry; a show/hide toggle in the input field reveals or obscures the plaintext.
+7. The keyboard correctly handles a password-mode text field: characters are masked with `•` immediately after entry; a show/hide toggle in the input field reveals or obscures the plaintext with a minimum 44×44 px tap target and a 20 px icon.
 8. The timezone region field accepts free-text input via the keyboard as an alternative
    to the scroll picker.
 
