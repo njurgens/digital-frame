@@ -386,10 +386,9 @@ class App:
 ```python
 def run(self) -> None:
     while True:
-        dt = self._clock.tick(FPS) / 1000.0
+        dt = ...
         self._process_pygame_events()
-        self._drain_custom_events()
-        self._config.tick(time.monotonic())
+        self._drain_harness_queue()
         if self._state == AppState.SLEEPING:
             time.sleep(0.25)
             continue
@@ -400,8 +399,8 @@ def run(self) -> None:
 
 #### `_process_pygame_events()`
 
-- `QUIT` → `self._shutdown()`
-- `KEYDOWN K_ESCAPE` → `self._shutdown()`
+- `QUIT` → `self._quit()`
+- `KEYDOWN K_ESCAPE` → `self._quit()`
 - `MOUSEBUTTONDOWN`: record `_swipe_start_pos` + `_swipe_start_time`; if state==SLEEPING → tap-to-wake
 - `MOUSEBUTTONUP`: call `_classify_pointer_up(event.pos)`
 - `MOUSEMOTION` with `event.buttons[0]`: if state==OVERLAY → `_overlay.on_drag(event.pos)`
@@ -409,16 +408,19 @@ def run(self) -> None:
 #### `_classify_pointer_up(pos)`
 
 ```python
-if _swipe_start_pos is None: return
+if _swipe_start_pos is None or _swipe_start_time is None: return
 dx = pos[0] - _swipe_start_pos[0]
 dy = pos[1] - _swipe_start_pos[1]
 elapsed = time.monotonic() - _swipe_start_time
 _swipe_start_pos = None
-if abs(dx) > 60 and abs(dy) < 40 and elapsed < 0.4:
-    if dx < 0: _player.skip_next()
-    else:      _player.skip_prev()
+_swipe_start_time = None
+if elapsed < 0.4 and abs(dx) > 60 and abs(dy) <= abs(dx) * 0.5:
+    if dx < 0: _player.skip()
+    else:      _player.go_back()
     return
-# Tap dispatch
+if dx * dx + dy * dy > 20 * 20:
+    return  # drag/no-op
+# Tap dispatch (short movement)
 _dispatch_tap(pos)
 ```
 
@@ -430,22 +432,11 @@ _dispatch_tap(pos)
 | OVERLAY | gear button | → SETTINGS; `_settings.open()` |
 | OVERLAY | controls | delegate to `_overlay.on_tap(pos)` |
 | OVERLAY | outside controls | → SLIDESHOW; `_overlay.hide()` |
-| SETTINGS | "Back to frame" | → SLIDESHOW |
-| SETTINGS | TextInput | `field.on_tap(pos)` → `_state = KEYBOARD` |
-| KEYBOARD | outside keyboard rect | → SETTINGS; `_keyboard.hide()` |
-| SLEEPING | anywhere | tap-to-wake: restore brightness, `_state = OVERLAY`, start 5 s dismiss timer |
+| SETTINGS | any tap | no-op in `_dispatch_tap` (handled elsewhere in event routing) |
+| KEYBOARD | any tap | no-op in `_dispatch_tap` (keyboard branch handles input) |
 
-#### `_drain_custom_events()`
-
-Checks `pygame.event.get()` for custom event types:
-
-| Event | Action |
-|-------|--------|
-| EVT_SYNC_COMPLETE | `_player.rescan()`; `_settings.refresh_sync_status()` |
-| EVT_SLEEP | `_enter_sleep()` |
-| EVT_WAKE | `_exit_sleep()` |
-| EVT_UPDATE_RESULT | `_settings.on_update_result(evt.result)` |
-| EVT_WIFI_RESULT | `_settings.on_wifi_result(evt.result)` |
+Custom events (`EVT_SYNC_COMPLETE`, `EVT_SLEEP`, `EVT_WAKE`, `EVT_UPDATE_RESULT`,
+`EVT_WIFI_RESULT`) are consumed inside `_process_pygame_events()`.
 
 #### `_enter_sleep()` / `_exit_sleep()`
 
@@ -496,6 +487,7 @@ def restart(self) -> None:
 
 def _shutdown(self) -> None:
     self._cleanup()
+    subprocess.run(["sudo", "shutdown", "-h", "now"], check=False)
     pygame.quit()
     sys.exit(0)
 
@@ -650,33 +642,32 @@ Manages the active playlist, transitions, and draws to the screen surface.
 |--------|------|-------------|
 | `_playlist` | `list[Path]` | Shuffled or sorted photo list |
 | `_index` | `int` | Current position in `_playlist` |
-| `_current_surface` | `pygame.Surface \| None` | Displayed frame |
-| `_trans_incoming` | `pygame.Surface \| None` | Copy used during transition |
-| `_trans_progress` | `float` | 0.0 → 1.0 |
+| `_current_surf` | `pygame.Surface \| None` | Displayed frame |
+| `_next_surf` | `pygame.Surface \| None` | Next frame during transition |
+| `_trans_t` | `float` | 0.0 → 1.0 transition progress |
 | `_trans_start` | `float` | `time.monotonic()` at start of transition |
-| `_trans_mode` | `str` | `"crossfade"` \| `"cut"` \| `"slide"` |
 | `_direction` | `int` | +1 forward, −1 backward |
 | `_in_transition` | `bool` | — |
 | `_paused` | `bool` | — |
-| `_slide_elapsed` | `float` | Seconds since last advance |
-| `_interval` | `float` | From config |
-| `_photo_dir` | `Path` | Watched directory |
+| `_elapsed` | `float` | Seconds since last advance |
 | `_cache` | `PhotoCache` | — |
 
-#### `__init__(photo_dir, cache, config)`
+#### `__init__(config, cache, screen_size, assets)`
 
-1. `rescan()` to populate `_playlist`.
-2. `_preload_current()`.
+Initializes screen geometry and transition state, then calls `rescan()` to populate
+the playlist and first frame.
 
 #### `rescan()`
 
 ```python
-files = sorted(_photo_dir.glob("*.jpg")) + sorted(_photo_dir.glob("*.jpeg"))
-files += sorted(_photo_dir.glob("*.png"))
-if config.slideshow.shuffle:
-    _fisher_yates(files)
+output_dir = Path(_config.sync.output_dir)
+files = sorted([p for p in output_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".gif"}])
 _playlist = files
+if _config.slideshow.shuffle:
+    _playlist = _fisher_yates(_playlist)
 _index = 0
+if _playlist:
+    _current_surf = _cache.get(_playlist[0], _config.slideshow.fit_mode, _w, _h)
 ```
 
 #### `_fisher_yates(lst)`
@@ -693,70 +684,74 @@ for i in range(len(lst) - 1, 0, -1):
 if _paused or not _playlist: return
 
 if _in_transition:
-    progress = (time.monotonic() - _trans_start) / TRANS_DURATION
-    _trans_progress = min(1.0, progress)
-    if _trans_progress >= 1.0:
+    _trans_t = min(1.0, (time.monotonic() - _trans_start) / TRANS_DURATION)
+    if _trans_t >= 1.0:
         _commit_transition()
     return
 
-_slide_elapsed += dt
-if _slide_elapsed >= _interval:
-    _slide_elapsed = 0.0
+_elapsed += dt
+if _elapsed >= _config.slideshow.interval:
     advance()
 ```
 
-#### `advance()` and `go_back()`
+#### `advance(direction=1)`, `go_back()`, `skip()`
 
 ```python
-def advance(self) -> None:
-    _direction = +1
-    _start_transition((_index + 1) % len(_playlist))
+def advance(self, direction: int = 1) -> None:
+    if not _playlist: return
+    _direction = direction
+    next_idx = (_index + direction) % len(_playlist)
+    _next_surf = _cache.get(_playlist[next_idx], _config.slideshow.fit_mode, _w, _h)
+    _index = next_idx
+    _start_transition()
 
 def go_back(self) -> None:
-    _direction = -1
-    _start_transition((_index - 1) % len(_playlist))
+    advance(direction=-1)
+
+def skip(self) -> None:
+    advance(direction=1)
 ```
 
-#### `_start_transition(next_index)`
+#### `_start_transition()`
 
 ```python
+_trans_start = time.monotonic()
 _in_transition = True
-_trans_start   = time.monotonic()
-_trans_progress = 0.0
-next_surf = _cache.get(_playlist[next_index])
-if _trans_mode == "cut":
-    _current_surface = next_surf
-    _index = next_index
-    _in_transition = False
-    return
-_trans_incoming = next_surf.copy()
-_pending_index  = next_index
+_trans_t = 0.0
 ```
 
 #### `_commit_transition()`
 
 ```python
-_current_surface = _trans_incoming
-_trans_incoming.set_alpha(255)   # restore after alpha-blend use
-_index = _pending_index
-_trans_incoming = None
-_in_transition  = False
+_trans_t = 1.0
+_current_surf = _next_surf
+_next_surf = None
+_in_transition = False
+_elapsed = 0.0
 ```
 
 #### `draw(screen: pygame.Surface)`
 
 ```python
-if not _current_surface: return
-screen.blit(_current_surface, (0, 0))
-if _in_transition and _trans_incoming:
-    if _trans_mode == "crossfade":
-        _trans_incoming.set_alpha(int(255 * _trans_progress))
-        screen.blit(_trans_incoming, (0, 0))
-    elif _trans_mode == "slide":
-        cur_x  = int(-_direction * _trans_progress * SCREEN_W)
-        next_x = int( _direction * (1.0 - _trans_progress) * SCREEN_W)
-        screen.blit(_current_surface, (cur_x,  0))
-        screen.blit(_trans_incoming,  (next_x, 0))
+if _current_surf is None:
+    screen.fill((0, 0, 0))
+    return
+if _in_transition and _next_surf is not None:
+    trans = _config.slideshow.transition
+    if trans == "crossfade":
+        screen.blit(_current_surf, (0, 0))
+        alpha_surf = _next_surf.copy()
+        alpha_surf.set_alpha(int(_trans_t * 255))
+        screen.blit(alpha_surf, (0, 0))
+    elif trans == "slide":
+        cur_x = int(-_direction * _trans_t * _w)
+        next_x = int(_direction * (1.0 - _trans_t) * _w)
+        screen.blit(_current_surf, (cur_x, 0))
+        screen.blit(_next_surf, (next_x, 0))
+    else:
+        screen.blit(_next_surf if _trans_t >= 0.5 else _current_surf, (0, 0))
+else:
+    screen.blit(_current_surf, (0, 0))
 ```
 
 #### `draw_pip(screen)`
@@ -771,14 +766,19 @@ assets.icon(IC_PAUSE, 14).blit(pip_surf, (6, 6))
 screen.blit(pip_surf, (12, 762))
 ```
 
-#### `skip_next()` / `skip_prev()`
+#### `skip()` / `go_back()`
 
-Calls `advance()` / `go_back()` and resets `_slide_elapsed = 0`.
+`skip()` calls `advance(direction=1)`. `go_back()` calls `advance(direction=-1)`.
+`_elapsed` is reset to `0.0` in `_commit_transition()`.
 
-#### `toggle_pause()`
+#### `is_paused` property
 
 ```python
-_paused = not _paused
+@property
+def is_paused(self) -> bool: ...
+
+@is_paused.setter
+def is_paused(self, value: bool) -> None: ...
 ```
 
 ---
