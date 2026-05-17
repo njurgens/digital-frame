@@ -289,7 +289,7 @@ COLOUR_CLOCK_TEXT         = (255, 255, 255, 220)
 COLOUR_OVERLAY_SCRIM      = (  0,   0,   0,  90)
 ```
 
-### 2.6 Font & icon constants (`piframe/assets.py`)
+### 2.6 Font & icon constants (`piframe/assets.py`, `piframe/keyboard.py`)
 
 ```python
 FONT_SIZE_CLOCK       = 48
@@ -324,6 +324,11 @@ IC_BRIGHTNESS   = "\ue896"
 IC_SCHEDULE     = "\ue8b5"
 IC_PERSON       = "\ue7ef"
 IC_DELETE       = "\ue872"
+
+# Keyboard-specific Material Icons codepoints (piframe/keyboard.py)
+IC_SHIFT        = "\ue5d8"
+IC_SHIFT_LOCK   = "\ue318"
+IC_BACKSPACE    = "\ue14a"
 ```
 
 ---
@@ -2008,9 +2013,12 @@ Font sizes used (pt):
 | `IC_PAUSE` | `\ue034` | pause | Overlay pause button |
 | `IC_SKIP_PREV` | `\ue044` | skip_previous | Overlay previous |
 | `IC_SKIP_NEXT` | `\ue043` | skip_next | Overlay next |
-| `IC_ARROW_BACK` | `\ue5d5` | arrow_back | Settings back; keyboard backspace |
+| `IC_ARROW_BACK` | `\ue5d5` | arrow_back | Settings back |
 | `IC_ARROW_FWD` | `\ue5dc` | arrow_forward | — |
 | `IC_INFO` | `\ue87d` | info | Info overlay (deferred) |
+| `IC_BACKSPACE` | `\ue14a` | backspace | Keyboard backspace key |
+| `IC_SHIFT` | `\ue5d8` | arrow_upward | Keyboard shift key |
+| `IC_SHIFT_LOCK` | `\ue318` | keyboard_capslock | Keyboard shift-locked key |
 | `IC_WIFI` | `\ue8f4` | wifi | Wi-Fi connected |
 | `IC_WIFI_OFF` | `\ue8f5` | wifi_off | Wi-Fi disconnected |
 | `IC_SYNC` | `\ue1d8` | sync | Sync status row |

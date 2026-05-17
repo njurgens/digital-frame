@@ -396,14 +396,14 @@ input while active, and emits character and action events.
 
 **Public interface:**
 - `attach(text_input)` — binds the keyboard to the given `TextInput` widget; resets to alpha layer.
-- `detach()` — unbinds; keyboard slides back down.
-- `draw(surface)` — renders the keyboard onto the surface (including slide animation).
-- `handle_event(event) -> bool` — intercepts all touch events while attached; returns `True` always (keyboard consumes all events while active).
+- `detach()` — unbinds and hides the keyboard.
+- `draw(surface)` — renders the keyboard onto the surface while visible.
+- `handle_event(event) -> bool` — handles keyboard touch events while attached; returns `True` when the event is consumed by a key interaction.
 - `is_visible` — read-only property.
 
 **Dependencies:** None (self-contained widget).
 
-**Owned state:** Active layer (alpha / numeric / extended); current attached `TextInput`; slide animation progress float; key layout tables for all three layers.
+**Owned state:** Active layer (alpha / numeric / extended); current attached `TextInput`; key layout tables for all three layers; active pressed key.
 
 ---
 
