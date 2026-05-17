@@ -1,3 +1,51 @@
+# Pi Frame — Agent Instructions
+
+## Code Review Gauntlet
+
+**All code changes must pass a five-round sequential review before merge.** Each round is handled by a dedicated sub-agent in `.claude/agents/`. The top-level agent resolves all critical, high, and medium findings between rounds and re-runs the reviewer until it signs off.
+
+### Round order (must not be skipped or reordered)
+
+| # | Agent | Focus |
+|---|-------|-------|
+| 1 | `review-architecture` | Adherence to UX requirements spec, HLD, and LLD — run first because it has the largest leverage on system correctness |
+| 2 | `review-correctness` | Implementation correctness — logic errors, edge cases, concurrency, resource leaks |
+| 3 | `review-security` | Credentials, TLS, subprocess injection, path traversal, secure defaults |
+| 4 | `review-docs` | Accuracy and completeness of design docs, READMEs, comments, config examples |
+| 5 | `review-testing` | Requirement-to-test mapping, test quality, coverage gaps |
+
+### How to run the gauntlet
+
+For each round in order:
+
+1. Spawn the reviewer sub-agent with the diff or changed file list as context.
+2. Read the report. Fix every **Critical** and **High** finding. Fix **Medium** findings unless there is a documented reason not to.
+3. Re-run the same reviewer. Repeat until it signs off with `APPROVED` (no Critical/High/Medium findings) or `APPROVED WITH NOTES` (only Low findings remain).
+4. Proceed to the next round.
+
+A round is complete only when the reviewer signs off. Do not advance to the next round while the current reviewer is still `BLOCKED`.
+
+### Gauntlet invocation example
+
+```
+# Round 1 — architecture (always first)
+Agent(subagent_type="review-architecture", prompt="Review the changes on branch X against docs/pi-frame-ux-requirements.md, docs/pi-frame-hld.md, and docs/pi-frame-lld.md. Changed files: [list]. Produce the structured report.")
+
+# Round 2 — correctness (after architecture signs off)
+Agent(subagent_type="review-correctness", prompt="Review the changes on branch X for implementation correctness. Changed files: [list]. Produce the structured Correctness Review report.")
+
+# Round 3 — security (after correctness signs off)
+Agent(subagent_type="review-security", prompt="Review the changes on branch X for security issues. Changed files: [list]. Produce the structured Security Review report.")
+
+# Round 4 — docs (after security signs off)
+Agent(subagent_type="review-docs", prompt="Review the changes on branch X for documentation accuracy and completeness. Changed files: [list]. Produce the structured Documentation Review report.")
+
+# Round 5 — testing (after docs signs off)
+Agent(subagent_type="review-testing", prompt="Review the changes on branch X for test coverage and requirement mapping. Changed files: [list]. Produce the structured Testing Review report.")
+```
+
+---
+
 # Copilot Instructions
 
 ## Target Environment
@@ -28,11 +76,11 @@
 ## Deployment
 
 ```bash
-# Deploy from repo root (dev machine → Pi via bash/scp/ssh — no rsync on Windows):
-bash install.sh
+# Deploy from repo root:
+bash eng/install.sh
 ```
 
-`install.sh` does everything: scp files, apt packages, sudoers, systemd units, and patches `/etc/xdg/labwc/autostart`. It is idempotent — safe to re-run.
+`eng/install.sh` does everything: rsyncs the repo to the Pi, installs apt packages, writes sudoers rules, disables retired systemd units, and patches `/etc/xdg/labwc/autostart`. It is idempotent — safe to re-run.
 
 After deploy, reboot for autostart changes to take effect:
 ```bash
@@ -61,10 +109,10 @@ slideshow.py writes its PID to `/tmp/slideshow.pid` on startup.
 ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid)'
 
 # Restart manually (for testing without a reboot)
-ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 /home/frame/framesync/slideshow.py > /tmp/slideshow.log 2>&1 &'
+ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 /home/frame/digital-frame/slideshow.py > /tmp/slideshow.log 2>&1 &'
 
 # Kill + restart in one line
-ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid); sleep 1; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 /home/frame/framesync/slideshow.py > /tmp/slideshow.log 2>&1 &'
+ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid); sleep 1; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 /home/frame/digital-frame/slideshow.py > /tmp/slideshow.log 2>&1 &'
 ```
 
 **Do NOT use `pkill -f slideshow.py` or `pgrep -f slideshow.py`** — the `-f` flag matches against the full command line, which includes the SSH command string itself, causing the SSH session to kill itself and hang.
