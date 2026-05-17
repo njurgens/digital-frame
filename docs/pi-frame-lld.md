@@ -1953,7 +1953,7 @@ Single-line text field. The `Keyboard` attaches to it.
 | `_focused` | `bool` | — |
 | `on_focus` | `Callable[[], None] \| None` | Called when tapped |
 | `on_change` | `Callable[[str], None] \| None` | Called on each edit |
-| `_password_mode` | `bool` | Renders `*` per character |
+| `_password_mode` | `bool` | Renders `•` per character when masked |
 
 #### `append(ch: str)`
 
@@ -1973,7 +1973,7 @@ if on_change: on_change(_text)
 
 1. Draw border rect (1 px `COLOUR_DIVIDER`; `COLOUR_BTN_PRIMARY` if focused).
 2. If empty: draw placeholder in `COLOUR_TEXT_CAPTION`.
-3. Else: draw text (`*` per char if `_password_mode`).
+3. Else: draw text (`•` per char if `_password_mode` and visibility toggle is off).
 4. If focused: draw cursor at text end.
 
 #### `handle_event(event) -> bool`

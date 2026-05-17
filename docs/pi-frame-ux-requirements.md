@@ -177,7 +177,7 @@ of 44 px. QWERTY layout.
 
 ### KB-05 — Password mode
 When the focused field is a password field:
-- Characters are replaced with `●` immediately after entry.
+- Characters are replaced with `•` immediately after entry.
 - A show/hide toggle (eye icon) in the input field reveals/obscures the plaintext.
 - The keyboard itself is identical to normal alpha mode.
 

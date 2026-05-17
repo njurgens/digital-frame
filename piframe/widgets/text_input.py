@@ -10,6 +10,7 @@ from piframe.widgets.base import Widget
 
 _EYE_SIZE = 20  # icon size in px
 _EYE_PADDING = 8  # gap from right edge
+_MASK_CHAR = "•"
 
 
 class TextInput(Widget):
@@ -68,6 +69,9 @@ class TextInput(Widget):
         """True when text should be rendered as bullet characters."""
         return self._password_mode and not self._show_text
 
+    def _display_text(self) -> str:
+        return _MASK_CHAR * len(self._text) if self._masked() else self._text
+
     def draw(self, screen: pygame.Surface) -> None:
         rect = self.rect
         border_colour = COLOUR_BTN_PRIMARY[:3] if self._focused else COLOUR_DIVIDER[:3]
@@ -85,7 +89,7 @@ class TextInput(Widget):
             surf, _ = font.render(self._placeholder, COLOUR_TEXT_CAPTION[:3])
             screen.blit(surf, (rect.x + 8, rect.centery - surf.get_height() // 2))
         else:
-            display = "●" * len(self._text) if self._masked() else self._text
+            display = self._display_text()
             surf, _ = font.render(display, COLOUR_TEXT_PRIMARY[:3])
             # Clip text to available width
             clip = pygame.Rect(rect.x + 8, rect.y, text_right - rect.x - 8, rect.height)
@@ -94,7 +98,7 @@ class TextInput(Widget):
             screen.set_clip(None)
 
         if self._focused:
-            display_text = "●" * len(self._text) if self._masked() else self._text
+            display_text = self._display_text()
             cursor_surf, _ = font.render(display_text, COLOUR_TEXT_PRIMARY[:3])
             cx = min(rect.x + 8 + cursor_surf.get_width() + 2, text_right)
             cy1 = rect.y + 6
