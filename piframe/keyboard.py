@@ -36,6 +36,9 @@ LAYERS = {"alpha": ALPHA, "numeric": NUMERIC, "extended": EXTENDED}
 KB_Y = 450
 KB_H = 350
 ROW_H = 75
+IC_SHIFT = "\ue5d8"
+IC_SHIFT_LOCK = "\ue318"
+IC_BACKSPACE = "\ue14a"
 
 
 class Keyboard:
@@ -104,6 +107,7 @@ class Keyboard:
         pygame.draw.rect(screen, COLOUR_SIDEBAR_BG[:3], pygame.Rect(0, KB_Y, SCREEN_W, KB_H))
         layer_keys = LAYERS[self._layer]
         font = self._assets.font(16)
+        icon_font = self._assets.icon(24)
 
         for r, (row, row_rects) in enumerate(zip(layer_keys, self._key_rects)):
             for c, (key, rect) in enumerate(zip(row, row_rects)):
@@ -117,10 +121,11 @@ class Keyboard:
                     bg = COLOUR_KEY_BG[:3]
                 pygame.draw.rect(screen, bg, rect, border_radius=8)
 
+                icon = None
                 if key == "SHIFT":
-                    label = "⇧" if not self._shift else "⇪"
+                    icon = IC_SHIFT_LOCK if self._shift else IC_SHIFT
                 elif key == "BACKSPACE":
-                    label = "⌫"
+                    icon = IC_BACKSPACE
                 elif key == "SPACE":
                     label = " "
                 elif key == "DONE":
@@ -128,7 +133,10 @@ class Keyboard:
                 else:
                     label = key.upper() if self._shift else key.lower()
 
-                surf, _ = font.render(label, COLOUR_TEXT_PRIMARY[:3])
+                if icon is not None:
+                    surf, _ = icon_font.render(icon, COLOUR_TEXT_PRIMARY[:3])
+                else:
+                    surf, _ = font.render(label, COLOUR_TEXT_PRIMARY[:3])
                 screen.blit(surf, (rect.centerx - surf.get_width() // 2, rect.centery - surf.get_height() // 2))
 
     def handle_event(self, event: pygame.event.Event) -> bool:
