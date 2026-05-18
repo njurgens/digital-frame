@@ -8,7 +8,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 
 from piframe.types import SCREEN_H, SCREEN_W
 
-_CACHE_VERSION = 2
+_CACHE_VERSION = 3
 MAX_CACHE = 6
 BLUR_RADIUS = 40
 
