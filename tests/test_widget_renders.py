@@ -8,6 +8,7 @@ import pygame
 import pytest
 
 from piframe.widgets.confirm_dialog import ConfirmDialog
+from piframe.widgets.horizontal_slider import HorizontalSlider
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.toggle import Toggle
 from piframe.widgets.vertical_slider import VerticalSlider
@@ -73,6 +74,26 @@ def test_vertical_slider_at_0_thumb_near_bottom():
     top_mean = pixel_mean(surf, pygame.Rect(0, 0, 40, 40))
     bottom_mean = pixel_mean(surf, pygame.Rect(0, 160, 40, 40))
     assert bottom_mean.mean() > top_mean.mean()
+
+
+def test_horizontal_slider_at_100_thumb_near_right():
+    surf = pygame.Surface((200, 40))
+    surf.fill((0, 0, 0))
+    slider = HorizontalSlider(rect=pygame.Rect(0, 0, 200, 40), initial_value=100)
+    slider.draw(surf)
+    left_mean = pixel_mean(surf, pygame.Rect(0, 0, 40, 40))
+    right_mean = pixel_mean(surf, pygame.Rect(160, 0, 40, 40))
+    assert right_mean.mean() > left_mean.mean()
+
+
+def test_horizontal_slider_at_0_thumb_near_left():
+    surf = pygame.Surface((200, 40))
+    surf.fill((0, 0, 0))
+    slider = HorizontalSlider(rect=pygame.Rect(0, 0, 200, 40), initial_value=0)
+    slider.draw(surf)
+    left_mean = pixel_mean(surf, pygame.Rect(0, 0, 40, 40))
+    right_mean = pixel_mean(surf, pygame.Rect(160, 0, 40, 40))
+    assert left_mean.mean() > right_mean.mean()
 
 
 def test_segmented_control_active_segment_filled():

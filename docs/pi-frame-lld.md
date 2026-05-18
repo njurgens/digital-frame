@@ -101,7 +101,8 @@ digital-frame/
 │   │   ├── __init__.py     # Re-exports all widget classes
 │   │   ├── base.py         # Widget ABC
 │   │   ├── toggle.py       # Toggle (animated 50×28px)
-│   │   ├── vertical_slider.py  # VerticalSlider (brightness, 4px track)
+│   │   ├── vertical_slider.py  # VerticalSlider (overlay brightness, 4px track)
+│   │   ├── horizontal_slider.py   # HorizontalSlider (display brightness, 4px track)
 │   │   ├── segmented_control.py# SegmentedControl (2–4 segments)
 │   │   ├── scroll_picker.py    # ScrollPicker (7-row windowed list)
 │   │   ├── time_picker.py      # TimePicker (HH MM pills + popup)
@@ -952,7 +953,7 @@ Section title: 24pt NotoSans-Bold at y_rel=18. Divider: 1 px `COLOUR_DIVIDER`.
 
 | Row label | Control | Config key |
 |-----------|---------|-----------|
-| Brightness | Horizontal `VerticalSlider` | `display.brightness` |
+| Brightness | `HorizontalSlider` | `display.brightness` |
 | Show clock | `Toggle` | `display.show_clock` |
 | Sleep schedule | `Toggle` | `sleep.enabled` |
 | Sleep time | `TimePicker` (conditional) | `sleep.sleep_time` |
@@ -1707,6 +1708,48 @@ def _y_to_value(self, y: int) -> int:
 #### `handle_event(event) -> bool`
 
 - `MOUSEBUTTONDOWN` in `rect.inflate(20, 0)`: start drag, update value.
+- `MOUSEMOTION` while dragging: update value, call `on_change(value)`.
+- `MOUSEBUTTONUP`: end drag.
+
+---
+
+### 4.2.1 `HorizontalSlider` (`piframe/widgets/horizontal_slider.py`)
+
+Same interaction model as `VerticalSlider`, but oriented left-to-right for the
+Display brightness control.
+
+#### Pixel spec
+
+| Property | Value |
+|----------|-------|
+| Track height | 4 px (centered in widget rect) |
+| Track colour | `COLOUR_SLIDER_TRACK` |
+| Fill colour | `COLOUR_SLIDER_FILL` |
+| Thumb diameter | 22 px |
+| Thumb colour | `COLOUR_SLIDER_THUMB` |
+| Value range | 0–100 |
+
+#### Value ↔ x conversion
+
+```python
+def _value_to_x(self, value: int) -> int:
+    return self.rect.left + 11 + int((value / 100) * (self.rect.width - 22))
+
+def _x_to_value(self, x: int) -> int:
+    raw = (x - self.rect.left - 11) / (self.rect.width - 22)
+    return round(max(0.0, min(1.0, raw)) * 100)
+```
+
+#### `draw(screen)`
+
+1. Track rect: `pygame.Rect(rect.left, rect.centery - 2, rect.width, 4)`.
+2. Draw full track with `COLOUR_SLIDER_TRACK`.
+3. Draw fill from `rect.left` to `_value_to_x(value)` with `COLOUR_SLIDER_FILL`.
+4. Draw thumb circle at `(_value_to_x(value), rect.centery)`.
+
+#### `handle_event(event) -> bool`
+
+- `MOUSEBUTTONDOWN` in `rect.inflate(0, 20)`: start drag, update value.
 - `MOUSEMOTION` while dragging: update value, call `on_change(value)`.
 - `MOUSEBUTTONUP`: end drag.
 
