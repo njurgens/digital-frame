@@ -517,7 +517,7 @@ surfaces to disk as PNG for fast reload.
 
 ```python
 MAX_CACHE      = 6
-_CACHE_VERSION = 2   # bump when rendering pipeline changes
+_CACHE_VERSION = 3   # bump when rendering pipeline changes
 BLUR_RADIUS    = 40
 ```
 
@@ -1128,19 +1128,22 @@ match key:
 
 #### Purpose
 Renders a clock at top-left with time (48pt) and date (18pt). Uses a daemon
-thread to wake exactly at each minute boundary; main-thread render cost is zero
-between ticks.
+thread to wake at minute-level granularity; text re-rasterization is skipped
+between ticks, while `draw()` still performs per-frame bubble and text blits.
+To keep text readable over bright photos, draw includes a translucent rounded
+backing bubble behind both lines.
 
 #### Data members
 
 | Member | Type | Description |
 |--------|------|-------------|
-| `_time_surf` | `pygame.Surface \| None` | Pre-rendered time string |
-| `_date_surf` | `pygame.Surface \| None` | Pre-rendered date string |
-| `_dirty` | `bool` | Set by ticker thread; cleared after draw |
-| `_lock` | `threading.Lock` | Protects surfaces and dirty flag |
+| `_surfaces` | `tuple[pygame.Surface, pygame.Surface] \| None` | Pre-rendered `(time_surf, date_surf)` tuple |
+| `_pending_now` | `datetime.datetime \| None` | Next wall-clock value queued by ticker/tick |
+| `_dirty` | `bool` | Set by ticker/tick/timezone updates; cleared in `update()` after re-render |
+| `_visible` | `bool` | Draw gate controlled by `set_visible()` |
+| `_lock` | `threading.Lock` | Protects `_surfaces`, `_pending_now`, `_dirty`, `_visible`, `_timezone` |
 | `_stop_event` | `threading.Event` | Signals thread shutdown |
-| `_timezone` | `datetime.timezone` | From config |
+| `_timezone` | `datetime.tzinfo` | Active timezone for formatting |
 
 #### Ticker thread algorithm
 
@@ -1148,8 +1151,9 @@ between ticks.
 def _ticker(self):
     while not _stop_event.is_set():
         now = datetime.datetime.now(_timezone)
-        _render_surfaces(now)
-        with _lock: _dirty = True
+        with _lock:
+            _pending_now = now
+            _dirty = True
         seconds_until = 60 - now.second
         _stop_event.wait(timeout=seconds_until)
 ```
@@ -1157,31 +1161,53 @@ def _ticker(self):
 #### `_render_surfaces(now)`
 
 ```python
+time_str = now.strftime("%-H:%M")      # e.g. "9:05"
+date_str = now.strftime("%A, %B %-d")  # e.g. "Monday, January 6"
+time_surf, _ = assets.font_bold(FONT_SIZE_CLOCK).render(time_str, COLOUR_CLOCK_TEXT)
+date_surf, _ = assets.font(FONT_SIZE_BODY).render(date_str, COLOUR_TEXT_SECONDARY)
 with _lock:
-    time_str = now.strftime("%-I:%M %p")   # e.g. "3:04 PM"
-    date_str = now.strftime("%A, %B %-d")  # e.g. "Monday, January 6"
-    _time_surf = assets.font_bold(FONT_SIZE_CLOCK).render(time_str, COLOUR_CLOCK_TEXT)
-    _date_surf = assets.font(FONT_SIZE_BODY).render(date_str, COLOUR_TEXT_SECONDARY)
+    _surfaces = (time_surf, date_surf)
 ```
+
+#### `_default_timezone()`
+
+Resolves the startup timezone in this order:
+1. Derive an IANA zone name from `/etc/localtime` (symlink under `/usr/share/zoneinfo`).
+2. Fall back to `/etc/timezone` text content.
+3. Fall back to `UTC`.
+
+This avoids fixed-offset timezone objects that can drift across DST boundaries.
 
 #### `draw(screen)`
 
 ```python
 with _lock:
-    if not _time_surf: return
-    # Drop shadow: offset (+2, +2) in black at alpha 120
-    shadow = pygame.Surface(_time_surf.get_size(), pygame.SRCALPHA)
-    shadow.blit(_time_surf, (0,0))
-    shadow.set_alpha(120)
-    screen.blit(shadow, (16, 16))
-    screen.blit(_time_surf, (14, 14))
-    screen.blit(_date_surf, (14, 14 + _time_surf.get_height() + 4))
-    _dirty = False
+    if not _visible or not _surfaces:
+        return
+    time_surf, date_surf = _surfaces
+bubble_w = max(time_surf.get_width(), date_surf.get_width()) + 16
+bubble_h = time_surf.get_height() + date_surf.get_height() + 20
+bubble = pygame.Surface((bubble_w, bubble_h), pygame.SRCALPHA)
+pygame.draw.rect(bubble, (0, 0, 0, 120), bubble.get_rect(), border_radius=12)
+screen.blit(bubble, (6, 6))
+screen.blit(time_surf, (14, 14))
+screen.blit(date_surf, (14, 14 + time_surf.get_height() + 4))
 ```
 
-#### `update_timezone(tz: datetime.timezone)`
+#### `update_timezone(tz: str | datetime.tzinfo)`
 
-Sets `_timezone`. The ticker picks it up on its next wake.
+Sets `_timezone`, re-renders immediately, and marks `_dirty` so the next draw
+shows the updated timezone without waiting for the next minute tick.
+
+#### `set_visible(visible: bool)`
+
+Sets `_visible`; when false, `draw()` exits early and does not render the clock.
+
+#### `tick()`
+
+Queues an immediate timestamp in `_pending_now` and sets `_dirty=True` so the
+next `update()` regenerates clock/date surfaces without waiting for the background
+ticker thread.
 
 #### `stop()`
 
@@ -2375,10 +2401,10 @@ def restart(self) -> None:
 ### OR-03: Cache Key Includes `fit_mode`
 
 **Decision:** Key format: `"{stem}_{fit_mode}_v{_CACHE_VERSION}"` where
-`_CACHE_VERSION = 2`. Changing `fit_mode` automatically misses old cached entries;
+`_CACHE_VERSION = 3`. Changing `fit_mode` automatically misses old cached entries;
 no explicit invalidation needed.
 
-Example keys: `IMG_0042_fit_v2.png`, `IMG_0042_fill_v2.png`.
+Example keys: `IMG_0042_fit_v3.png`, `IMG_0042_fill_v3.png`.
 
 ---
 

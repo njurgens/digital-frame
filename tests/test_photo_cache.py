@@ -13,7 +13,7 @@ def test_cache_key_format(tmp_path: Path):
     cache = PhotoCache((1280, 800))
     p = tmp_path / "hello-world.jpg"
     key = cache._key(p, "fit")
-    assert key == "hello-world_fit_v2"
+    assert key == "hello-world_fit_v3"
 
 
 def test_lru_eviction():

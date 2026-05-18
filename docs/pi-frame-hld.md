@@ -222,7 +222,7 @@ but it is not blitted.
 | Layer | Z-order | Contents | Visible in states |
 |---|---|---|---|
 | Photo | 0 | Current photo surface; during crossfade, next surface blended on top | `SLIDESHOW`, `OVERLAY` |
-| Clock | 1 | Time and date text with drop-shadow backing | `SLIDESHOW`, `OVERLAY` (when `show_clock = true`) |
+| Clock | 1 | Time and date text with translucent rounded backing bubble | `SLIDESHOW`, `OVERLAY` (when `show_clock = true`) |
 | Paused pip | 2 | Small semi-transparent pause icon in bottom-left corner | `SLIDESHOW` only (when `SlideshowPlayer.is_paused`; hidden when overlay is active) |
 | Scrim | 3 | Full-screen semi-transparent black rect (`rgba(0,0,0,0.55)`) | `OVERLAY` |
 | Dismiss progress bar | 4 | 3 px rect at top edge, width proportional to remaining dismiss time | `OVERLAY` (hidden when timer suspended / paused) |
@@ -467,14 +467,14 @@ rapid slider changes do not thrash the filesystem.
 surface. Re-renders its text surfaces once per minute.
 
 **Public interface:**
-- `draw(surface)` — blits the current time and date text onto `surface` at the configured position (top-left, with drop-shadow).
-- `tick()` — called by the clock ticker background service each minute; invalidates and re-renders the text surfaces.
+- `draw(surface)` — blits the current time and date text onto `surface` at the configured position (top-left, with a translucent rounded backing bubble).
+- `tick()` — explicit invalidation API that queues a pending timestamp and marks the widget dirty so `update()` can re-render surfaces on the main thread.
 - `set_visible(visible: bool)` — shows or hides the clock per `show_clock` config.
 - `set_timezone(tz)` — updates the timezone used for time display.
 
-**Dependencies:** `ConfigStore`.
+**Dependencies:** `Assets`.
 
-**Owned state:** Cached time-text surface; cached date-text surface; current timezone; visibility flag; last-rendered minute.
+**Owned state:** Cached `(time, date)` surface tuple; pending timestamp queued by ticker/tick; dirty flag; current timezone; visibility flag.
 
 ---
 
