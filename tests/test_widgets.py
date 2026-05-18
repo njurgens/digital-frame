@@ -7,6 +7,7 @@ import pygame
 import pytest
 from unittest.mock import MagicMock
 
+from piframe.widgets.horizontal_slider import HorizontalSlider
 from piframe.widgets.vertical_slider import VerticalSlider
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.scroll_picker import ScrollPicker
@@ -29,6 +30,11 @@ def pygame_init_module():
 def make_slider(value=50):
     rect = pygame.Rect(100, 100, 40, 200)
     return VerticalSlider(rect=rect, initial_value=value)
+
+
+def make_horizontal_slider(value=50):
+    rect = pygame.Rect(100, 100, 200, 40)
+    return HorizontalSlider(rect=rect, initial_value=value)
 
 
 def test_drag_from_top_gives_100():
@@ -65,6 +71,27 @@ def test_on_change_called_during_drag():
     sl = VerticalSlider(rect=rect, initial_value=50, on_change=lambda v: changes.append(v))
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 150), button=1))
     sl.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(120, 200), rel=(0, 50), buttons=(1, 0, 0)))
+    assert len(changes) >= 1
+
+
+def test_horizontal_slider_drag_from_left_gives_0():
+    sl = make_horizontal_slider(50)
+    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(100, 120), button=1))
+    assert sl.value == 0
+
+
+def test_horizontal_slider_drag_from_right_gives_100():
+    sl = make_horizontal_slider(50)
+    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(300, 120), button=1))
+    assert sl.value == 100
+
+
+def test_horizontal_slider_on_change_called_during_drag():
+    changes = []
+    rect = pygame.Rect(100, 100, 200, 40)
+    sl = HorizontalSlider(rect=rect, initial_value=50, on_change=lambda v: changes.append(v))
+    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 120), button=1))
+    sl.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 120), rel=(80, 0), buttons=(1, 0, 0)))
     assert len(changes) >= 1
 
 

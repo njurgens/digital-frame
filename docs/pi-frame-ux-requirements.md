@@ -219,6 +219,7 @@ crops the photo to fill the screen with no bars.
 
 | Setting | Control | Default |
 |---|---|---|
+| Brightness | Horizontal slider | 72 |
 | Show clock | Toggle | On |
 | Sleep schedule | Toggle (enable/disable the schedule) | Off |
 | Sleep window | Two time pickers: sleep time → wake time (grayed out if schedule disabled) | 22:00 → 07:00 |
@@ -337,9 +338,10 @@ against — the architecture should not preclude adding them later.
    this is a free-text field with the on-screen keyboard, or a scrollable picker built
    from `zoneinfo`. Recommend the picker for touch usability.
 
-4. **Vertical slider widget:** pygame has no native vertical slider. The LLD must
-   specify a custom `BrightnessSlider` widget: a tall thin track, circular draggable
-   thumb, value clamped 0–100, maps to 0–255 for the sysfs write.
+4. **Brightness slider widgets:** pygame has no native slider widgets. The LLD must
+   specify custom sliders: `VerticalSlider` for overlay brightness and
+   `HorizontalSlider` for Display section brightness, each with a circular draggable
+   thumb and value clamped 0–100 mapping to 0–255 for sysfs writes.
 
 5. **Sleep-mode tap-to-wake:** When the display is sleeping (brightness = 0), a tap
    should wake the display temporarily (restore brightness, show overlay, restart

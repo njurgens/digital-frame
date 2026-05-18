@@ -33,13 +33,13 @@ from piframe.types import (
     SIDEBAR_W,
 )
 from piframe.widgets.confirm_dialog import ConfirmDialog
+from piframe.widgets.horizontal_slider import HorizontalSlider
 from piframe.widgets.nav_item import NavItem
 from piframe.widgets.scroll_picker import ScrollPicker
 from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.text_input import TextInput
 from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
-from piframe.widgets.vertical_slider import VerticalSlider
 from piframe.widgets.wifi_list_item import WifiListItem
 
 
@@ -176,8 +176,8 @@ class SettingsPanel:
         content_x = CONTENT_X
         content_w = CONTENT_W
 
-        self._brightness_slider = VerticalSlider(
-            rect=pygame.Rect(content_x + content_w - 64, 80, 40, 200),
+        self._brightness_slider = HorizontalSlider(
+            rect=pygame.Rect(content_x + 130, 82, content_w - 220, 40),
             initial_value=cfg.brightness,
             on_change=self._on_brightness_change_display,
         )
@@ -266,6 +266,7 @@ class SettingsPanel:
             self._wifi_manager.scan()
 
     def open(self):
+        self.sync_from_config()
         self._visible = True
 
     def close(self):
@@ -288,6 +289,7 @@ class SettingsPanel:
         except Exception:
             pass
         self._shuffle_toggle.set_value(cfg.shuffle)
+        self._brightness_slider.set_value(disp.brightness)
         self._show_clock_toggle.set_value(disp.show_clock)
         self._sleep_enabled_toggle.set_value(sleep.enabled)
 
@@ -358,6 +360,7 @@ class SettingsPanel:
     def _draw_display(self, screen: pygame.Surface):
         body_font = self._assets.font(FONT_SIZE_BODY)
         content_x = SETTINGS_CONTENT_X + 18
+        content_w = CONTENT_W
         rows = [
             ("Brightness", self._brightness_slider, 62),
             ("Show clock", self._show_clock_toggle, 144),
@@ -367,6 +370,10 @@ class SettingsPanel:
             surf, _ = body_font.render(label, COLOUR_TEXT_SECONDARY[:3])
             screen.blit(surf, (content_x, y_offset))
             widget.draw(screen)
+
+        pct_surf, pct_rect = body_font.render(f"{self._brightness_slider.value}%", COLOUR_TEXT_PRIMARY[:3])
+        pct_rect.midright = (content_x + content_w - 18, self._brightness_slider.rect.centery)
+        screen.blit(pct_surf, pct_rect)
 
         tz_label, _ = body_font.render("Timezone", COLOUR_TEXT_SECONDARY[:3])
         screen.blit(tz_label, (content_x, 370))
