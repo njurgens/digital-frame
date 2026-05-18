@@ -52,6 +52,9 @@ class Section(Enum):
 
 CONTENT_X = SETTINGS_CONTENT_X + 18
 CONTENT_W = SCREEN_W - CONTENT_X - 18
+WIFI_LIST_Y = 200
+WIFI_ITEM_H = 56
+WIFI_MAX_ITEMS = 8
 
 
 class SettingsPanel:
@@ -659,6 +662,7 @@ class SettingsPanel:
         elif result.operation == "connect":
             self._wifi_connecting = False
             self._wifi_password_ssid = None
+            self._rebuild_wifi_items()
             if result.success and self._wifi_manager is not None:
                 self._wifi_manager.get_status()
         elif result.operation == "status":
@@ -672,8 +676,12 @@ class SettingsPanel:
     def _rebuild_wifi_items(self) -> None:
         current_ssid = self._wifi_status.ssid if self._wifi_status and self._wifi_status.connected else ""
         self._wifi_items = []
-        y = 200
-        for net in self._wifi_networks[:8]:
+        max_items = WIFI_MAX_ITEMS
+        if self._wifi_password_ssid:
+            available_h = max(0, self._wifi_password_input.rect.top - WIFI_LIST_Y)
+            max_items = min(max_items, available_h // WIFI_ITEM_H)
+        y = WIFI_LIST_Y
+        for net in self._wifi_networks[:max_items]:
             item = WifiListItem(
                 rect=pygame.Rect(CONTENT_X, y, CONTENT_W - 24, 56),
                 network=net,
@@ -682,12 +690,13 @@ class SettingsPanel:
                 on_tap=self._on_wifi_network_tap,
             )
             self._wifi_items.append(item)
-            y += 56
+            y += WIFI_ITEM_H
 
     def _on_wifi_network_tap(self, network) -> None:
         if network.security and network.security != "--":
             self._wifi_password_ssid = network.ssid
             self._wifi_password_input.clear()
+            self._rebuild_wifi_items()
             return
         if self._wifi_manager is not None:
             self._wifi_connecting = True

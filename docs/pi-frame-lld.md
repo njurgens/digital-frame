@@ -963,9 +963,10 @@ Section title: 24pt NotoSans-Bold at y_rel=18. Divider: 1 px `COLOUR_DIVIDER`.
 
 1. Status row: connected SSID + IP, or "Not connected". Icon: `IC_WIFI` / `IC_WIFI_OFF`.
 2. "Scan for networks" button → `WifiManager.scan()`.
-3. Scrollable `WifiListItem` list (populated on scan result).
+3. Non-scrollable `WifiListItem` rows (populated from scan results, capped to visible space).
 4. Connecting flow: if selected network has security → show `TextInput` for password
    → `Keyboard` opens → on Done → `WifiManager.connect(ssid, password)`.
+5. When the password prompt is visible, visible list rows are capped so list item rects stay above the password input rect.
 
 #### System section rows
 

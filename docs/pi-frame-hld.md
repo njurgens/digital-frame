@@ -920,10 +920,11 @@ timezone region entry), `App` (KEYBOARD state)
 3. Tapping an open network connects immediately; a spinner is shown during the attempt.
 4. Tapping a secured network opens a password prompt using the on-screen keyboard in
    password mode.
-5. A failed connection shows an inline error message that auto-clears after 4 seconds.
-6. The "Forget" button removes the network with a confirmation dialog; the device
+5. While the password prompt is visible, the networks list does not overlap the password input area.
+6. A failed connection shows an inline error message that auto-clears after 4 seconds.
+7. The "Forget" button removes the network with a confirmation dialog; the device
    disconnects.
-7. If no networks are found, an empty state with "Scan again" button is shown.
+8. If no networks are found, an empty state with "Scan again" button is shown.
 
 **Deferred:** System section, sync integration.
 

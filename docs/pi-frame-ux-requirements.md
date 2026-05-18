@@ -244,6 +244,7 @@ mechanic) but does not permanently override the schedule.
 - Scanned SSIDs with signal-strength icons (3 levels)
 - Tapping an SSID that requires a password opens the on-screen keyboard with a
   password-mode text field
+- When the password prompt is visible, the networks list must not overlap the password field
 - Tapping an open network connects immediately
 - A spinner / status indicator shows connecting / failed state
 
