@@ -134,6 +134,16 @@ Current apt packages used by slideshow.py:
 - `python3-pygame` — display, surfaces, blitting, event loop
 - `python3-pil` — EXIF orientation correction on JPEG load
 
+## pygame Documentation
+
+pygame API documentation is available through the Context7 tool. Before writing or editing code that uses pygame surfaces, events, freetype, or display APIs, fetch the current docs to confirm behavior:
+
+```
+context7_get_library_docs(libraryName="pygame", query="<specific topic>")
+```
+
+This provides version-accurate documentation instead of relying on trained-in memory, which may be stale for pygame 2.x APIs.
+
 ## Killing / Restarting the Slideshow
 
 slideshow.py writes its PID to `/tmp/slideshow.pid` on startup.
