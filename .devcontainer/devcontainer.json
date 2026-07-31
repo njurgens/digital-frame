@@ -6,11 +6,15 @@
 
   "remoteUser": "vscode",
 
+  // Fix root-owned named volume on first create (idempotent — skips if already correct)
+  "postCreateCommand": "[ \"$(stat -c '%U' /home/vscode/.config/gh 2>/dev/null)\" != \"vscode\" ] && sudo chown -R vscode:vscode /home/vscode/.config/gh",
+
   "mounts": [
   //  // Host's pi config (auth, models.json, skills, extensions, prompt templates)
   //  // mounted read-only. This is what makes pi "just work" inside the container
   //  // with the same providers/skills you already have configured outside.
-    "source=${localEnv:HOME}/.pi,target=/home/vscode/.pi,type=bind"
+    "source=${localEnv:HOME}/.pi,target=/home/vscode/.pi,type=bind",
+    "source=gh-config,target=/home/vscode/.config/gh,type=volume"
 
   //  // Mutable state pi writes during a session (todos, memory/session history)
   //  // gets its own writable named volumes, layered on top of the read-only
