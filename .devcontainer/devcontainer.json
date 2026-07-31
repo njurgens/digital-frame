@@ -1,0 +1,34 @@
+{
+  "name": "python-dev-with-pi",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  "remoteUser": "vscode",
+
+  // Fix root-owned named volumes on first create, then seed git signing config
+  "postCreateCommand": "bash .devcontainer/setup-volume-mounts.sh /home/vscode/.config/gh /home/vscode/.config/git && bash .devcontainer/setup-git-signing.sh \"$DEVCONTAINER_GIT_EMAIL\"",
+
+  "runArgs": ["--env-file", ".devcontainer/.env"],
+
+  "mounts": [
+  //  // Host's pi config (auth, models.json, skills, extensions, prompt templates)
+  //  // mounted read-only. This is what makes pi "just work" inside the container
+  //  // with the same providers/skills you already have configured outside.
+    "source=${localEnv:HOME}/.pi,target=/home/vscode/.pi,type=bind",
+    "source=gh-config,target=/home/vscode/.config/gh,type=volume",
+    "source=git-config,target=/home/vscode/.config/git,type=volume"
+
+  //  // Mutable state pi writes during a session (todos, memory/session history)
+  //  // gets its own writable named volumes, layered on top of the read-only
+  //  // mount above at those subpaths. This keeps container session junk out
+  //  // of your host's ~/.pi, and avoids write failures against the RO mount.
+  ],
+
+  "containerEnv": {
+    // Uncomment/adjust if your provider auth is via env var rather than
+    // the mounted ~/.pi/agent config (e.g. subscription OAuth token cached
+    // in ~/.pi already won't need this).
+    // "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  }
+}

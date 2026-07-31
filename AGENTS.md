@@ -32,6 +32,8 @@ Remove the worktree only after the PR is merged. If the branch was deleted remot
 - The test harness (`--test-harness` flag) can be run inside the worktree without disturbing the primary app instance.
 - Never run `git checkout` inside a worktree to switch branches — create a new worktree instead.
 
+> If `gh` or git operations fail inside the dev container, see [`.devcontainer/README.md`](.devcontainer/README.md) for setup (SSH agent, `.env`, `gh auth login`).
+
 ---
 
 ## Code Review Gauntlet
@@ -81,6 +83,10 @@ Agent(subagent_type="review-testing", prompt="Review the changes on branch X for
 ---
 
 # Copilot Instructions
+
+## Documentation Lookup
+
+Load the `context7-docs` skill whenever a question involves a specific library, framework, SDK, CLI tool, or cloud service. Use it even when you think you know the answer — training data may not reflect recent API changes.
 
 ## Target Environment
 
