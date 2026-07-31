@@ -1,0 +1,27 @@
+{
+  "name": "python-dev-with-pi",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  "remoteUser": "vscode",
+
+  "mounts": [
+  //  // Host's pi config (auth, models.json, skills, extensions, prompt templates)
+  //  // mounted read-only. This is what makes pi "just work" inside the container
+  //  // with the same providers/skills you already have configured outside.
+    "source=${localEnv:HOME}/.pi,target=/home/vscode/.pi,type=bind"
+
+  //  // Mutable state pi writes during a session (todos, memory/session history)
+  //  // gets its own writable named volumes, layered on top of the read-only
+  //  // mount above at those subpaths. This keeps container session junk out
+  //  // of your host's ~/.pi, and avoids write failures against the RO mount.
+  ],
+
+  "containerEnv": {
+    // Uncomment/adjust if your provider auth is via env var rather than
+    // the mounted ~/.pi/agent config (e.g. subscription OAuth token cached
+    // in ~/.pi already won't need this).
+    // "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  }
+}
