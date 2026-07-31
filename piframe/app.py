@@ -218,16 +218,25 @@ class SlideshowPlayer:
 
 class App:
     def __init__(self) -> None:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--test-harness", action="store_true")
+        parser.add_argument("--mock-wifi", action="store_true")
+        parser.add_argument("--windowed", action="store_true", help="Run in a window instead of fullscreen")
+        self._args = parser.parse_args()
+
         pygame.init()
         pygame.freetype.init()
         init_events()
 
         Path("/tmp/slideshow.pid").write_text(str(os.getpid()))
 
-        self._screen = pygame.display.set_mode(
-            (SCREEN_W, SCREEN_H),
-            pygame.FULLSCREEN | pygame.NOFRAME,
-        )
+        if self._args.windowed:
+            self._screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.SCALED)
+        else:
+            self._screen = pygame.display.set_mode(
+                (SCREEN_W, SCREEN_H),
+                pygame.FULLSCREEN | pygame.NOFRAME,
+            )
         pygame.display.set_caption("Pi Frame")
         self._clock = pygame.time.Clock()
         self._state = AppState.SLIDESHOW
@@ -235,11 +244,6 @@ class App:
         self._swipe_start_pos: tuple[int, int] | None = None
         self._swipe_start_time: float | None = None
         self._suppress_next_tap: bool = False
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--test-harness", action="store_true")
-        parser.add_argument("--mock-wifi", action="store_true")
-        self._args = parser.parse_args()
 
         self._assets = Assets.load()
 

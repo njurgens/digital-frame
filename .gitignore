@@ -1,6 +1,6 @@
 # Secrets — never commit
 framesync/config.toml
-.env
+.devcontainer/.env
 
 # Python
 __pycache__/

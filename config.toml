@@ -1,0 +1,28 @@
+[slideshow]
+interval = 30.0
+fit_mode = "fit"
+shuffle = true
+transition = "crossfade"
+
+[display]
+brightness = 75
+show_clock = true
+timezone_auto = true
+
+[sleep]
+enabled = false
+sleep_time = "22:00"
+wake_time = "07:00"
+
+[sync]
+share_url = ""
+password = ""
+output_dir = "/home/frame/Pictures/slideshow"
+cache_dir = "/home/frame/.cache/framesync"
+interval_minutes = 60
+
+[system]
+timezone = "America/Los_Angeles"
+
+[update]
+repo = "njurgens/digital-frame"

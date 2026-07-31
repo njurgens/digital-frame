@@ -19,10 +19,6 @@ ssh-add -l       # verify your key is listed
 On macOS the agent typically runs by default. On Linux start it as shown above
 and add the `ssh-agent` / `ssh-add` lines to `~/.bash_profile` or `~/.zprofile`.
 
-> **Security key (ED25519-SK) users:** FIDO security keys require physical
-> presence and do not work through forwarded agents. Use a regular ED25519 or
-> RSA key for container git operations.
-
 ### 2. Git email
 
 Copy the example env file and set your email:
