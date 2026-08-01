@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pygame
+import pytest
 
 from piframe.assets import IC_PAUSE, IC_PLAY
 from piframe.config_store import ConfigStore
@@ -23,9 +24,12 @@ class _StubAssets:
     def font(self, _size: int) -> _StubFont:
         return _StubFont()
 
+    def font_bold(self, _size: int) -> _StubFont:
+        return _StubFont()
+
 
 def _make_overlay(tmp_path: Path) -> OverlayUI:
-    return OverlayUI(_StubAssets(), ConfigStore(tmp_path / "config.toml"))
+    return OverlayUI(_StubAssets(), ConfigStore(tmp_path / "config.toml"))  # type: ignore[arg-type]
 
 
 def test_overlay_button_background_preserves_alpha(tmp_path: Path) -> None:
@@ -43,7 +47,7 @@ def test_overlay_button_background_preserves_alpha(tmp_path: Path) -> None:
     assert outside[3] == 0
 
 
-def test_show_and_hide_manage_visibility_and_flags(tmp_path: Path, monkeypatch) -> None:
+def test_show_and_hide_manage_visibility_and_flags(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
     overlay.show()
@@ -56,7 +60,7 @@ def test_show_and_hide_manage_visibility_and_flags(tmp_path: Path, monkeypatch) 
     assert overlay._dragging_slider is False
 
 
-def test_show_while_paused_has_no_dismiss_timer(tmp_path: Path, monkeypatch) -> None:
+def test_show_while_paused_has_no_dismiss_timer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     overlay._paused = True
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
@@ -64,7 +68,7 @@ def test_show_while_paused_has_no_dismiss_timer(tmp_path: Path, monkeypatch) -> 
     assert overlay._dismiss_at is None
 
 
-def test_update_hides_after_timer_expiry(tmp_path: Path, monkeypatch) -> None:
+def test_update_hides_after_timer_expiry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     overlay._visible = True
     overlay._dismiss_at = 10.0
@@ -81,7 +85,7 @@ def test_draw_noop_when_hidden(tmp_path: Path) -> None:
     assert screen.get_at((640, 400))[3] == 0
 
 
-def test_draw_visible_renders_scrim_and_progress_bar(tmp_path: Path, monkeypatch) -> None:
+def test_draw_visible_renders_scrim_and_progress_bar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
@@ -92,7 +96,7 @@ def test_draw_visible_renders_scrim_and_progress_bar(tmp_path: Path, monkeypatch
     assert screen.get_at((10, 1))[3] == 255
 
 
-def test_draw_hides_progress_bar_when_paused(tmp_path: Path, monkeypatch) -> None:
+def test_draw_hides_progress_bar_when_paused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 10.0)
@@ -102,19 +106,19 @@ def test_draw_hides_progress_bar_when_paused(tmp_path: Path, monkeypatch) -> Non
     assert screen.get_at((10, 1))[3] < 255
 
 
-def test_draw_uses_play_icon_when_paused_and_pause_when_playing(tmp_path: Path, monkeypatch) -> None:
+def test_draw_uses_play_icon_when_paused_and_pause_when_playing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 1.0)
     overlay.show()
     captured: list[str] = []
     original = overlay._draw_icon_centered
 
-    def _capture(_screen, icon, size, center):
+    def _capture(screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]):
         if center == PLAY_RECT.center:
             captured.append(icon)
-        return original(_screen, icon, size, center)
+        return original(screen, icon, size, center)
 
-    overlay._draw_icon_centered = _capture
+    overlay._draw_icon_centered = _capture  # type: ignore[assignment]
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     overlay.set_paused(True)
     overlay.draw(screen)
@@ -124,7 +128,7 @@ def test_draw_uses_play_icon_when_paused_and_pause_when_playing(tmp_path: Path, 
     assert captured[1] == IC_PAUSE
 
 
-def test_draw_renders_visible_playback_icons(tmp_path: Path, monkeypatch) -> None:
+def test_draw_renders_visible_playback_icons(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 10.0)
     overlay.show()
@@ -171,7 +175,7 @@ def test_on_drag_uses_overlay_callback_when_slider_callback_missing(tmp_path: Pa
     cb.assert_called_once_with(overlay._slider.value)
 
 
-def test_drag_helpers_and_setters(tmp_path: Path, monkeypatch) -> None:
+def test_drag_helpers_and_setters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     overlay = _make_overlay(tmp_path)
     overlay._dragging_slider = True
     overlay.stop_drag()

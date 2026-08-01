@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from piframe.assets import Assets
 
 from piframe.types import (
     COLOUR_BTN_PRIMARY,
@@ -33,7 +37,7 @@ class ConfirmDialog(Widget):
         destructive: bool = False,
         on_confirm: Callable[[], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
-        assets=None,
+        assets: Assets | None = None,
     ) -> None:
         super().__init__(pygame.Rect(DIALOG_X, DIALOG_Y, DIALOG_W, DIALOG_H))
         self.title = title

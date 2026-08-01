@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from piframe.assets import Assets
 
 from piframe.types import (
     COLOUR_DIALOG_BG,
@@ -23,7 +27,7 @@ class TimePicker(Widget):
         rect: pygame.Rect,
         initial_hour: int = 22,
         initial_minute: int = 0,
-        assets=None,
+        assets: Assets | None = None,
         on_change: Callable[[int, int], None] | None = None,
     ) -> None:
         super().__init__(rect)

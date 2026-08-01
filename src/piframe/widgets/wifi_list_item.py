@@ -4,12 +4,13 @@ from collections.abc import Callable
 
 import pygame
 
-from piframe.assets import IC_LOCK, IC_WIFI, IC_WIFI_OFF
+from piframe.assets import Assets, IC_LOCK, IC_WIFI, IC_WIFI_OFF
 from piframe.types import (
     COLOUR_CONNECTED,
     COLOUR_NAV_ACTIVE_BG,
     COLOUR_TEXT_PRIMARY,
     COLOUR_TEXT_SECONDARY,
+    WifiNetwork,
 )
 from piframe.widgets.base import Widget
 
@@ -20,11 +21,11 @@ class WifiListItem(Widget):
     def __init__(
         self,
         rect: pygame.Rect,
-        network: object,
+        network: WifiNetwork,
         current_ssid: str = "",
-        assets=None,
-        on_tap: Callable[[object], None] | None = None,
-        on_long_press: Callable[[object], None] | None = None,
+        assets: Assets | None = None,
+        on_tap: Callable[[WifiNetwork], None] | None = None,
+        on_long_press: Callable[[WifiNetwork], None] | None = None,
     ) -> None:
         super().__init__(rect)
         self.network = network

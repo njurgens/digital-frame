@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import pygame
 
-from piframe.assets import IC_VISIBILITY, IC_VISIBILITY_OFF
+from piframe.assets import Assets, IC_VISIBILITY, IC_VISIBILITY_OFF
 from piframe.types import COLOUR_BTN_PRIMARY, COLOUR_DIVIDER, COLOUR_TEXT_CAPTION, COLOUR_TEXT_PRIMARY
 from piframe.widgets.base import Widget
 
@@ -20,7 +20,7 @@ class TextInput(Widget):
         rect: pygame.Rect,
         placeholder: str = "",
         password_mode: bool = False,
-        assets=None,
+        assets: Assets | None = None,
         on_focus: Callable[[], None] | None = None,
         on_change: Callable[[str], None] | None = None,
     ) -> None:

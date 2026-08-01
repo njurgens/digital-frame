@@ -63,17 +63,17 @@ class OverlayUI:
         if self.on_brightness_change is not None:
             self.on_brightness_change(value)
 
-    def show(self):
+    def show(self) -> None:
         self._visible = True
         self.dismissed = False
         self._dismiss_at = time.monotonic() + OVERLAY_DISMISS if not self._paused else None
 
-    def hide(self):
+    def hide(self) -> None:
         self._visible = False
         self.dismissed = True
         self._dragging_slider = False
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> None:
         _ = dt
         if self._dismiss_at is not None and time.monotonic() >= self._dismiss_at:
             self.hide()
@@ -90,7 +90,7 @@ class OverlayUI:
         r.center = center
         screen.blit(surf, r)
 
-    def draw(self, screen: pygame.Surface):
+    def draw(self, screen: pygame.Surface) -> None:
         if not self._visible:
             return
 
@@ -145,7 +145,7 @@ class OverlayUI:
             return "next"
         return None
 
-    def on_drag(self, pos: tuple[int, int]):
+    def on_drag(self, pos: tuple[int, int]) -> None:
         if not self._visible:
             return
         if self._dragging_slider or self._slider.rect.inflate(20, 0).collidepoint(pos):
@@ -170,14 +170,14 @@ class OverlayUI:
         if not self._paused:
             self._dismiss_at = time.monotonic() + OVERLAY_DISMISS
 
-    def set_paused(self, paused: bool):
+    def set_paused(self, paused: bool) -> None:
         self._paused = paused
         if paused:
             self._dismiss_at = None
         else:
             self._extend_dismiss()
 
-    def set_brightness(self, pct: int):
+    def set_brightness(self, pct: int) -> None:
         self._brightness = max(0, min(100, int(pct)))
         self._slider.value = self._brightness
         self._slider.dirty = True

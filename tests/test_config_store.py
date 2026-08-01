@@ -8,25 +8,25 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 from piframe.config_store import ConfigStore
 
 
-def write_toml(path: Path, content: str):
+def write_toml(path: Path, content: str) -> None:
     path.write_text(content)
 
 
-def test_load_from_file(tmp_path):
+def test_load_from_file(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     write_toml(p, '[slideshow]\ninterval = 15\n')
     cfg = ConfigStore(p)
     assert cfg.slideshow.interval == 15.0
 
 
-def test_load_missing_file_uses_defaults(tmp_path):
+def test_load_missing_file_uses_defaults(tmp_path: Path) -> None:
     p = tmp_path / "nonexistent.toml"
     cfg = ConfigStore(p)
     assert cfg.slideshow.interval == 30.0
     assert cfg.display.brightness == 72
 
 
-def test_load_malformed_toml_creates_backup(tmp_path):
+def test_load_malformed_toml_creates_backup(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     p.write_text("this is not valid [[[ toml")
     cfg = ConfigStore(p)
@@ -34,21 +34,21 @@ def test_load_malformed_toml_creates_backup(tmp_path):
     assert (tmp_path / "config.bak").exists()
 
 
-def test_interval_clamped_below_min(tmp_path):
+def test_interval_clamped_below_min(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     write_toml(p, '[slideshow]\ninterval = -5.0\n')
     cfg = ConfigStore(p)
     assert cfg.slideshow.interval == 1.0
 
 
-def test_brightness_clamped_above_max(tmp_path):
+def test_brightness_clamped_above_max(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     write_toml(p, '[display]\nbrightness = 200\n')
     cfg = ConfigStore(p)
     assert cfg.display.brightness == 100
 
 
-def test_set_and_debounce_write(tmp_path):
+def test_set_and_debounce_write(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     cfg = ConfigStore(p)
     now = time.monotonic()
@@ -60,7 +60,7 @@ def test_set_and_debounce_write(tmp_path):
     assert "42" in p.read_text()
 
 
-def test_flush_now_writes_immediately(tmp_path):
+def test_flush_now_writes_immediately(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     cfg = ConfigStore(p)
     cfg.set("display", "brightness", 77)
@@ -69,7 +69,7 @@ def test_flush_now_writes_immediately(tmp_path):
     assert "77" in p.read_text()
 
 
-def test_protected_keys_never_overwritten(tmp_path):
+def test_protected_keys_never_overwritten(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     write_toml(
         p,

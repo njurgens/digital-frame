@@ -14,11 +14,15 @@ from __future__ import annotations
 import datetime as dt
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import paramiko
 import pytest
 from PIL import Image
+
+if TYPE_CHECKING:
+    from tests.conftest import AppHarness
 
 from piframe.backlight import BACKLIGHT_PATH
 from tests.image_utils import assert_screenshot_matches
@@ -79,35 +83,35 @@ KEY_DONE = (1192, 748)
 # ---------------------------------------------------------------------------
 
 
-def _ssh(harness) -> paramiko.SSHClient:
+def _ssh(harness: AppHarness) -> paramiko.SSHClient:
     """Return the underlying paramiko SSH client from the harness."""
     return harness._ssh
 
 
-def _remote_run(harness, cmd: str) -> str:
+def _remote_run(harness: AppHarness, cmd: str) -> str:
     """Run a command on the Pi and return stdout."""
     _, stdout, _ = _ssh(harness).exec_command(cmd)
     return stdout.read().decode().strip()
 
 
-def _remote_run_status(harness, cmd: str) -> tuple[int, str, str]:
+def _remote_run_status(harness: AppHarness, cmd: str) -> tuple[int, str, str]:
     """Run a command on Pi and return (exit_code, stdout, stderr)."""
     _, stdout, stderr = _ssh(harness).exec_command(cmd)
     code = stdout.channel.recv_exit_status()
     return code, stdout.read().decode(), stderr.read().decode()
 
 
-def _backlight_value(harness) -> int:
+def _backlight_value(harness: AppHarness) -> int:
     """Read current raw backlight brightness (0-255) from sysfs."""
     return int(_remote_run(harness, f"cat {BACKLIGHT_PATH}"))
 
 
-def _backlight_percent(harness) -> int:
+def _backlight_percent(harness: AppHarness) -> int:
     raw = _backlight_value(harness)
     return round(raw / 255 * 100)
 
 
-def _wait_for_state(harness, state: str, timeout: float = 10.0, poll: float = 0.2) -> bool:
+def _wait_for_state(harness: AppHarness, state: str, timeout: float = 10.0, poll: float = 0.2) -> bool:
     end = time.time() + timeout
     while time.time() < end:
         try:
@@ -122,12 +126,12 @@ def _wait_for_state(harness, state: str, timeout: float = 10.0, poll: float = 0.
         return False
 
 
-def _tap_and_settle(harness, x: int, y: int, delay: float = 0.2) -> None:
+def _tap_and_settle(harness: AppHarness, x: int, y: int, delay: float = 0.2) -> None:
     harness.tap(x, y)
     time.sleep(delay)
 
 
-def _return_to_slideshow(harness) -> None:
+def _return_to_slideshow(harness: AppHarness) -> None:
     for _ in range(15):
         try:
             state = harness.state()
@@ -151,7 +155,7 @@ def _return_to_slideshow(harness) -> None:
         time.sleep(0.2)
 
 
-def _open_overlay(harness) -> None:
+def _open_overlay(harness: AppHarness) -> None:
     _return_to_slideshow(harness)
     time.sleep(0.3)  # settle after any pending state change
     _tap_and_settle(harness, *CENTER, delay=0.4)
@@ -161,17 +165,17 @@ def _open_overlay(harness) -> None:
         assert _wait_for_state(harness, "OVERLAY", timeout=3), "OVERLAY did not appear"
 
 
-def _open_settings(harness) -> None:
+def _open_settings(harness: AppHarness) -> None:
     _open_overlay(harness)
     _tap_and_settle(harness, *GEAR_BTN)
     assert _wait_for_state(harness, "SETTINGS", timeout=3)
 
 
-def _goto_nav(harness, nav_xy: tuple[int, int]) -> None:
+def _goto_nav(harness: AppHarness, nav_xy: tuple[int, int]) -> None:
     _tap_and_settle(harness, *nav_xy)
 
 
-def _restart_app(harness, timeout: float = 20.0) -> None:
+def _restart_app(harness: AppHarness, timeout: float = 20.0) -> None:
     """Kill and restart the app in harness mode; block until socket is ready."""
     ssh = _ssh(harness)
     ssh.exec_command("kill -9 $(cat /tmp/slideshow.pid) 2>/dev/null; sleep 0.5")
@@ -223,7 +227,7 @@ def _images_differ(a: Path, b: Path, ignore_rects: list[tuple[int, int, int, int
     return fraction >= min_fraction
 
 
-def _set_sleep_window_around_now(harness, wake_delta_min: int = 2) -> None:
+def _set_sleep_window_around_now(harness: AppHarness, wake_delta_min: int = 2) -> None:
     now = dt.datetime.now()
     sleep_t = (now - dt.timedelta(minutes=1)).strftime("%H:%M")
     wake_t = (now + dt.timedelta(minutes=wake_delta_min)).strftime("%H:%M")
@@ -232,7 +236,7 @@ def _set_sleep_window_around_now(harness, wake_delta_min: int = 2) -> None:
     harness.set_config("sleep", "wake_time", wake_t)
 
 
-def _ensure_wifi_password_keyboard(harness) -> None:
+def _ensure_wifi_password_keyboard(harness: AppHarness) -> None:
     _open_settings(harness)
     _goto_nav(harness, NAV_WIFI)
     _tap_and_settle(harness, *WIFI_SCAN_BTN, delay=0.5)
@@ -243,7 +247,7 @@ def _ensure_wifi_password_keyboard(harness) -> None:
         pytest.skip("Mock Wi-Fi did not expose a password field in this run")
 
 
-def _type_hello(harness) -> None:
+def _type_hello(harness: AppHarness) -> None:
     for key in (KEY_H, KEY_E, KEY_L, KEY_L, KEY_O):
         _tap_and_settle(harness, *key, delay=0.12)
 
@@ -253,7 +257,7 @@ def _type_hello(harness) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_stage1_slideshow_cycles(pi_app):
+def test_stage1_slideshow_cycles(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     pi_app.set_config("slideshow", "interval", 2)
     try:
@@ -266,7 +270,7 @@ def test_stage1_slideshow_cycles(pi_app):
         pi_app.set_config("slideshow", "interval", 30)
 
 
-def test_stage1_directory_rescan(pi_app):
+def test_stage1_directory_rescan(pi_app: AppHarness) -> None:
     # AC: app picks up newly added files without a restart.
     _return_to_slideshow(pi_app)
     pi_app.set_config("slideshow", "interval", 3)
@@ -291,19 +295,19 @@ def test_stage1_directory_rescan(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage2_tap_shows_overlay(pi_app):
+def test_stage2_tap_shows_overlay(pi_app: AppHarness) -> None:
     _open_overlay(pi_app)
     assert pi_app.state() == "OVERLAY"
     _return_to_slideshow(pi_app)
 
 
-def test_stage2_overlay_autodismiss(pi_app):
+def test_stage2_overlay_autodismiss(pi_app: AppHarness) -> None:
     _open_overlay(pi_app)
     time.sleep(6)
     assert _wait_for_state(pi_app, "SLIDESHOW", timeout=2)
 
 
-def test_stage2_pause_suspends_timer(pi_app):
+def test_stage2_pause_suspends_timer(pi_app: AppHarness) -> None:
     _open_overlay(pi_app)
     _tap_and_settle(pi_app, *PAUSE_BTN)
     time.sleep(7)
@@ -312,7 +316,7 @@ def test_stage2_pause_suspends_timer(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage2_pause_pip_visible(pi_app):
+def test_stage2_pause_pip_visible(pi_app: AppHarness) -> None:
     # AC: pausing leaves a pause-indicator PiP visible in SLIDESHOW state.
     _open_overlay(pi_app)
     _tap_and_settle(pi_app, *PAUSE_BTN)
@@ -334,7 +338,7 @@ def test_stage2_pause_pip_visible(pi_app):
     assert np.any(diff > 10), "PiP pill region did not change when toggling pause"
 
 
-def test_stage2_brightness_slider(pi_app):
+def test_stage2_brightness_slider(pi_app: AppHarness) -> None:
     _open_overlay(pi_app)
     # Drag to top to establish a known high brightness, then drag to bottom
     pi_app.swipe(1240, 700, dx=0, dy=-530, ms=300)  # bottom → near top (≈94%)
@@ -347,7 +351,7 @@ def test_stage2_brightness_slider(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage2_swipe_navigates(pi_app):
+def test_stage2_swipe_navigates(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     base = pi_app.screenshot("stage2_swipe_navigates_base")
     pi_app.swipe(*SWIPE_START, dx=-300, dy=0)
@@ -365,7 +369,7 @@ def test_stage2_swipe_navigates(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage3_config_persists(pi_app):
+def test_stage3_config_persists(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     original = _backlight_percent(pi_app)
     target = 40
@@ -378,7 +382,7 @@ def test_stage3_config_persists(pi_app):
     pi_app.set_config("display", "brightness", original)
 
 
-def test_stage3_missing_config_defaults(pi_app):
+def test_stage3_missing_config_defaults(pi_app: AppHarness) -> None:
     ssh = _ssh(pi_app)
     bak = f"{APP_DIR}/config.toml.integration.bak"
     try:
@@ -400,19 +404,19 @@ def test_stage3_missing_config_defaults(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage4_settings_opens(pi_app):
+def test_stage4_settings_opens(pi_app: AppHarness) -> None:
     _open_settings(pi_app)
     assert pi_app.state() == "SETTINGS"
     _return_to_slideshow(pi_app)
 
 
-def test_stage4_back_returns(pi_app):
+def test_stage4_back_returns(pi_app: AppHarness) -> None:
     _open_settings(pi_app)
     _tap_and_settle(pi_app, *BACK_BTN)
     assert _wait_for_state(pi_app, "SLIDESHOW", timeout=5)
 
 
-def test_stage4_interval_change(pi_app):
+def test_stage4_interval_change(pi_app: AppHarness) -> None:
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_SLIDESHOW)
     _tap_and_settle(pi_app, *INTERVAL_5S)
@@ -425,7 +429,7 @@ def test_stage4_interval_change(pi_app):
     pi_app.set_config("slideshow", "interval", 30)
 
 
-def test_stage4_shuffle_toggle(pi_app):
+def test_stage4_shuffle_toggle(pi_app: AppHarness) -> None:
     # AC: shuffle toggle can be turned off; slideshow order becomes deterministic.
     pi_app.set_config("slideshow", "shuffle", True)
     _open_settings(pi_app)
@@ -447,7 +451,7 @@ def test_stage4_shuffle_toggle(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage4_fit_fill_toggle(pi_app):
+def test_stage4_fit_fill_toggle(pi_app: AppHarness) -> None:
     # AC: fill mode removes black bars; control reflects new state.
     pi_app.set_config("slideshow", "fit_mode", "fit")  # also syncs widget to Fit (selected=0)
     _open_settings(pi_app)
@@ -473,7 +477,7 @@ def test_stage4_fit_fill_toggle(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage5_clock_toggle(pi_app):
+def test_stage5_clock_toggle(pi_app: AppHarness) -> None:
     # AC: disabling the clock removes the clock from the slideshow view.
     # Ensure clock is enabled going in (previous test cleanup may have left it disabled).
     pi_app.set_config("display", "show_clock", True)
@@ -501,7 +505,7 @@ def test_stage5_clock_toggle(pi_app):
         pi_app.set_config("display", "show_clock", True)
 
 
-def test_stage5_sleep_dims_display(pi_app):
+def test_stage5_sleep_dims_display(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     _set_sleep_window_around_now(pi_app, wake_delta_min=2)
     assert _wait_for_state(pi_app, "SLEEPING", timeout=40, poll=0.5)
@@ -511,7 +515,7 @@ def test_stage5_sleep_dims_display(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage5_wake_restores(pi_app):
+def test_stage5_wake_restores(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     pi_app.set_config("display", "brightness", 60)
     _set_sleep_window_around_now(pi_app, wake_delta_min=2)
@@ -529,13 +533,13 @@ def test_stage5_wake_restores(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage6_keyboard_appears(pi_app):
+def test_stage6_keyboard_appears(pi_app: AppHarness) -> None:
     _ensure_wifi_password_keyboard(pi_app)
     assert pi_app.state() == "KEYBOARD"
     _return_to_slideshow(pi_app)
 
 
-def test_stage6_keyboard_typing(pi_app):
+def test_stage6_keyboard_typing(pi_app: AppHarness) -> None:
     _ensure_wifi_password_keyboard(pi_app)
     _type_hello(pi_app)
     shot = pi_app.screenshot("stage6_keyboard_typing")
@@ -543,14 +547,14 @@ def test_stage6_keyboard_typing(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage6_keyboard_done(pi_app):
+def test_stage6_keyboard_done(pi_app: AppHarness) -> None:
     _ensure_wifi_password_keyboard(pi_app)
     _tap_and_settle(pi_app, *KEY_DONE)
     assert _wait_for_state(pi_app, "SETTINGS", timeout=2)
     _return_to_slideshow(pi_app)
 
 
-def test_stage6_password_masking(pi_app):
+def test_stage6_password_masking(pi_app: AppHarness) -> None:
     _ensure_wifi_password_keyboard(pi_app)
     _type_hello(pi_app)
     _tap_and_settle(pi_app, *KEY_DONE)
@@ -565,7 +569,7 @@ def test_stage6_password_masking(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage7_wifi_scan_shows_networks(pi_app):
+def test_stage7_wifi_scan_shows_networks(pi_app: AppHarness) -> None:
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_WIFI)
     _tap_and_settle(pi_app, *WIFI_SCAN_BTN, delay=1.0)
@@ -574,7 +578,7 @@ def test_stage7_wifi_scan_shows_networks(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage7_connect_secured(pi_app):
+def test_stage7_connect_secured(pi_app: AppHarness) -> None:
     _ensure_wifi_password_keyboard(pi_app)
     _type_hello(pi_app)
     _tap_and_settle(pi_app, *KEY_DONE)
@@ -584,7 +588,7 @@ def test_stage7_connect_secured(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage7_forget_confirmation(pi_app):
+def test_stage7_forget_confirmation(pi_app: AppHarness) -> None:
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_WIFI)
     _tap_and_settle(pi_app, 650, 158)
@@ -599,7 +603,7 @@ def test_stage7_forget_confirmation(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage8_device_info_displayed(pi_app):
+def test_stage8_device_info_displayed(pi_app: AppHarness) -> None:
     # Verify System section renders without crash and shows different content than slideshow.
     before = pi_app.screenshot("stage8_device_info_before")
     _open_settings(pi_app)
@@ -610,7 +614,7 @@ def test_stage8_device_info_displayed(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage8_shutdown_requires_confirm(pi_app):
+def test_stage8_shutdown_requires_confirm(pi_app: AppHarness) -> None:
     # Shutdown tap must show a confirm dialog; Cancel must NOT shut down.
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_SYSTEM)
@@ -624,7 +628,7 @@ def test_stage8_shutdown_requires_confirm(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage8_ota_check(pi_app):
+def test_stage8_ota_check(pi_app: AppHarness) -> None:
     # OTA check must run without crashing and keep app in SETTINGS state.
     # The update result may already be cached from a prior run in this session,
     # so we just verify: button press doesn't crash, state remains SETTINGS.
@@ -640,7 +644,7 @@ def test_stage8_ota_check(pi_app):
 # ---------------------------------------------------------------------------
 
 
-def test_stage9_sync_status_updates(pi_app):
+def test_stage9_sync_status_updates(pi_app: AppHarness) -> None:
     # Sync status row is in the Slideshow section; verify it updates after a sync.
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_SLIDESHOW)
@@ -653,7 +657,7 @@ def test_stage9_sync_status_updates(pi_app):
     _return_to_slideshow(pi_app)
 
 
-def test_stage9_new_photo_appears(pi_app):
+def test_stage9_new_photo_appears(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     pi_app.set_config("slideshow", "interval", 3)
     before = pi_app.screenshot("stage9_new_photo_before")

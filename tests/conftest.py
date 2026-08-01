@@ -1,10 +1,17 @@
 """Shared pytest fixtures for all test tiers."""
+from __future__ import annotations
+
 import os
 import socket
 import time
 import json
+from collections.abc import Generator
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
+
+if TYPE_CHECKING:
+    import paramiko
 
 # Must be set before any pygame import
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -18,7 +25,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session", autouse=True)
-def pygame_init():
+def pygame_init() -> Generator[None, None, None]:
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -26,13 +33,13 @@ def pygame_init():
 
 
 @pytest.fixture
-def mock_backlight():
+def mock_backlight() -> Generator[MagicMock, None, None]:
     with patch("piframe.backlight.open", MagicMock()) as m:
         yield m
 
 
 @pytest.fixture
-def mock_nmcli():
+def mock_nmcli() -> Generator[MagicMock, None, None]:
     """Returns a mock that replaces subprocess.run inside WifiManager."""
     with patch("piframe.wifi_manager.subprocess.run") as m:
         yield m
@@ -54,7 +61,7 @@ BRIDGE_PORT = 9901  # local TCP port forwarded to SOCK_PATH via socat
 class AppHarness:
     """Thin wrapper around the test-harness socket protocol."""
 
-    def __init__(self, ssh, host: str, port: int, sock_path: str | None = None):
+    def __init__(self, ssh: paramiko.SSHClient, host: str, port: int, sock_path: str | None = None):
         self._ssh = ssh
         self._host = host
         self._port = port
@@ -95,7 +102,7 @@ class AppHarness:
     def state(self) -> str:
         return self.cmd({"cmd": "state"})["state"]
 
-    def set_config(self, section: str, key: str, value) -> dict:
+    def set_config(self, section: str, key: str, value: float | str | bool) -> dict:
         return self.cmd({"cmd": "set_config", "section": section, "key": key, "value": value})
 
     def trigger_sync(self) -> dict:
@@ -122,7 +129,7 @@ class AppHarness:
 
 
 @pytest.fixture(scope="module")
-def pi_app():
+def pi_app() -> Generator[AppHarness, None, None]:
     """Connect to (or start) the app on the Pi in harness mode and yield an AppHarness."""
     try:
         import paramiko

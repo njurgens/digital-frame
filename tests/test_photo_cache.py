@@ -9,14 +9,14 @@ from piframe.photo_cache import MAX_CACHE, PhotoCache
 
 
 @pytest.mark.skipif(pytest.importorskip("PIL", reason="PIL is required") is None, reason="PIL is required")
-def test_cache_key_format(tmp_path: Path):
+def test_cache_key_format(tmp_path: Path) -> None:
     cache = PhotoCache((1280, 800))
     p = tmp_path / "hello-world.jpg"
     key = cache._key(p, "fit")
     assert key == "hello-world_fit_v2"
 
 
-def test_lru_eviction():
+def test_lru_eviction() -> None:
     cache = PhotoCache((1280, 800))
     for i in range(MAX_CACHE + 1):
         cache._put(f"k{i}", pygame.Surface((10, 10)))
@@ -26,7 +26,7 @@ def test_lru_eviction():
     assert f"k{MAX_CACHE}" in cache._cache
 
 
-def test_exif_orientation_dimensions(tmp_path: Path):
+def test_exif_orientation_dimensions(tmp_path: Path) -> None:
     PIL = pytest.importorskip("PIL")
     Image = PIL.Image
 

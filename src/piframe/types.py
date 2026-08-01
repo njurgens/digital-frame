@@ -1,8 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
+from typing import Protocol
+
+
+class WifiManagerProtocol(Protocol):
+    """Structural type for wifi manager implementations."""
+
+    def scan(self) -> None: ...
+    def connect(self, ssid: str, password: str | None) -> None: ...
+    def forget(self, ssid: str) -> None: ...
+    def disconnect(self) -> None: ...
+    def get_status(self) -> None: ...
 
 # Screen constants
 SCREEN_W = 1280

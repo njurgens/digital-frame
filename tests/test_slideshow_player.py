@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pygame
@@ -11,16 +10,14 @@ from piframe.app import SlideshowPlayer
 from piframe.types import TRANS_DURATION
 
 
-def _make_config(photo_dir: Path) -> SimpleNamespace:
-    return SimpleNamespace(
-        slideshow=SimpleNamespace(
-            interval=1.0,
-            fit_mode="fit",
-            shuffle=True,
-            transition="crossfade",
-        ),
-        sync=SimpleNamespace(output_dir=str(photo_dir)),
-    )
+def _make_config(photo_dir: Path) -> MagicMock:
+    cfg = MagicMock()
+    cfg.slideshow.interval = 1.0
+    cfg.slideshow.fit_mode = "fit"
+    cfg.slideshow.shuffle = True
+    cfg.slideshow.transition = "crossfade"
+    cfg.sync.output_dir = str(photo_dir)
+    return cfg
 
 
 def _make_files(photo_dir: Path, n: int = 3) -> None:
@@ -32,7 +29,7 @@ def _make_surface() -> pygame.Surface:
     return pygame.Surface((1280, 800))
 
 
-def test_fisher_yates_contains_same_items(tmp_path: Path):
+def test_fisher_yates_contains_same_items(tmp_path: Path) -> None:
     cfg = _make_config(tmp_path)
     cache = MagicMock()
     cache.get.return_value = _make_surface()
@@ -45,7 +42,7 @@ def test_fisher_yates_contains_same_items(tmp_path: Path):
     assert len(shuffled) == len(items)
 
 
-def test_interval_timer_and_advance(tmp_path: Path):
+def test_interval_timer_and_advance(tmp_path: Path) -> None:
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -62,7 +59,7 @@ def test_interval_timer_and_advance(tmp_path: Path):
     assert player._index == (start_index + 1) % len(player._playlist)
 
 
-def test_transition_progress_and_clamp(tmp_path: Path):
+def test_transition_progress_and_clamp(tmp_path: Path) -> None:
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -84,7 +81,7 @@ def test_transition_progress_and_clamp(tmp_path: Path):
     assert player._next_surf is None
 
 
-def test_advance_forward_and_backward(tmp_path: Path):
+def test_advance_forward_and_backward(tmp_path: Path) -> None:
     _make_files(tmp_path, 4)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -101,7 +98,7 @@ def test_advance_forward_and_backward(tmp_path: Path):
     assert player._index == (after_forward - 1) % len(player._playlist)
 
 
-def test_paused_stops_update(tmp_path: Path):
+def test_paused_stops_update(tmp_path: Path) -> None:
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -115,7 +112,7 @@ def test_paused_stops_update(tmp_path: Path):
     assert player._elapsed == 0.0
 
 
-def test_go_back_and_skip_start_transitions_with_direction(tmp_path: Path):
+def test_go_back_and_skip_start_transitions_with_direction(tmp_path: Path) -> None:
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()

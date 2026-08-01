@@ -45,7 +45,7 @@ class SyncService:
             framesync_dir = str(Path(__file__).parent.parent / "framesync")
             if framesync_dir not in sys.path:
                 sys.path.insert(0, framesync_dir)
-            from framesync import sync as framesync_sync
+            from framesync import sync as framesync_sync  # type: ignore[import-not-found]
 
             cfg = self._config.sync
             share_url = cfg.share_url
