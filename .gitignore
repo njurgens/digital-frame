@@ -17,3 +17,8 @@ Thumbs.db
 
 *.pdf
 *.png
+
+# uv
+.venv/
+.pytest_cache/
+.ruff_cache/

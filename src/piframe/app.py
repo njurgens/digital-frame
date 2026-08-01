@@ -659,3 +659,8 @@ class App:
                 self._sync.trigger()
             return {"ok": True}
         return {"ok": False, "error": f"unknown command: {cmd}"}
+
+
+def main() -> None:
+    """Entry point for the slideshow CLI."""
+    App().run()

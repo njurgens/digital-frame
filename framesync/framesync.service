@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=frame
-WorkingDirectory=/home/frame/framesync
-ExecStart=/usr/bin/python3 /home/frame/framesync/framesync.py
+WorkingDirectory=/home/frame/digital-frame/framesync
+ExecStart=/home/frame/digital-frame/.venv/bin/python /home/frame/digital-frame/framesync/framesync.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
