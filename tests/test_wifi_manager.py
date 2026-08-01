@@ -1,4 +1,5 @@
 import os
+from collections.abc import Callable
 from unittest.mock import patch
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -7,7 +8,7 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 from piframe.wifi_manager import WifiManager
 
 
-def make_scan_output():
+def make_scan_output() -> str:
     return (
         "HomeNetwork:WPA2:85\n"
         "GuestWifi:WPA2:60\n"
@@ -16,11 +17,11 @@ def make_scan_output():
     )
 
 
-def run_async_inline(manager: WifiManager, method_name: str, *args):
+def run_async_inline(manager: WifiManager, method_name: str, *args) -> None:
     captured = []
 
     class ImmediateThread:
-        def __init__(self, *a, target=None, daemon=None, **kw):
+        def __init__(self, *a: object, target: Callable[..., object] | None = None, daemon: bool | None = None, **kw: object):
             _ = a, daemon, kw
             captured.append(target)
 
@@ -31,7 +32,7 @@ def run_async_inline(manager: WifiManager, method_name: str, *args):
         getattr(manager, method_name)(*args)
 
 
-def test_scan_parses_networks():
+def test_scan_parses_networks() -> None:
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, make_scan_output())):
         with patch.object(manager, "_post") as mock_post:
@@ -47,7 +48,7 @@ def test_scan_parses_networks():
             assert networks[2].security == ""
 
 
-def test_connect_with_password_builds_correct_command():
+def test_connect_with_password_builds_correct_command() -> None:
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
         with patch.object(manager, "_post"):
@@ -58,7 +59,7 @@ def test_connect_with_password_builds_correct_command():
             assert "mypassword" in cmd
 
 
-def test_connect_without_password():
+def test_connect_without_password() -> None:
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
         with patch.object(manager, "_post"):
@@ -68,7 +69,7 @@ def test_connect_without_password():
             assert "OpenNet" in cmd
 
 
-def test_forget_builds_correct_command():
+def test_forget_builds_correct_command() -> None:
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
         with patch.object(manager, "_post"):
@@ -78,7 +79,7 @@ def test_forget_builds_correct_command():
             assert "HomeNetwork" in cmd
 
 
-def test_get_status_parses_connected():
+def test_get_status_parses_connected() -> None:
     connected_output = "GENERAL.CONNECTION:HomeNetwork\nIP4.ADDRESS[1]:192.168.1.100/24\n"
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, connected_output)):
@@ -93,7 +94,7 @@ def test_get_status_parses_connected():
             assert "192.168.1.100" in status.ip_address
 
 
-def test_get_status_parses_disconnected():
+def test_get_status_parses_disconnected() -> None:
     disconnected_output = "GENERAL.CONNECTION:--\nIP4.ADDRESS[1]:\n"
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, disconnected_output)):
@@ -105,7 +106,7 @@ def test_get_status_parses_disconnected():
             assert status.ssid == ""
 
 
-def test_get_status_timeout():
+def test_get_status_timeout() -> None:
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(False, "timeout")):
         with patch.object(manager, "_post") as mock_post:
@@ -114,7 +115,7 @@ def test_get_status_timeout():
             assert result.success is False
 
 
-def test_operations_pass_expected_timeout():
+def test_operations_pass_expected_timeout() -> None:
     manager = WifiManager()
     cases = [
         ("scan", (), 10),

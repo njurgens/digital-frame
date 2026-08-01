@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from piframe.assets import Assets
+    from piframe.widgets.text_input import TextInput
 
 from piframe.types import (
     COLOUR_KEY_BG,
@@ -42,7 +47,7 @@ IC_BACKSPACE = "\ue14a"
 
 
 class Keyboard:
-    def __init__(self, assets, on_done: Callable[[], None] | None = None):
+    def __init__(self, assets: Assets, on_done: Callable[[], None] | None = None):
         self._assets = assets
         self._layer: str = "alpha"
         self._shift: bool = False
@@ -84,7 +89,7 @@ class Keyboard:
                 ]
             self._key_rects.append(row_rects)
 
-    def attach(self, target) -> None:
+    def attach(self, target: TextInput) -> None:
         self._target = target
         self._visible = True
         self._layer = "alpha"

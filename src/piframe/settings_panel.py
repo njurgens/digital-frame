@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import socket
 import threading
+from collections.abc import Callable
 from enum import Enum
 from typing import TYPE_CHECKING
 import zoneinfo
@@ -11,6 +12,9 @@ import pygame
 
 if TYPE_CHECKING:
     from piframe.app import App
+    from piframe.sync_service import SyncService
+    from piframe.types import WifiManagerProtocol, WifiNetwork, WifiResult
+    from piframe.wifi_manager import WifiManager
 
 from piframe.assets import (
     FONT_SIZE_BODY,
@@ -66,10 +70,10 @@ class SettingsPanel:
         self,
         assets: Assets,
         config: ConfigStore,
-        on_brightness_change=None,
-        on_focus_text=None,
-        wifi_manager=None,
-        sync_service=None,
+        on_brightness_change: Callable[[int], None] | None = None,
+        on_focus_text: Callable[["TextInput"], None] | None = None,
+        wifi_manager: WifiManagerProtocol | None = None,
+        sync_service: SyncService | None = None,
         app_ref: App | None = None,
     ):
         self._assets = assets
@@ -269,14 +273,14 @@ class SettingsPanel:
             self._wifi_manager.get_status()
             self._wifi_manager.scan()
 
-    def open(self):
+    def open(self) -> None:
         self.sync_from_config()
         self._visible = True
 
-    def close(self):
+    def close(self) -> None:
         self._visible = False
 
-    def sync_from_config(self):
+    def sync_from_config(self) -> None:
         """Re-sync all widget visual states from current config values.
         Call this after any programmatic config change so widgets stay in sync."""
         cfg = self._config.slideshow
@@ -297,11 +301,11 @@ class SettingsPanel:
         self._show_clock_toggle.set_value(disp.show_clock)
         self._sleep_enabled_toggle.set_value(sleep.enabled)
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> None:
         for w in self._active_widgets():
             w.update(dt)
 
-    def draw(self, screen: pygame.Surface):
+    def draw(self, screen: pygame.Surface) -> None:
         if not self._visible:
             return
         pygame.draw.rect(screen, COLOUR_SIDEBAR_BG[:3], (0, 0, SIDEBAR_W, SCREEN_H))
@@ -591,7 +595,7 @@ class SettingsPanel:
             return self._system_widgets
         return []
 
-    def on_tap(self, event_or_pos) -> bool:
+    def on_tap(self, event_or_pos: pygame.event.Event | tuple[int, int]) -> bool:
         if isinstance(event_or_pos, tuple):
             event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=event_or_pos, button=1)
         else:
@@ -664,10 +668,10 @@ class SettingsPanel:
                 return True
         return False
 
-    def on_wifi_result(self, result):
+    def on_wifi_result(self, result: WifiResult) -> None:
         if result.operation == "scan":
             if result.success:
-                self._wifi_networks = result.data or []
+                self._wifi_networks = result.data or []  # type: ignore[assignment]
                 self._rebuild_wifi_items()
             self._wifi_connecting = False
         elif result.operation == "connect":
@@ -678,7 +682,7 @@ class SettingsPanel:
                 self._wifi_manager.get_status()
         elif result.operation == "status":
             if result.success:
-                self._wifi_status = result.data
+                self._wifi_status = result.data  # type: ignore[assignment]
                 self._rebuild_wifi_items()
         elif result.operation == "forget":
             if result.success and self._wifi_manager is not None:
@@ -703,7 +707,7 @@ class SettingsPanel:
             self._wifi_items.append(item)
             y += WIFI_ITEM_H
 
-    def _on_wifi_network_tap(self, network) -> None:
+    def _on_wifi_network_tap(self, network: WifiNetwork) -> None:
         if network.security and network.security != "--":
             self._wifi_password_ssid = network.ssid
             self._wifi_password_input.clear()

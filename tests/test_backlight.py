@@ -8,7 +8,7 @@ from unittest.mock import mock_open, patch
 from piframe.backlight import BACKLIGHT_PATH, BacklightController
 
 
-def test_set_brightness_0_writes_0():
+def test_set_brightness_0_writes_0() -> None:
     ctrl = BacklightController()
     m = mock_open()
     with patch("builtins.open", m):
@@ -17,7 +17,7 @@ def test_set_brightness_0_writes_0():
     m().write.assert_called_once_with("0\n")
 
 
-def test_set_brightness_100_writes_255():
+def test_set_brightness_100_writes_255() -> None:
     ctrl = BacklightController()
     m = mock_open()
     with patch("builtins.open", m):
@@ -25,7 +25,7 @@ def test_set_brightness_100_writes_255():
     m().write.assert_called_once_with("255\n")
 
 
-def test_set_brightness_72_writes_184():
+def test_set_brightness_72_writes_184() -> None:
     ctrl = BacklightController()
     m = mock_open()
     with patch("builtins.open", m):
@@ -34,7 +34,7 @@ def test_set_brightness_72_writes_184():
     assert written == f"{round(72 / 100 * 255)}\n"
 
 
-def test_set_brightness_clamp_negative():
+def test_set_brightness_clamp_negative() -> None:
     ctrl = BacklightController()
     m = mock_open()
     with patch("builtins.open", m):
@@ -42,7 +42,7 @@ def test_set_brightness_clamp_negative():
     m().write.assert_called_once_with("0\n")
 
 
-def test_set_brightness_clamp_over_100():
+def test_set_brightness_clamp_over_100() -> None:
     ctrl = BacklightController()
     m = mock_open()
     with patch("builtins.open", m):
@@ -50,7 +50,7 @@ def test_set_brightness_clamp_over_100():
     m().write.assert_called_once_with("255\n")
 
 
-def test_set_brightness_no_redundant_write():
+def test_set_brightness_no_redundant_write() -> None:
     ctrl = BacklightController()
     m = mock_open()
     with patch("builtins.open", m):
@@ -59,7 +59,7 @@ def test_set_brightness_no_redundant_write():
     assert m().write.call_count == 1
 
 
-def test_get_brightness_oserror_returns_50():
+def test_get_brightness_oserror_returns_50() -> None:
     ctrl = BacklightController()
     with patch("builtins.open", side_effect=OSError):
         result = ctrl.get_brightness()

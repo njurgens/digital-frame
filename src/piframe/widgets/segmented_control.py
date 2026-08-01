@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from piframe.assets import Assets
 
 from piframe.types import COLOUR_BTN_PRIMARY, COLOUR_BTN_SECONDARY, COLOUR_TEXT_PRIMARY
 from piframe.widgets.base import Widget
@@ -14,7 +18,7 @@ class SegmentedControl(Widget):
         rect: pygame.Rect,
         segments: list[str],
         selected: int = 0,
-        assets=None,
+        assets: Assets | None = None,
         on_change: Callable[[int, str], None] | None = None,
     ) -> None:
         super().__init__(rect)

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from piframe.assets import Assets
 
 from piframe.types import (
     COLOUR_CONNECTED,
@@ -19,7 +23,7 @@ class NavItem(Widget):
         rect: pygame.Rect,
         label: str,
         icon: str,
-        assets,
+        assets: Assets,
         active: bool = False,
         on_select: Callable[[], None] | None = None,
     ) -> None:
@@ -54,7 +58,7 @@ class NavItem(Widget):
 
         label_font = self._assets.font(20)
         label_surf, _ = label_font.render(self._label, text_colour)
-        font_height = label_font.get_sized_height()
+        font_height = label_font.get_sized_height()  # type: ignore[call-arg]
         screen.blit(label_surf, (self.rect.x + 56, self.rect.centery - font_height // 2))
 
     def handle_event(self, event: pygame.event.Event) -> bool:

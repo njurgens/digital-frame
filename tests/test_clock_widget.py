@@ -21,7 +21,7 @@ def _mock_assets():
     return assets, bold_font, body_font
 
 
-def test_time_and_date_format_strings():
+def test_time_and_date_format_strings() -> None:
     assets, bold_font, body_font = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -37,7 +37,7 @@ def test_time_and_date_format_strings():
         clock.stop()
 
 
-def test_update_timezone_changes_timezone():
+def test_update_timezone_changes_timezone() -> None:
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -47,7 +47,7 @@ def test_update_timezone_changes_timezone():
         clock.stop()
 
 
-def test_update_timezone_changes_formatted_output():
+def test_update_timezone_changes_formatted_output() -> None:
     assets, bold_font, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -68,7 +68,7 @@ def test_update_timezone_changes_formatted_output():
         clock.stop()
 
 
-def test_ticker_marks_clock_dirty():
+def test_ticker_marks_clock_dirty() -> None:
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -77,7 +77,7 @@ def test_ticker_marks_clock_dirty():
         clock._dirty = False
         clock._stop_event.clear()
 
-        def _wait_once(_timeout):
+        def _wait_once(_timeout: float):
             clock._stop_event.set()
             return True
 
@@ -90,7 +90,7 @@ def test_ticker_marks_clock_dirty():
         clock.stop()
 
 
-def test_surfaces_rendered_after_construction():
+def test_surfaces_rendered_after_construction() -> None:
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
 import pygame.freetype
+
+if TYPE_CHECKING:
+    from piframe.assets import Assets
 
 from piframe.types import COLOUR_SCROLL_PICKER_HL
 from piframe.widgets.base import Widget
@@ -14,7 +18,7 @@ class ScrollPicker(Widget):
         rect: pygame.Rect,
         items: list[str],
         selected: int = 0,
-        assets=None,
+        assets: Assets | None = None,
         on_change: Callable[[int, str], None] | None = None,
         row_h: int = 44,
         visible_rows: int = 7,

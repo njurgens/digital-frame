@@ -46,14 +46,14 @@ class ClockWidget:
         with self._lock:
             self._surfaces = (time_surf, date_surf)
 
-    def update_timezone(self, tz_name: str):
+    def update_timezone(self, tz_name: str) -> None:
         with self._lock:
             self._timezone = ZoneInfo(tz_name)
         self._render_surfaces(datetime.datetime.now(self._timezone))
         with self._lock:
             self._dirty = True
 
-    def set_timezone(self, tz_name: str):
+    def set_timezone(self, tz_name: str) -> None:
         self.update_timezone(tz_name)
 
     def update(self, dt: float) -> None:
@@ -66,11 +66,11 @@ class ClockWidget:
             self._dirty = False
         self._render_surfaces(now)
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop_event.set()
         self._thread.join(timeout=2)
 
-    def draw(self, screen: Surface):
+    def draw(self, screen: Surface) -> None:
         with self._lock:
             surfs = self._surfaces
         if surfs is None:

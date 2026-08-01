@@ -178,7 +178,7 @@ class ConfigStore:
             else:
                 self._data[section] = section_data
 
-    def _clamp(self, section: str, key: str, value):
+    def _clamp(self, section: str, key: str, value: float | str | bool) -> float | str | bool:
         bounds = _CLAMP.get((section, key))
         if bounds is None or not isinstance(value, (int, float)):
             return value
@@ -204,7 +204,7 @@ class ConfigStore:
         self._write_toml(self._data)
         self._dirty_at = None
 
-    def set(self, section: str, key: str, value) -> None:
+    def set(self, section: str, key: str, value: float | str | bool) -> None:
         value = self._clamp(section, key, value)
         self._data.setdefault(section, {})[key] = value
         if self._dirty_at is None:

@@ -52,7 +52,7 @@ def test_wifi_list_shrinks_to_avoid_password_input_overlap(tmp_path: Path) -> No
 def test_wifi_secure_tap_rebuilds_list_for_password_prompt(tmp_path: Path) -> None:
     panel = _make_panel(tmp_path)
     panel.on_wifi_result(
-        SimpleNamespace(
+        SimpleNamespace(  # type: ignore[arg-type]
             operation="scan",
             success=True,
             data=[
@@ -98,7 +98,7 @@ def test_wifi_connect_result_clears_prompt_and_restores_visible_rows(tmp_path: P
     panel._rebuild_wifi_items()
     assert len(panel._wifi_items) == 1
 
-    panel.on_wifi_result(SimpleNamespace(operation="connect", success=False, data=None))
+    panel.on_wifi_result(SimpleNamespace(operation="connect", success=False, data=None))  # type: ignore[arg-type]
 
     assert panel._wifi_password_ssid is None
     assert len(panel._wifi_items) == 3

@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import pygame
 
-from piframe.assets import IC_LOCK, IC_WIFI, IC_WIFI_OFF
+from piframe.assets import Assets, IC_LOCK, IC_WIFI, IC_WIFI_OFF
 from piframe.types import (
     COLOUR_CONNECTED,
     COLOUR_NAV_ACTIVE_BG,
@@ -23,7 +23,7 @@ class WifiListItem(Widget):
         rect: pygame.Rect,
         network: WifiNetwork,
         current_ssid: str = "",
-        assets=None,
+        assets: Assets | None = None,
         on_tap: Callable[[WifiNetwork], None] | None = None,
         on_long_press: Callable[[WifiNetwork], None] | None = None,
     ) -> None:

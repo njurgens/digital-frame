@@ -3,14 +3,18 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import queue
 import subprocess
 import sys
 import time
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pygame
 import pygame.freetype
+
+if TYPE_CHECKING:
+    import socket
 from pygame import Rect, Surface
 
 from piframe.assets import Assets, IC_PAUSE
@@ -26,6 +30,7 @@ from piframe.sync_service import SyncService
 from piframe.updater import apply_update, check_update
 from piframe.wifi_manager import WifiManager
 from piframe.widgets.confirm_dialog import ConfirmDialog
+from piframe.widgets.text_input import TextInput
 from piframe import types as app_types
 from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, WAKE_GRACE, init_events
 
@@ -36,7 +41,7 @@ _TAP_MAX_DIST = 20.0
 
 
 class MockWifiManager:
-    def scan(self):
+    def scan(self) -> None:
         import threading as _threading
         from piframe.types import WifiNetwork, WifiResult
         from piframe import types as _types
@@ -57,23 +62,23 @@ class MockWifiManager:
 
         _threading.Thread(target=_post, daemon=True).start()
 
-    def connect(self, ssid, password=None):
+    def connect(self, ssid: str, password: str | None = None) -> None:
         _ = ssid, password
         return None
 
-    def forget(self, ssid):
+    def forget(self, ssid: str) -> None:
         _ = ssid
         return None
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         return None
 
-    def get_status(self):
+    def get_status(self) -> None:
         return None
 
 
 class SlideshowPlayer:
-    def __init__(self, config: ConfigStore, cache: PhotoCache, screen_size, assets: Assets | None = None):
+    def __init__(self, config: ConfigStore, cache: PhotoCache, screen_size: tuple[int, int], assets: Assets | None = None):
         self._config = config
         self._cache = cache
         self._assets = assets
@@ -92,7 +97,7 @@ class SlideshowPlayer:
         self._slide_rect: Rect = Rect(0, 0, self._w, self._h)
         self.rescan()
 
-    def rescan(self):
+    def rescan(self) -> None:
         output_dir = Path(self._config.sync.output_dir)
         exts = {".jpg", ".jpeg", ".png", ".gif"}
         files = sorted([p for p in output_dir.iterdir() if p.suffix.lower() in exts]) if output_dir.exists() else []
@@ -119,7 +124,7 @@ class SlideshowPlayer:
             lst[i], lst[j] = lst[j], lst[i]
         return lst
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> None:
         if self._paused or not self._playlist:
             return
         interval = self._config.slideshow.interval
@@ -135,7 +140,7 @@ class SlideshowPlayer:
             if self._elapsed >= interval:
                 self.advance()
 
-    def advance(self, direction: int = 1):
+    def advance(self, direction: int = 1) -> None:
         if not self._playlist:
             return
         self._direction = direction
@@ -161,16 +166,16 @@ class SlideshowPlayer:
         self._in_transition = False
         self._elapsed = 0.0
 
-    def go_back(self):
+    def go_back(self) -> None:
         self.advance(direction=-1)
 
-    def skip(self):
+    def skip(self) -> None:
         self.advance(direction=1)
 
-    def skip_next(self):
+    def skip_next(self) -> None:
         return self.skip()
 
-    def draw(self, screen: Surface):
+    def draw(self, screen: Surface) -> None:
         if self._current_surf is None:
             screen.fill((0, 0, 0))
             return
@@ -191,7 +196,7 @@ class SlideshowPlayer:
         else:
             screen.blit(self._current_surf, (0, 0))
 
-    def draw_pip(self, screen: Surface):
+    def draw_pip(self, screen: Surface) -> None:
         if not self._paused:
             return
         pill_rect = pygame.Rect(12, 762, 26, 26)
@@ -286,7 +291,7 @@ class App:
         self._config.set("display", "brightness", value)
         self._overlay.set_brightness(value)
 
-    def _on_focus_text(self, field) -> None:
+    def _on_focus_text(self, field: TextInput) -> None:
         self._keyboard.attach(field)
         self._state = AppState.KEYBOARD
 
@@ -537,7 +542,7 @@ class App:
         t = threading.Thread(target=self._harness_loop, args=(server,), daemon=True)
         t.start()
 
-    def _harness_loop(self, server):
+    def _harness_loop(self, server: "socket.socket") -> None:
         while True:
             conn = None
             try:
@@ -563,7 +568,7 @@ class App:
                     except Exception:
                         pass
 
-    def _handle_harness_cmd(self, msg: dict, conn) -> None:
+    def _handle_harness_cmd(self, msg: dict, conn: "socket.socket") -> None:
         import threading
 
         cmd = msg.get("cmd")
