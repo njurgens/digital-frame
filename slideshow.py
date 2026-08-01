@@ -1,4 +1,4 @@
-from piframe.app import App
+from piframe.app import main
 
 if __name__ == "__main__":
-    App().run()
+    main()

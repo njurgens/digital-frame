@@ -132,13 +132,29 @@ Manually trigger a sync (without waiting for the timer):
 ssh frame@10.1.7.58 'sudo systemctl start framesync.service'
 ```
 
-## Python Dependencies — apt only, no pip/venv
+## Python Dependencies — uv managed
 
-All Python packages must be installed via `apt` (system packages), never pip or a virtualenv. The apt versions are pre-built for aarch64 and link against the correct system libraries (SDL2, libjpeg, etc.).
+All Python packages are managed by uv via `pyproject.toml` and `uv.lock`.
+`eng/install.sh` runs `uv sync --frozen` on the Pi, which installs a managed
+Python 3.13 (from python-build-standalone) and creates `.venv`.
 
-Current apt packages used by slideshow.py:
-- `python3-pygame` — display, surfaces, blitting, event loop
-- `python3-pil` — EXIF orientation correction on JPEG load
+- `.python-version` pins 3.13 — matches on both Pi and devcontainer
+- `uv.lock` is committed — deterministic deployments
+- No apt Python packages needed — all have aarch64 wheels
+- `pygame` has cp313 aarch64 wheels but not cp314 — hence the 3.13 pin
+
+## Dev workflow
+
+```bash
+bash eng/sync.sh            # one-time: create .venv, install deps
+bash eng/check.sh           # lint + format check
+bash eng/test.sh            # run tests
+bash eng/test.sh -k foo     # filter tests
+bash eng/run.sh             # run slideshow locally (needs display)
+bash eng/install.sh         # deploy to Pi
+```
+
+Agents should always use the `eng/` scripts rather than invoking uv directly.
 
 ## Killing / Restarting the Slideshow
 
@@ -149,17 +165,17 @@ slideshow.py writes its PID to `/tmp/slideshow.pid` on startup.
 ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid)'
 
 # Restart manually (for testing without a reboot)
-ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 /home/frame/digital-frame/slideshow.py > /tmp/slideshow.log 2>&1 &'
+ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /home/frame/digital-frame/.venv/bin/slideshow > /tmp/slideshow.log 2>&1 &'
 
 # Kill + restart in one line
-ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid); sleep 1; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 /home/frame/digital-frame/slideshow.py > /tmp/slideshow.log 2>&1 &'
+ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid); sleep 1; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /home/frame/digital-frame/.venv/bin/slideshow > /tmp/slideshow.log 2>&1 &'
 ```
 
 **Do NOT use `pkill -f slideshow.py` or `pgrep -f slideshow.py`** — the `-f` flag matches against the full command line, which includes the SSH command string itself, causing the SSH session to kill itself and hang.
 
 ## Key Conventions
 
-- **No venv, no pip.** Python scripts use system Python 3 (`/usr/bin/python3`). All packages installed via `apt`.
+- **uv-managed Python 3.13.** Python scripts run from `.venv/bin/`. The venv is created by `uv sync` on deploy. No apt Python packages.
 - **framesync.py logs to stdout/stderr** — captured by journald via `StandardOutput=journal`. Keep log lines concise; they show up in `journalctl -u framesync`.
 - **sync_folder() is destructive** — it deletes local files not present in the remote folder.
 - **install.sh uses a bash heredoc to run Python as root on the Pi.** The heredoc is unquoted (`<<EOF`), so Python raw strings (`r'...'`) and backslash sequences are mangled by bash. Avoid them inside the heredoc — use plain string logic instead.

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:3-3.14-trixie
+FROM mcr.microsoft.com/devcontainers/python:3-3.13-trixie
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 

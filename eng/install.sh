@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # eng/install.sh — Deploy the Pi Frame app to the Raspberry Pi.
 # Run from the repo root on your development machine:
 #   bash eng/install.sh
@@ -19,18 +19,18 @@ rsync -av --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='.git' --exclude='config.toml' \
   "${REPO_DIR}/" "frame@10.1.7.58:${REMOTE_DIR}/"
 
+echo "==> Installing uv on Pi..."
+ssh "$PI" 'command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh'
+
+echo "==> Syncing Python environment on Pi..."
+ssh "$PI" '$HOME/.local/bin/uv sync --frozen --directory /home/frame/digital-frame'
+
 echo "==> Installing system packages on Pi..."
 ssh "$PI" 'sudo apt-get update -qq && sudo apt-get install -y \
-  python3-pygame \
-  python3-pil \
-  python3-requests \
-  python3-numpy \
   fonts-noto-core \
   network-manager \
   curl \
-  socat \
-  python3-pytest \
-  python3-paramiko'
+  socat'
 
 echo "==> Ensuring config.toml exists (will not overwrite)..."
 ssh "$PI" "
@@ -84,12 +84,12 @@ for line in content.splitlines():
         lines.append(line)
 
 out = '\n'.join(lines)
-new_line = 'python3 /home/frame/digital-frame/slideshow.py &'
+new_line = '/home/frame/digital-frame/.venv/bin/slideshow &'
 
 # Remove any previous slideshow line (old or new path)
 replaced = []
 for l in out.splitlines():
-    if ('slideshow.py' in l and not l.strip().startswith('#')):
+    if ('slideshow' in l and not l.strip().startswith('#')):
         replaced.append(new_line)
         new_line = None  # only insert once
     else:
@@ -114,7 +114,7 @@ echo "  1. Edit credentials if needed: ssh $PI 'nano ${REMOTE_DIR}/config.toml'"
 echo "  2. Reboot to apply autostart: ssh $PI 'sudo reboot now'"
 echo ""
 echo "Manual test start (without reboot):"
-echo "  ssh $PI 'kill -9 \$(cat /tmp/slideshow.pid 2>/dev/null) 2>/dev/null; sleep 1; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 python3 ${REMOTE_DIR}/slideshow.py > /tmp/slideshow.log 2>&1 &'"
+echo "  ssh $PI 'kill -9 \$(cat /tmp/slideshow.pid 2>/dev/null) 2>/dev/null; sleep 1; XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 ${REMOTE_DIR}/.venv/bin/slideshow > /tmp/slideshow.log 2>&1 &'"
 echo ""
 echo "Debug commands:"
 echo "  ssh $PI 'cat /tmp/slideshow.log'           # slideshow logs"
