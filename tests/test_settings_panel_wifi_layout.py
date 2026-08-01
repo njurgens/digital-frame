@@ -28,7 +28,7 @@ class _StubAssets:
 
 
 def _make_panel(tmp_path: Path) -> SettingsPanel:
-    return SettingsPanel(assets=_StubAssets(), config=ConfigStore(tmp_path / "config.toml"))
+    return SettingsPanel(assets=_StubAssets(), config=ConfigStore(tmp_path / "config.toml"))  # type: ignore[arg-type]
 
 
 def test_wifi_list_shrinks_to_avoid_password_input_overlap(tmp_path: Path) -> None:
@@ -73,7 +73,7 @@ def test_wifi_secure_tap_rebuilds_list_for_password_prompt(tmp_path: Path) -> No
 def test_wifi_password_input_focus_triggers_keyboard_attach_callback(tmp_path: Path) -> None:
     focused = []
     panel = SettingsPanel(
-        assets=_StubAssets(),
+        assets=_StubAssets(),  # type: ignore[arg-type]
         config=ConfigStore(tmp_path / "config.toml"),
         on_focus_text=lambda w: focused.append(w),
     )

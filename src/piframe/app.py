@@ -486,8 +486,9 @@ class App:
         sys.exit(0)
 
     def _cleanup(self):
-        if getattr(self, "_sync", None) is not None:
-            self._sync.stop()
+        sync = getattr(self, "_sync", None)
+        if sync is not None:
+            sync.stop()
         self._sleep.stop()
         self._clock_w.stop()
         self._config.flush_now()
@@ -655,8 +656,9 @@ class App:
                 self._settings.sync_from_config()
             return {"ok": True}
         if cmd == "trigger_sync":
-            if hasattr(self, "_sync"):
-                self._sync.trigger()
+            sync = getattr(self, "_sync", None)
+            if sync is not None:
+                sync.trigger()
             return {"ok": True}
         return {"ok": False, "error": f"unknown command: {cmd}"}
 

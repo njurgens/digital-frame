@@ -58,7 +58,7 @@ def test_slideshow_tap_transitions_to_overlay(tmp_path):
     assert app._state == AppState.SLIDESHOW
     app._dispatch_tap((640, 400))
     assert app._state == AppState.OVERLAY
-    app._overlay.show.assert_called()
+    app._overlay.show.assert_called()  # type: ignore[union-attr]
 
 
 def test_overlay_tap_outside_controls_returns_to_slideshow(tmp_path):
@@ -66,7 +66,7 @@ def test_overlay_tap_outside_controls_returns_to_slideshow(tmp_path):
     from piframe.types import AppState
 
     app._state = AppState.OVERLAY
-    app._overlay.on_tap.return_value = None
+    app._overlay.on_tap.return_value = None  # type: ignore[union-attr]
     app._dispatch_tap((640, 400))
     assert app._state == AppState.SLIDESHOW
 
@@ -86,10 +86,10 @@ def test_overlay_settings_action_transitions_to_settings(tmp_path):
     from piframe.types import AppState
 
     app._state = AppState.OVERLAY
-    app._overlay.on_tap.return_value = "settings"
+    app._overlay.on_tap.return_value = "settings"  # type: ignore[union-attr]
     app._dispatch_tap((1240, 33))
     assert app._state == AppState.SETTINGS
-    app._settings.open.assert_called_once()
+    app._settings.open.assert_called_once()  # type: ignore[union-attr]
 
 
 def test_play_pause_tap_toggles_player(tmp_path):
@@ -97,11 +97,11 @@ def test_play_pause_tap_toggles_player(tmp_path):
     from piframe.types import AppState
 
     app._state = AppState.OVERLAY
-    app._overlay.on_tap.return_value = "play_pause"
+    app._overlay.on_tap.return_value = "play_pause"  # type: ignore[union-attr]
     app._player.is_paused = False
     app._dispatch_tap((640, 400))
     assert app._player.is_paused is True
-    app._overlay.set_paused.assert_called_once_with(True)
+    app._overlay.set_paused.assert_called_once_with(True)  # type: ignore[union-attr]
 
 
 def test_on_focus_text_transitions_to_keyboard(tmp_path):
@@ -112,7 +112,7 @@ def test_on_focus_text_transitions_to_keyboard(tmp_path):
     field = MagicMock()
     app._on_focus_text(field)
     assert app._state == AppState.KEYBOARD
-    app._keyboard.attach.assert_called_once_with(field)
+    app._keyboard.attach.assert_called_once_with(field)  # type: ignore[union-attr]
 
 
 def test_keyboard_done_returns_to_settings(tmp_path):
@@ -132,9 +132,9 @@ def test_sleeping_tap_wakes_to_overlay(tmp_path):
     pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(640, 400), button=1))
     app._process_pygame_events()
     assert app._state == AppState.OVERLAY
-    app._overlay.show.assert_called_once()
-    app._backlight.set_brightness.assert_called_once_with(app._config.display.brightness)
-    app._sleep.set_grace.assert_called_once()
+    app._overlay.show.assert_called_once()  # type: ignore[union-attr]
+    app._backlight.set_brightness.assert_called_once_with(app._config.display.brightness)  # type: ignore[union-attr]
+    app._sleep.set_grace.assert_called_once()  # type: ignore[union-attr]
 
 
 def test_pointer_up_diagonal_drag_does_not_dispatch_tap(tmp_path, monkeypatch):
@@ -147,8 +147,8 @@ def test_pointer_up_diagonal_drag_does_not_dispatch_tap(tmp_path, monkeypatch):
     app._classify_pointer_up((250, 180))
 
     app._dispatch_tap.assert_not_called()
-    app._player.skip.assert_not_called()
-    app._player.go_back.assert_not_called()
+    app._player.skip.assert_not_called()  # type: ignore[union-attr]
+    app._player.go_back.assert_not_called()  # type: ignore[union-attr]
 
 
 def test_pointer_up_allows_diagonal_horizontal_swipe(tmp_path, monkeypatch):
@@ -160,7 +160,7 @@ def test_pointer_up_allows_diagonal_horizontal_swipe(tmp_path, monkeypatch):
 
     app._classify_pointer_up((180, 341))
 
-    app._player.skip.assert_called_once()
+    app._player.skip.assert_called_once()  # type: ignore[union-attr]
     app._dispatch_tap.assert_not_called()
 
 
@@ -196,7 +196,7 @@ def test_pointer_up_accepts_swipe_at_slope_boundary(tmp_path, monkeypatch):
 
     app._classify_pointer_up((161, 130))  # dx=61, dy=30 => dy <= dx*0.5
 
-    app._player.go_back.assert_called_once()
+    app._player.go_back.assert_called_once()  # type: ignore[union-attr]
     app._dispatch_tap.assert_not_called()
 
 
@@ -209,7 +209,7 @@ def test_pointer_up_rejects_swipe_just_over_slope_boundary(tmp_path, monkeypatch
 
     app._classify_pointer_up((161, 131))  # dx=61, dy=31 => dy > dx*0.5
 
-    app._player.go_back.assert_not_called()
+    app._player.go_back.assert_not_called()  # type: ignore[union-attr]
     app._dispatch_tap.assert_not_called()
 
 
@@ -234,5 +234,5 @@ def test_pointer_up_rejects_swipe_at_elapsed_boundary(tmp_path, monkeypatch):
 
     app._classify_pointer_up((180, 120))
 
-    app._player.go_back.assert_not_called()
+    app._player.go_back.assert_not_called()  # type: ignore[union-attr]
     app._dispatch_tap.assert_not_called()

@@ -4,9 +4,13 @@ import shutil
 import socket
 import threading
 from enum import Enum
+from typing import TYPE_CHECKING
 import zoneinfo
 
 import pygame
+
+if TYPE_CHECKING:
+    from piframe.app import App
 
 from piframe.assets import (
     FONT_SIZE_BODY,
@@ -66,7 +70,7 @@ class SettingsPanel:
         on_focus_text=None,
         wifi_manager=None,
         sync_service=None,
-        app_ref=None,
+        app_ref: App | None = None,
     ):
         self._assets = assets
         self._config = config
@@ -74,7 +78,7 @@ class SettingsPanel:
         self._on_focus_text = on_focus_text
         self._wifi_manager = wifi_manager
         self._sync_service = sync_service
-        self._app_ref = app_ref
+        self._app_ref: App | None = app_ref
         self._active_section = Section.SLIDESHOW
         self._visible = False
         self._build_nav()
@@ -805,13 +809,14 @@ class SettingsPanel:
     def _show_reboot_confirm(self) -> None:
         if self._app_ref is None:
             return
+        app = self._app_ref
 
         def _confirm() -> None:
-            self._app_ref._dialog = None
-            self._app_ref._reboot()
+            app._dialog = None
+            app._reboot()
 
         def _cancel() -> None:
-            self._app_ref._dialog = None
+            app._dialog = None
 
         self._set_dialog(
             ConfirmDialog(
@@ -827,13 +832,14 @@ class SettingsPanel:
     def _show_shutdown_confirm(self) -> None:
         if self._app_ref is None:
             return
+        app = self._app_ref
 
         def _confirm() -> None:
-            self._app_ref._dialog = None
-            self._app_ref._shutdown()
+            app._dialog = None
+            app._shutdown()
 
         def _cancel() -> None:
-            self._app_ref._dialog = None
+            app._dialog = None
 
         self._set_dialog(
             ConfirmDialog(

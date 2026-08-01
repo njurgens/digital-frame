@@ -27,7 +27,7 @@ class _StubAssets:
 
 
 def _make_panel(tmp_path: Path) -> SettingsPanel:
-    return SettingsPanel(assets=_StubAssets(), config=ConfigStore(tmp_path / "config.toml"))
+    return SettingsPanel(assets=_StubAssets(), config=ConfigStore(tmp_path / "config.toml"))  # type: ignore[arg-type]
 
 
 def test_display_brightness_uses_horizontal_slider(tmp_path: Path) -> None:

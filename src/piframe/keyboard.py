@@ -122,6 +122,7 @@ class Keyboard:
                 pygame.draw.rect(screen, bg, rect, border_radius=8)
 
                 icon = None
+                label = ""
                 if key == "SHIFT":
                     icon = IC_SHIFT_LOCK if self._shift else IC_SHIFT
                 elif key == "BACKSPACE":

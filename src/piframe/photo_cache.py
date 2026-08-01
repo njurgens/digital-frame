@@ -15,7 +15,7 @@ BLUR_RADIUS = 40
 try:
     _LANCZOS = Image.Resampling.LANCZOS
 except AttributeError:
-    _LANCZOS = Image.LANCZOS
+    _LANCZOS = Image.LANCZOS  # type: ignore[attr-defined]
 
 
 class PhotoCache:
@@ -70,7 +70,7 @@ class PhotoCache:
     def _apply_exif_orientation(self, img: Image.Image) -> Image.Image:
         orientation = 1
         try:
-            exif = img._getexif()
+            exif = img._getexif()  # type: ignore[attr-defined]
             if exif is not None:
                 orientation = exif.get(274, 1)
         except AttributeError:

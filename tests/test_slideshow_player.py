@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pygame
@@ -11,16 +10,14 @@ from piframe.app import SlideshowPlayer
 from piframe.types import TRANS_DURATION
 
 
-def _make_config(photo_dir: Path) -> SimpleNamespace:
-    return SimpleNamespace(
-        slideshow=SimpleNamespace(
-            interval=1.0,
-            fit_mode="fit",
-            shuffle=True,
-            transition="crossfade",
-        ),
-        sync=SimpleNamespace(output_dir=str(photo_dir)),
-    )
+def _make_config(photo_dir: Path) -> MagicMock:
+    cfg = MagicMock()
+    cfg.slideshow.interval = 1.0
+    cfg.slideshow.fit_mode = "fit"
+    cfg.slideshow.shuffle = True
+    cfg.slideshow.transition = "crossfade"
+    cfg.sync.output_dir = str(photo_dir)
+    return cfg
 
 
 def _make_files(photo_dir: Path, n: int = 3) -> None:

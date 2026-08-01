@@ -23,9 +23,12 @@ class _StubAssets:
     def font(self, _size: int) -> _StubFont:
         return _StubFont()
 
+    def font_bold(self, _size: int) -> _StubFont:
+        return _StubFont()
+
 
 def _make_overlay(tmp_path: Path) -> OverlayUI:
-    return OverlayUI(_StubAssets(), ConfigStore(tmp_path / "config.toml"))
+    return OverlayUI(_StubAssets(), ConfigStore(tmp_path / "config.toml"))  # type: ignore[arg-type]
 
 
 def test_overlay_button_background_preserves_alpha(tmp_path: Path) -> None:
@@ -109,12 +112,12 @@ def test_draw_uses_play_icon_when_paused_and_pause_when_playing(tmp_path: Path, 
     captured: list[str] = []
     original = overlay._draw_icon_centered
 
-    def _capture(_screen, icon, size, center):
+    def _capture(screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]):
         if center == PLAY_RECT.center:
             captured.append(icon)
-        return original(_screen, icon, size, center)
+        return original(screen, icon, size, center)
 
-    overlay._draw_icon_centered = _capture
+    overlay._draw_icon_centered = _capture  # type: ignore[assignment]
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     overlay.set_paused(True)
     overlay.draw(screen)

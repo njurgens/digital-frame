@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pygame
+import pygame.freetype
 
 from piframe.types import COLOUR_SCROLL_PICKER_HL
 from piframe.widgets.base import Widget
@@ -38,7 +39,7 @@ class ScrollPicker(Widget):
     def _font(self):
         if self._assets is not None:
             return self._assets.font(18)
-        return pygame.font.SysFont(None, 24)
+        return pygame.freetype.SysFont(None, 24)
 
     def _render_item(self, i: int) -> pygame.Surface:
         cached = self._surface_cache.get(i)
