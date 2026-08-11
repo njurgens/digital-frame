@@ -82,6 +82,20 @@ Agent(subagent_type="review-testing", prompt="Review the changes on branch X for
 
 ---
 
+## Issue & PR Management
+
+| Task | Script |
+|------|--------|
+| Create issue | `eng/create-issue.sh --title "..." --body-file FILE [--label L]` |
+| Get issue | `eng/get-issue.sh ISSUE_NUMBER` |
+| Create PR | `eng/create-pr.sh --title "..." --body-file FILE [--reviewer U]` |
+| Get PR | `eng/get-pr.sh PR_NUMBER` |
+| Update PR | `eng/update-pr.sh PR_NUMBER --body-file FILE` |
+
+See each script's `--help` for full usage.
+
+---
+
 # Copilot Instructions
 
 ## Documentation Lookup
