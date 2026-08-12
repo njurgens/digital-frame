@@ -1,10 +1,11 @@
+"""Wi-Fi network list item widget."""
 from __future__ import annotations
 
 from collections.abc import Callable
 
 import pygame
 
-from piframe.assets import Assets, IC_LOCK, IC_WIFI, IC_WIFI_OFF
+from piframe.assets import IC_LOCK, IC_WIFI, IC_WIFI_OFF, Assets
 from piframe.types import (
     COLOUR_CONNECTED,
     COLOUR_NAV_ACTIVE_BG,
@@ -18,6 +19,8 @@ ROW_H = 56
 
 
 class WifiListItem(Widget):
+    """Wi-Fi network list item with signal strength and security indicators."""
+
     def __init__(
         self,
         rect: pygame.Rect,
@@ -27,6 +30,17 @@ class WifiListItem(Widget):
         on_tap: Callable[[WifiNetwork], None] | None = None,
         on_long_press: Callable[[WifiNetwork], None] | None = None,
     ) -> None:
+        """Create a Wi-Fi network list item.
+
+        Args:
+        rect: Position and size of the item.
+        network: The Wi-Fi network data to display.
+        current_ssid: SSID of the currently connected network.
+        assets: Asset provider for fonts and icons.
+        on_tap: Callback invoked on short tap.
+        on_long_press: Callback invoked on long press.
+
+        """
         super().__init__(rect)
         self.network = network
         self.current_ssid = current_ssid
@@ -36,6 +50,7 @@ class WifiListItem(Widget):
         self._press_start: float | None = None
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the network name, signal, and security indicators."""
         net = self.network
         rect = self.rect
         is_connected = net.ssid == self.current_ssid
@@ -69,6 +84,7 @@ class WifiListItem(Widget):
                 pygame.draw.circle(screen, COLOUR_CONNECTED[:3], (rect.right - 16, rect.centery), 4)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle tap and long-press events on the network item."""
         import time
 
         if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):

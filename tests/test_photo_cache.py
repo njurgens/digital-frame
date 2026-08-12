@@ -1,3 +1,4 @@
+"""Tests for PhotoCache caching, rendering, and invalidation."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +11,7 @@ from piframe.photo_cache import MAX_CACHE, PhotoCache
 
 @pytest.mark.skipif(pytest.importorskip("PIL", reason="PIL is required") is None, reason="PIL is required")
 def test_cache_key_format(tmp_path: Path) -> None:
+    """Cache key format."""
     cache = PhotoCache((1280, 800))
     p = tmp_path / "hello-world.jpg"
     key = cache._key(p, "fit")
@@ -17,6 +19,7 @@ def test_cache_key_format(tmp_path: Path) -> None:
 
 
 def test_lru_eviction() -> None:
+    """Lru eviction."""
     cache = PhotoCache((1280, 800))
     for i in range(MAX_CACHE + 1):
         cache._put(f"k{i}", pygame.Surface((10, 10)))
@@ -27,6 +30,7 @@ def test_lru_eviction() -> None:
 
 
 def test_exif_orientation_dimensions(tmp_path: Path) -> None:
+    """Exif orientation dimensions."""
     PIL = pytest.importorskip("PIL")
     Image = PIL.Image
 

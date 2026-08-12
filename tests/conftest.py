@@ -1,10 +1,10 @@
 """Shared pytest fixtures for all test tiers."""
 from __future__ import annotations
 
+import json
 import os
 import socket
 import time
-import json
 from collections.abc import Generator
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -25,7 +25,8 @@ import pytest
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session", autouse=True)
-def pygame_init() -> Generator[None, None, None]:
+def pygame_init() -> Generator[None]:
+    """Initialise pygame for the test session."""
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -33,14 +34,15 @@ def pygame_init() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_backlight() -> Generator[MagicMock, None, None]:
+def mock_backlight() -> Generator[MagicMock]:
+    """Mock the sysfs backlight file for testing."""
     with patch("piframe.backlight.open", MagicMock()) as m:
         yield m
 
 
 @pytest.fixture
-def mock_nmcli() -> Generator[MagicMock, None, None]:
-    """Returns a mock that replaces subprocess.run inside WifiManager."""
+def mock_nmcli() -> Generator[MagicMock]:
+    """Return a mock that replaces subprocess.run inside WifiManager."""
     with patch("piframe.wifi_manager.subprocess.run") as m:
         yield m
 
@@ -61,7 +63,16 @@ BRIDGE_PORT = 9901  # local TCP port forwarded to SOCK_PATH via socat
 class AppHarness:
     """Thin wrapper around the test-harness socket protocol."""
 
-    def __init__(self, ssh: paramiko.SSHClient, host: str, port: int, sock_path: str | None = None):
+    def __init__(self, ssh: paramiko.SSHClient, host: str, port: int, sock_path: str | None = None) -> None:
+        """Create an app test harness.
+
+        Args:
+            ssh: SSH client for connecting to the Pi.
+            host: Pi hostname or IP address.
+            port: TCP port for the test harness socket.
+            sock_path: Optional Unix socket path for direct connection.
+
+        """
         self._ssh = ssh
         self._host = host
         self._port = port
@@ -91,24 +102,31 @@ class AppHarness:
         return json.loads(data.strip())
 
     def cmd(self, obj: dict) -> dict:
+        """Send a command to the app and return the response."""
         return self._send(obj)
 
     def tap(self, x: int, y: int) -> dict:
+        """Tap at the given coordinates."""
         return self.cmd({"cmd": "tap", "x": x, "y": y})
 
     def swipe(self, x: int, y: int, dx: int, dy: int, ms: int = 300) -> dict:
+        """Swipe from (x, y) by (dx, dy) over ms milliseconds."""
         return self.cmd({"cmd": "swipe", "x": x, "y": y, "dx": dx, "dy": dy, "ms": ms})
 
     def state(self) -> str:
+        """Get the current app state name."""
         return self.cmd({"cmd": "state"})["state"]
 
     def set_config(self, section: str, key: str, value: float | str | bool) -> dict:
+        """Set a config value and optionally kick the sleep scheduler."""
         return self.cmd({"cmd": "set_config", "section": section, "key": key, "value": value})
 
     def trigger_sync(self) -> dict:
+        """Trigger an immediate photo sync."""
         return self.cmd({"cmd": "trigger_sync"})
 
     def screenshot(self, name: str) -> Path:
+        """Take a screenshot of the current screen."""
         remote = f"/tmp/pf_{name}.png"
         self.cmd({"cmd": "screenshot", "path": remote})
         time.sleep(0.3)
@@ -122,6 +140,7 @@ class AppHarness:
         return local
 
     def quit(self) -> None:
+        """Quit the app via the test harness."""
         try:
             self.cmd({"cmd": "quit"})
         except Exception:
@@ -129,7 +148,7 @@ class AppHarness:
 
 
 @pytest.fixture(scope="module")
-def pi_app() -> Generator[AppHarness, None, None]:
+def pi_app() -> Generator[AppHarness]:
     """Connect to (or start) the app on the Pi in harness mode and yield an AppHarness."""
     try:
         import paramiko

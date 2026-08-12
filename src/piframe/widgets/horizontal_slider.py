@@ -1,3 +1,4 @@
+"""Horizontal slider widget for value selection."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -9,12 +10,22 @@ from piframe.widgets.base import Widget
 
 
 class HorizontalSlider(Widget):
+    """Horizontal brightness/value slider widget (0–100)."""
+
     def __init__(
         self,
         rect: pygame.Rect,
         initial_value: int = 50,
         on_change: Callable[[int], None] | None = None,
     ):
+        """Create a horizontal slider.
+
+        Args:
+        rect: Position and size of the slider.
+        initial_value: Starting value (0–100).
+        on_change: Callback invoked when the value changes.
+
+        """
         super().__init__(rect)
         self.value: int = max(0, min(100, initial_value))
         self._dragging: bool = False
@@ -35,10 +46,12 @@ class HorizontalSlider(Widget):
             self.on_change(value)
 
     def set_value(self, value: int) -> None:
+        """Set the slider value without triggering on_change."""
         self.value = max(0, min(100, value))
         self.dirty = True
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the slider track, fill, and thumb."""
         rect = self.rect
         track_rect = pygame.Rect(rect.left, rect.centery - 2, rect.width, 4)
         pygame.draw.rect(screen, COLOUR_SLIDER_TRACK[:3], track_rect)
@@ -49,6 +62,7 @@ class HorizontalSlider(Widget):
         pygame.draw.circle(screen, COLOUR_SLIDER_THUMB[:3], (thumb_x, rect.centery), 11)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle drag events to adjust the slider value."""
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1:
             hit_rect = self.rect.inflate(0, 20)
             x, y = event.pos

@@ -1,3 +1,5 @@
+"""On-screen virtual keyboard for text input."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -21,19 +23,19 @@ from piframe.types import (
 ALPHA = [
     list("QWERTYUIOP"),
     list("ASDFGHJKL"),
-    ["SHIFT"] + list("ZXCVBNM") + ["BACKSPACE"],
+    ["SHIFT", *list("ZXCVBNM"), "BACKSPACE"],
     ["123", "SPACE", "DONE"],
 ]
 NUMERIC = [
     list("1234567890"),
     list("-/:;()$&@"),
-    ["#+="] + list(".,?!'") + ["BACKSPACE"],
+    ["#+=", *list(".,?!'"), "BACKSPACE"],
     ["ABC", "SPACE", "DONE"],
 ]
 EXTENDED = [
     list("[]{}#%^*+="),
     list(r"_\|~<>€£¥"),
-    ["123"] + list(".,?!'") + ["BACKSPACE"],
+    ["123", *list(".,?!'"), "BACKSPACE"],
     ["ABC", "SPACE", "DONE"],
 ]
 LAYERS = {"alpha": ALPHA, "numeric": NUMERIC, "extended": EXTENDED}
@@ -47,7 +49,16 @@ IC_BACKSPACE = "\ue14a"
 
 
 class Keyboard:
+    """On-screen virtual keyboard with alpha, numeric, and extended layers."""
+
     def __init__(self, assets: Assets, on_done: Callable[[], None] | None = None):
+        """Create a virtual keyboard.
+
+        Args:
+            assets: Asset manager for fonts and icons.
+            on_done: Callback when the DONE key is pressed.
+
+        """
         self._assets = assets
         self._layer: str = "alpha"
         self._shift: bool = False
@@ -90,6 +101,7 @@ class Keyboard:
             self._key_rects.append(row_rects)
 
     def attach(self, target: TextInput) -> None:
+        """Attach the keyboard to a text input target."""
         self._target = target
         self._visible = True
         self._layer = "alpha"
@@ -97,15 +109,18 @@ class Keyboard:
         self._build_rects()
 
     def detach(self) -> None:
+        """Detach the keyboard from the current target."""
         self._target = None
         self._visible = False
         self._active_key = None
 
     @property
     def is_visible(self) -> bool:
+        """Whether the keyboard is currently visible."""
         return self._visible
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the keyboard onto the screen."""
         if not self._visible:
             return
 
@@ -146,6 +161,7 @@ class Keyboard:
                 screen.blit(surf, (rect.centerx - surf.get_width() // 2, rect.centery - surf.get_height() // 2))
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle pygame events for key presses and releases."""
         if not self._visible:
             return False
 

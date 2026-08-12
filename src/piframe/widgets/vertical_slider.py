@@ -1,3 +1,4 @@
+"""Vertical slider widget for value selection."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -9,12 +10,22 @@ from piframe.widgets.base import Widget
 
 
 class VerticalSlider(Widget):
+    """Vertical brightness/value slider widget (0–100)."""
+
     def __init__(
         self,
         rect: pygame.Rect,
         initial_value: int = 50,
         on_change: Callable[[int], None] | None = None,
     ):
+        """Create a vertical slider.
+
+        Args:
+        rect: Position and size of the slider.
+        initial_value: Starting value (0–100).
+        on_change: Callback invoked when the value changes.
+
+        """
         super().__init__(rect)
         self.value: int = max(0, min(100, initial_value))
         self._dragging: bool = False
@@ -35,6 +46,7 @@ class VerticalSlider(Widget):
             self.on_change(value)
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the slider track, fill, and thumb."""
         rect = self.rect
         track_rect = pygame.Rect(rect.centerx - 2, rect.top, 4, rect.height)
         pygame.draw.rect(screen, COLOUR_SLIDER_TRACK[:3], track_rect)
@@ -45,6 +57,7 @@ class VerticalSlider(Widget):
         pygame.draw.circle(screen, COLOUR_SLIDER_THUMB[:3], (rect.centerx, thumb_y), 11)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle drag events to adjust the slider value."""
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1:
             hit_rect = self.rect.inflate(20, 0)
             x, _ = event.pos

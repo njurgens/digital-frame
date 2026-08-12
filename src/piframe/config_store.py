@@ -1,3 +1,4 @@
+"""TOML-based configuration store with typed section accessors."""
 from __future__ import annotations
 
 import logging
@@ -39,6 +40,8 @@ _CLAMP = {
 
 
 class _AppCfg:
+    """App-level configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -48,6 +51,8 @@ class _AppCfg:
 
 
 class _SlideshowCfg:
+    """Slideshow configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -70,6 +75,8 @@ class _SlideshowCfg:
 
 
 class _DisplayCfg:
+    """Display configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -87,6 +94,8 @@ class _DisplayCfg:
 
 
 class _SleepCfg:
+    """Sleep schedule configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -114,6 +123,8 @@ class _SleepCfg:
 
 
 class _SyncCfg:
+    """Photo sync configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -139,6 +150,8 @@ class _SyncCfg:
 
 
 class _SystemCfg:
+    """System configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -148,6 +161,8 @@ class _SystemCfg:
 
 
 class _UpdateCfg:
+    """Update configuration values."""
+
     def __init__(self, data: dict):
         self._d = data
 
@@ -157,7 +172,19 @@ class _UpdateCfg:
 
 
 class ConfigStore:
-    def __init__(self, path: str | Path):
+    """TOML-based configuration store with typed section accessors.
+
+    Reads from disk on init, merges user overrides, protects secrets,
+    and flushes changes back to disk on a delay.
+    """
+
+    def __init__(self, path: str | Path) -> None:
+        """Initialise the config store from a TOML file.
+
+        Args:
+            path: Path to the TOML configuration file.
+
+        """
         self._path = Path(path)
         self._data = deepcopy(_DEFAULTS)
         self._dirty_at: float | None = None
@@ -196,10 +223,12 @@ class ConfigStore:
         return type(value)(max(lo, min(hi, value)))
 
     def tick(self, now: float) -> None:
+        """Check if enough time has passed to flush pending changes."""
         if self._dirty_at is not None and now - self._dirty_at >= 0.5:
             self.flush_now()
 
     def flush_now(self) -> None:
+        """Write the current configuration to disk immediately."""
         disk: dict = {}
         if self._path.exists():
             try:
@@ -215,6 +244,7 @@ class ConfigStore:
         self._dirty_at = None
 
     def set(self, section: str, key: str, value: float | str | bool) -> None:
+        """Set a configuration value and schedule a delayed flush."""
         value = self._clamp(section, key, value)
         self._data.setdefault(section, {})[key] = value
         if self._dirty_at is None:
@@ -247,28 +277,35 @@ class ConfigStore:
 
     @property
     def app(self) -> _AppCfg:
+        """App-level configuration accessor."""
         return _AppCfg(self._data.setdefault("app", {}))
 
     @property
     def slideshow(self) -> _SlideshowCfg:
+        """Slideshow configuration accessor."""
         return _SlideshowCfg(self._data.setdefault("slideshow", {}))
 
     @property
     def display(self) -> _DisplayCfg:
+        """Display configuration accessor."""
         return _DisplayCfg(self._data.setdefault("display", {}))
 
     @property
     def sleep(self) -> _SleepCfg:
+        """Sleep schedule configuration accessor."""
         return _SleepCfg(self._data.setdefault("sleep", {}))
 
     @property
     def sync(self) -> _SyncCfg:
+        """Photo sync configuration accessor."""
         return _SyncCfg(self._data.setdefault("sync", {}))
 
     @property
     def system(self) -> _SystemCfg:
+        """System configuration accessor."""
         return _SystemCfg(self._data.setdefault("system", {}))
 
     @property
     def update(self) -> _UpdateCfg:
+        """Update configuration accessor."""
         return _UpdateCfg(self._data.setdefault("update", {}))

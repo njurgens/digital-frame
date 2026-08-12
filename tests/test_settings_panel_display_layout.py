@@ -1,3 +1,4 @@
+"""Tests for settings panel display section layout."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,6 +32,7 @@ def _make_panel(tmp_path: Path) -> SettingsPanel:
 
 
 def test_display_brightness_uses_horizontal_slider(tmp_path: Path) -> None:
+    """Display brightness uses horizontal slider."""
     panel = _make_panel(tmp_path)
 
     assert isinstance(panel._brightness_slider, HorizontalSlider)
@@ -38,6 +40,7 @@ def test_display_brightness_uses_horizontal_slider(tmp_path: Path) -> None:
 
 
 def test_display_brightness_drag_updates_config_value(tmp_path: Path) -> None:
+    """Display brightness drag updates config value."""
     panel = _make_panel(tmp_path)
     panel._active_section = Section.DISPLAY
 
@@ -53,6 +56,7 @@ def test_display_brightness_drag_updates_config_value(tmp_path: Path) -> None:
 
 
 def test_display_brightness_syncs_from_config(tmp_path: Path) -> None:
+    """Display brightness syncs from config."""
     panel = _make_panel(tmp_path)
     panel._config.set("display", "brightness", 33)
 
@@ -62,6 +66,7 @@ def test_display_brightness_syncs_from_config(tmp_path: Path) -> None:
 
 
 def test_open_resyncs_brightness_from_config(tmp_path: Path) -> None:
+    """Open resyncs brightness from config."""
     panel = _make_panel(tmp_path)
     panel._brightness_slider.set_value(72)
     panel._config.set("display", "brightness", 21)

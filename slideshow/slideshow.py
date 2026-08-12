@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-slideshow.py — pygame-based picture frame slideshow.
+"""slideshow.py — pygame-based picture frame slideshow.
 
 Displays JPEG/PNG images with blurred background fill and crossfade transitions.
 Rescans the image directory at the start of each cycle so new synced images
@@ -19,7 +18,7 @@ from pathlib import Path
 from threading import Thread
 
 import pygame
-from PIL import Image, ExifTags
+from PIL import ExifTags, Image
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -48,6 +47,7 @@ _DEFAULTS: dict = {
 }
 
 def load_config() -> dict:
+    """Load the slideshow configuration from disk."""
     cfg = dict(_DEFAULTS)
     if _CONFIG_PATH.exists():
         with open(_CONFIG_PATH, "rb") as f:
@@ -118,8 +118,8 @@ def prepare_surface(
     size: tuple[int, int],
     cache_dir: Path | None,
 ) -> pygame.Surface:
-    """
-    Build a composite surface: blurred-fill background + aspect-correct foreground.
+    """Build a composite surface: blurred-fill background + aspect-correct foreground.
+
     Reads from / writes to a disk cache keyed by filename, mtime, screen size, and
     cache version (so EXIF-fix and other changes auto-invalidate old entries).
     """
@@ -213,9 +213,7 @@ def show_image(
     config: dict,
     cache_dir: Path | None,
 ) -> pygame.Surface | None:
-    """
-    Blit current_surface, wait display_duration (starting preload after
-    preload_delay), then crossfade to the preloaded next surface.
+    """Blit current surface, wait display duration, then crossfade to the next surface.
 
     Returns the next surface on success, or None if quit was requested or
     the next image failed to load.
@@ -286,6 +284,7 @@ _PID_FILE = Path("/tmp/slideshow.pid")
 
 
 def main() -> None:
+    """Entry point for the legacy slideshow script."""
     _PID_FILE.write_text(str(os.getpid()))
     try:
         _run()

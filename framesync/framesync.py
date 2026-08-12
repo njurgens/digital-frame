@@ -1,14 +1,17 @@
+"""OneDrive sync script using the Badger token API."""
 #!/usr/bin/env python3
 import base64
 import tomllib
-import requests
 from pathlib import Path
+
+import requests
 
 API_V2  = "https://my.microsoftpersonalcontent.com/_api/v2.0"
 API_V21 = "https://my.microsoftpersonalcontent.com/_api/v2.1"
 APP_ID  = "00000000-0000-0000-0000-0000481710a4"
 
 def get_badger_token() -> str:
+    """Obtain a Badger authentication token from Microsoft."""
     resp = requests.post("https://api-badgerp.svc.ms/v1.0/token",
         headers={"Content-Type": "application/json"},
         json={"appId": APP_ID})
@@ -16,9 +19,11 @@ def get_badger_token() -> str:
     return resp.json()["token"]
 
 def encode_url(url: str) -> str:
+    """Base64-encode a share URL for the Badger API."""
     return base64.b64encode(url.encode()).rstrip(b"=").decode().replace("/", "_").replace("+", "-")
 
-def validate_password(encoded_url: str, share_url: str, password: str, token: str):
+def validate_password(encoded_url: str, share_url: str, password: str, token: str) -> None:
+    """Validate the share password with the Badger API."""
     url = f"{API_V21}/shares/u!{encoded_url}/root/oneDrive.validatePermission"
     challenge = base64.b64encode(share_url.encode()).decode()
     resp = requests.post(url,
@@ -33,6 +38,7 @@ def validate_password(encoded_url: str, share_url: str, password: str, token: st
     print("Password validated.")
 
 def redeem_share(encoded_url: str, token: str) -> dict:
+    """Redeem a share URL to get the drive item details."""
     url = f"{API_V2}/shares/u!{encoded_url}/driveitem"
     params = {"$select": "id,parentReference,folder,bundle,remoteItem,name,file,@content.downloadUrl"}
     resp = requests.post(url,
@@ -119,7 +125,8 @@ def sync(share_url: str, password: str, output_dir) -> None:
         folder_id = root["id"]
         sync_folder(drive_id, folder_id, token, dest)
 
-def main():
+def main() -> None:
+    """Run the full sync flow from config."""
     with open(Path(__file__).parent / "config.toml", "rb") as f:
         config = tomllib.load(f)
 

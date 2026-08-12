@@ -1,3 +1,4 @@
+"""Clock widget with background thread that updates every minute."""
 from __future__ import annotations
 
 import datetime
@@ -6,14 +7,22 @@ from zoneinfo import ZoneInfo
 
 from pygame import Surface
 
-from piframe.assets import Assets, FONT_SIZE_BODY, FONT_SIZE_CLOCK
+from piframe.assets import FONT_SIZE_BODY, FONT_SIZE_CLOCK, Assets
 from piframe.types import COLOUR_CLOCK_TEXT, COLOUR_TEXT_SECONDARY
 
 
 class ClockWidget:
+    """Clock widget rendered on a background thread, updating every minute."""
+
     _TZ_DEFAULT = "America/Los_Angeles"
 
-    def __init__(self, assets: Assets):
+    def __init__(self, assets: Assets) -> None:
+        """Create a clock widget.
+
+        Args:
+            assets: Asset provider for fonts.
+
+        """
         self._assets = assets
         self._timezone = ZoneInfo(self._TZ_DEFAULT)
         self._surfaces: tuple[Surface, Surface] | None = None
@@ -47,6 +56,7 @@ class ClockWidget:
             self._surfaces = (time_surf, date_surf)
 
     def update_timezone(self, tz_name: str) -> None:
+        """Update the timezone and re-render the clock surfaces."""
         with self._lock:
             self._timezone = ZoneInfo(tz_name)
         self._render_surfaces(datetime.datetime.now(self._timezone))
@@ -54,9 +64,11 @@ class ClockWidget:
             self._dirty = True
 
     def set_timezone(self, tz_name: str) -> None:
+        """Alias for :meth:`update_timezone`."""
         self.update_timezone(tz_name)
 
     def update(self, dt: float) -> None:
+        """Update the clock display if the time has changed."""
         _ = dt
         with self._lock:
             if not self._dirty:
@@ -67,10 +79,12 @@ class ClockWidget:
         self._render_surfaces(now)
 
     def stop(self) -> None:
+        """Stop the background ticker thread."""
         self._stop_event.set()
         self._thread.join(timeout=2)
 
     def draw(self, screen: Surface) -> None:
+        """Draw the clock time and date onto the screen."""
         with self._lock:
             surfs = self._surfaces
         if surfs is None:

@@ -1,3 +1,4 @@
+"""Modal confirmation dialog widget."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -29,6 +30,8 @@ DIALOG_Y = 280
 
 
 class ConfirmDialog(Widget):
+    """Modal confirmation dialog with cancel/confirm buttons."""
+
     def __init__(
         self,
         title: str,
@@ -39,6 +42,18 @@ class ConfirmDialog(Widget):
         on_cancel: Callable[[], None] | None = None,
         assets: Assets | None = None,
     ) -> None:
+        """Create a confirmation dialog.
+
+        Args:
+        title: Dialog title text.
+        body: Dialog body text.
+        confirm_label: Label for the confirm button.
+        destructive: Whether the confirm button is styled as destructive.
+        on_confirm: Callback invoked on confirm.
+        on_cancel: Callback invoked on cancel.
+        assets: Asset provider for fonts.
+
+        """
         super().__init__(pygame.Rect(DIALOG_X, DIALOG_Y, DIALOG_W, DIALOG_H))
         self.title = title
         self.body = body
@@ -51,6 +66,7 @@ class ConfirmDialog(Widget):
         self._confirm_rect = pygame.Rect(DIALOG_X + 264, DIALOG_Y + 168, 196, 52)
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the dialog with scrim, buttons, and text."""
         scrim = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
         scrim.fill(COLOUR_SCRIM)
         screen.blit(scrim, (0, 0))
@@ -89,6 +105,7 @@ class ConfirmDialog(Widget):
             )
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle taps on cancel, confirm, or outside the dialog."""
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self._cancel_rect.collidepoint(event.pos):
                 if self.on_cancel:

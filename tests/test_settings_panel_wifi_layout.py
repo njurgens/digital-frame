@@ -1,3 +1,4 @@
+"""Tests for settings panel Wi-Fi section layout."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,7 +7,7 @@ from types import SimpleNamespace
 import pygame
 
 from piframe.config_store import ConfigStore
-from piframe.settings_panel import SettingsPanel, Section, WIFI_LIST_Y
+from piframe.settings_panel import WIFI_LIST_Y, Section, SettingsPanel
 from piframe.types import WifiNetwork
 
 
@@ -32,6 +33,7 @@ def _make_panel(tmp_path: Path) -> SettingsPanel:
 
 
 def test_wifi_list_shrinks_to_avoid_password_input_overlap(tmp_path: Path) -> None:
+    """Wifi list shrinks to avoid password input overlap."""
     panel = _make_panel(tmp_path)
     panel._wifi_networks = [
         WifiNetwork("Net 1", "WPA2", 80),
@@ -50,6 +52,7 @@ def test_wifi_list_shrinks_to_avoid_password_input_overlap(tmp_path: Path) -> No
 
 
 def test_wifi_secure_tap_rebuilds_list_for_password_prompt(tmp_path: Path) -> None:
+    """Wifi secure tap rebuilds list for password prompt."""
     panel = _make_panel(tmp_path)
     panel.on_wifi_result(
         SimpleNamespace(  # type: ignore[arg-type]
@@ -71,6 +74,7 @@ def test_wifi_secure_tap_rebuilds_list_for_password_prompt(tmp_path: Path) -> No
 
 
 def test_wifi_password_input_focus_triggers_keyboard_attach_callback(tmp_path: Path) -> None:
+    """Wifi password input focus triggers keyboard attach callback."""
     focused = []
     panel = SettingsPanel(
         assets=_StubAssets(),  # type: ignore[arg-type]
@@ -88,6 +92,7 @@ def test_wifi_password_input_focus_triggers_keyboard_attach_callback(tmp_path: P
 
 
 def test_wifi_connect_result_clears_prompt_and_restores_visible_rows(tmp_path: Path) -> None:
+    """Wifi connect result clears prompt and restores visible rows."""
     panel = _make_panel(tmp_path)
     panel._wifi_networks = [
         WifiNetwork("Secure", "WPA2", 80),
@@ -105,6 +110,7 @@ def test_wifi_connect_result_clears_prompt_and_restores_visible_rows(tmp_path: P
 
 
 def test_wifi_list_allows_zero_visible_rows_when_no_space_above_password_input(tmp_path: Path) -> None:
+    """Wifi list allows zero visible rows when no space above password input."""
     panel = _make_panel(tmp_path)
     panel._wifi_networks = [WifiNetwork("Secure", "WPA2", 80)]
     panel._wifi_password_ssid = "Secure"

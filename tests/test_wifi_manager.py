@@ -1,3 +1,4 @@
+"""Tests for WifiManager nmcli integration and mock."""
 import os
 from collections.abc import Callable
 from unittest.mock import patch
@@ -9,6 +10,7 @@ from piframe.wifi_manager import WifiManager
 
 
 def make_scan_output() -> str:
+    """Make scan output."""
     return (
         "HomeNetwork:WPA2:85\n"
         "GuestWifi:WPA2:60\n"
@@ -18,6 +20,7 @@ def make_scan_output() -> str:
 
 
 def run_async_inline(manager: WifiManager, method_name: str, *args) -> None:
+    """Run async inline."""
     captured = []
 
     class ImmediateThread:
@@ -33,6 +36,7 @@ def run_async_inline(manager: WifiManager, method_name: str, *args) -> None:
 
 
 def test_scan_parses_networks() -> None:
+    """Scan parses networks."""
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, make_scan_output())):
         with patch.object(manager, "_post") as mock_post:
@@ -49,6 +53,7 @@ def test_scan_parses_networks() -> None:
 
 
 def test_connect_with_password_builds_correct_command() -> None:
+    """Connect with password builds correct command."""
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
         with patch.object(manager, "_post"):
@@ -60,6 +65,7 @@ def test_connect_with_password_builds_correct_command() -> None:
 
 
 def test_connect_without_password() -> None:
+    """Connect without password."""
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
         with patch.object(manager, "_post"):
@@ -70,6 +76,7 @@ def test_connect_without_password() -> None:
 
 
 def test_forget_builds_correct_command() -> None:
+    """Forget builds correct command."""
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, "")) as run_mock:
         with patch.object(manager, "_post"):
@@ -80,6 +87,7 @@ def test_forget_builds_correct_command() -> None:
 
 
 def test_get_status_parses_connected() -> None:
+    """Get status parses connected."""
     connected_output = "GENERAL.CONNECTION:HomeNetwork\nIP4.ADDRESS[1]:192.168.1.100/24\n"
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, connected_output)):
@@ -95,6 +103,7 @@ def test_get_status_parses_connected() -> None:
 
 
 def test_get_status_parses_disconnected() -> None:
+    """Get status parses disconnected."""
     disconnected_output = "GENERAL.CONNECTION:--\nIP4.ADDRESS[1]:\n"
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(True, disconnected_output)):
@@ -107,6 +116,7 @@ def test_get_status_parses_disconnected() -> None:
 
 
 def test_get_status_timeout() -> None:
+    """Get status timeout."""
     manager = WifiManager()
     with patch.object(manager, "_run_cmd", return_value=(False, "timeout")):
         with patch.object(manager, "_post") as mock_post:
@@ -116,6 +126,7 @@ def test_get_status_timeout() -> None:
 
 
 def test_operations_pass_expected_timeout() -> None:
+    """Operations pass expected timeout."""
     manager = WifiManager()
     cases = [
         ("scan", (), 10),

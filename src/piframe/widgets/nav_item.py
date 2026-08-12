@@ -1,3 +1,4 @@
+"""Sidebar navigation item widget."""
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -18,6 +19,8 @@ from piframe.widgets.base import Widget
 
 
 class NavItem(Widget):
+    """Sidebar navigation item with icon, label, and active state."""
+
     def __init__(
         self,
         rect: pygame.Rect,
@@ -27,6 +30,17 @@ class NavItem(Widget):
         active: bool = False,
         on_select: Callable[[], None] | None = None,
     ) -> None:
+        """Create a navigation item.
+
+        Args:
+        rect: Position and size of the item.
+        label: Display text for the item.
+        icon: Material Icons character for the item.
+        assets: Asset provider for fonts and icons.
+        active: Whether the item is currently selected.
+        on_select: Callback invoked when the item is tapped.
+
+        """
         super().__init__(rect)
         self._label = label
         self._icon = icon
@@ -36,6 +50,7 @@ class NavItem(Widget):
 
     @property
     def active(self) -> bool:
+        """Whether the nav item is currently selected."""
         return self._active
 
     @active.setter
@@ -43,6 +58,7 @@ class NavItem(Widget):
         self._active = value
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the nav item with icon and label."""
         if self._active:
             bg = pygame.Surface((self.rect.width, 56), pygame.SRCALPHA)
             bg.fill(COLOUR_NAV_ACTIVE_BG)
@@ -62,6 +78,7 @@ class NavItem(Widget):
         screen.blit(label_surf, (self.rect.x + 56, self.rect.centery - font_height // 2))
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle tap events to select the nav item."""
         if (
             event.type == pygame.MOUSEBUTTONDOWN
             and getattr(event, "button", 0) == 1

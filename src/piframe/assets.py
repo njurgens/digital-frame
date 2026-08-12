@@ -1,3 +1,4 @@
+"""Font and icon asset management with cached pygame.freetype fonts."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,13 +46,17 @@ _ICONS = str(_FONT_DIR / "MaterialIcons-Regular.ttf")
 
 
 class Assets:
+    """Font and icon asset manager with cached pygame.freetype font instances."""
+
     def __init__(self) -> None:
+        """Initialise empty font caches."""
         self._regular: dict[int, pygame.freetype.Font] = {}
         self._bold: dict[int, pygame.freetype.Font] = {}
         self._icons: dict[int, pygame.freetype.Font] = {}
 
     @classmethod
-    def load(cls) -> "Assets":
+    def load(cls) -> Assets:
+        """Load all fonts and return an Assets instance."""
         inst = cls()
         inst._regular = {
             size: pygame.freetype.Font(_REGULAR, size)
@@ -64,10 +69,16 @@ class Assets:
         return inst
 
     def font(self, size: int) -> pygame.freetype.Font:
+        """Return the regular Noto Sans font at the given size."""
+        """Return the regular Noto Sans font at the given size."""
         return self._regular[size]
 
     def font_bold(self, size: int) -> pygame.freetype.Font:
+        """Return the bold Noto Sans font at the given size."""
+        """Return the bold Noto Sans font at the given size."""
         return self._bold[size]
 
     def icon(self, size: int) -> pygame.freetype.Font:
+        """Return the Material Icons font at the given size."""
+        """Return the Material Icons font at the given size."""
         return self._icons[size]

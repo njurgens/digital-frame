@@ -258,6 +258,7 @@ def _type_hello(harness: AppHarness) -> None:
 
 
 def test_stage1_slideshow_cycles(pi_app: AppHarness) -> None:
+    """Stage1 slideshow cycles."""
     _return_to_slideshow(pi_app)
     pi_app.set_config("slideshow", "interval", 2)
     try:
@@ -271,6 +272,7 @@ def test_stage1_slideshow_cycles(pi_app: AppHarness) -> None:
 
 
 def test_stage1_directory_rescan(pi_app: AppHarness) -> None:
+    """Stage1 directory rescan."""
     # AC: app picks up newly added files without a restart.
     _return_to_slideshow(pi_app)
     pi_app.set_config("slideshow", "interval", 3)
@@ -296,18 +298,21 @@ def test_stage1_directory_rescan(pi_app: AppHarness) -> None:
 
 
 def test_stage2_tap_shows_overlay(pi_app: AppHarness) -> None:
+    """Stage2 tap shows overlay."""
     _open_overlay(pi_app)
     assert pi_app.state() == "OVERLAY"
     _return_to_slideshow(pi_app)
 
 
 def test_stage2_overlay_autodismiss(pi_app: AppHarness) -> None:
+    """Stage2 overlay autodismiss."""
     _open_overlay(pi_app)
     time.sleep(6)
     assert _wait_for_state(pi_app, "SLIDESHOW", timeout=2)
 
 
 def test_stage2_pause_suspends_timer(pi_app: AppHarness) -> None:
+    """Stage2 pause suspends timer."""
     _open_overlay(pi_app)
     _tap_and_settle(pi_app, *PAUSE_BTN)
     time.sleep(7)
@@ -317,6 +322,7 @@ def test_stage2_pause_suspends_timer(pi_app: AppHarness) -> None:
 
 
 def test_stage2_pause_pip_visible(pi_app: AppHarness) -> None:
+    """Stage2 pause pip visible."""
     # AC: pausing leaves a pause-indicator PiP visible in SLIDESHOW state.
     _open_overlay(pi_app)
     _tap_and_settle(pi_app, *PAUSE_BTN)
@@ -329,8 +335,8 @@ def test_stage2_pause_pip_visible(pi_app: AppHarness) -> None:
     _return_to_slideshow(pi_app)
     shot_unpaused = pi_app.screenshot("stage2_pause_pip_unpaused")
     # PiP pill is at (12, 762, 26, 26). Paused screenshot should differ in that region.
-    from PIL import Image
     import numpy as np
+    from PIL import Image
     pip_region = (12, 756, 38, 794)  # x1, y1, x2, y2
     arr_paused = np.array(Image.open(shot_paused).convert("RGB").crop(pip_region))
     arr_unpaused = np.array(Image.open(shot_unpaused).convert("RGB").crop(pip_region))
@@ -339,6 +345,7 @@ def test_stage2_pause_pip_visible(pi_app: AppHarness) -> None:
 
 
 def test_stage2_brightness_slider(pi_app: AppHarness) -> None:
+    """Stage2 brightness slider."""
     _open_overlay(pi_app)
     # Drag to top to establish a known high brightness, then drag to bottom
     pi_app.swipe(1240, 700, dx=0, dy=-530, ms=300)  # bottom → near top (≈94%)
@@ -352,6 +359,7 @@ def test_stage2_brightness_slider(pi_app: AppHarness) -> None:
 
 
 def test_stage2_swipe_navigates(pi_app: AppHarness) -> None:
+    """Stage2 swipe navigates."""
     _return_to_slideshow(pi_app)
     base = pi_app.screenshot("stage2_swipe_navigates_base")
     pi_app.swipe(*SWIPE_START, dx=-300, dy=0)
@@ -370,6 +378,7 @@ def test_stage2_swipe_navigates(pi_app: AppHarness) -> None:
 
 
 def test_stage3_config_persists(pi_app: AppHarness) -> None:
+    """Stage3 config persists."""
     _return_to_slideshow(pi_app)
     original = _backlight_percent(pi_app)
     target = 40
@@ -383,6 +392,7 @@ def test_stage3_config_persists(pi_app: AppHarness) -> None:
 
 
 def test_stage3_missing_config_defaults(pi_app: AppHarness) -> None:
+    """Stage3 missing config defaults."""
     ssh = _ssh(pi_app)
     bak = f"{APP_DIR}/config.toml.integration.bak"
     try:
@@ -405,18 +415,21 @@ def test_stage3_missing_config_defaults(pi_app: AppHarness) -> None:
 
 
 def test_stage4_settings_opens(pi_app: AppHarness) -> None:
+    """Stage4 settings opens."""
     _open_settings(pi_app)
     assert pi_app.state() == "SETTINGS"
     _return_to_slideshow(pi_app)
 
 
 def test_stage4_back_returns(pi_app: AppHarness) -> None:
+    """Stage4 back returns."""
     _open_settings(pi_app)
     _tap_and_settle(pi_app, *BACK_BTN)
     assert _wait_for_state(pi_app, "SLIDESHOW", timeout=5)
 
 
 def test_stage4_interval_change(pi_app: AppHarness) -> None:
+    """Stage4 interval change."""
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_SLIDESHOW)
     _tap_and_settle(pi_app, *INTERVAL_5S)
@@ -430,6 +443,7 @@ def test_stage4_interval_change(pi_app: AppHarness) -> None:
 
 
 def test_stage4_shuffle_toggle(pi_app: AppHarness) -> None:
+    """Stage4 shuffle toggle."""
     # AC: shuffle toggle can be turned off; slideshow order becomes deterministic.
     pi_app.set_config("slideshow", "shuffle", True)
     _open_settings(pi_app)
@@ -439,8 +453,8 @@ def test_stage4_shuffle_toggle(pi_app: AppHarness) -> None:
     _tap_and_settle(pi_app, 1237, 242)  # toggle shuffle OFF
     shot_after = pi_app.screenshot("stage4_shuffle_after")
     # Toggle region (1210-1264, 226-258) should change visual state
-    from PIL import Image
     import numpy as np
+    from PIL import Image
     toggle_region = (1210, 226, 1264, 258)
     arr_b = np.array(Image.open(shot_before).convert("RGB").crop(toggle_region))
     arr_a = np.array(Image.open(shot_after).convert("RGB").crop(toggle_region))
@@ -452,6 +466,7 @@ def test_stage4_shuffle_toggle(pi_app: AppHarness) -> None:
 
 
 def test_stage4_fit_fill_toggle(pi_app: AppHarness) -> None:
+    """Stage4 fit fill toggle."""
     # AC: fill mode removes black bars; control reflects new state.
     pi_app.set_config("slideshow", "fit_mode", "fit")  # also syncs widget to Fit (selected=0)
     _open_settings(pi_app)
@@ -460,8 +475,8 @@ def test_stage4_fit_fill_toggle(pi_app: AppHarness) -> None:
     _tap_and_settle(pi_app, *FIT_FILL)  # switch to fill (segment 1)
     shot_after = pi_app.screenshot("stage4_fit_fill_after")
     # The fit/fill segmented control region should change active segment color
-    from PIL import Image
     import numpy as np
+    from PIL import Image
     ctrl_region = (880, 155, 1265, 190)
     arr_b = np.array(Image.open(shot_before).convert("RGB").crop(ctrl_region))
     arr_a = np.array(Image.open(shot_after).convert("RGB").crop(ctrl_region))
@@ -478,6 +493,7 @@ def test_stage4_fit_fill_toggle(pi_app: AppHarness) -> None:
 
 
 def test_stage5_clock_toggle(pi_app: AppHarness) -> None:
+    """Stage5 clock toggle."""
     # AC: disabling the clock removes the clock from the slideshow view.
     # Ensure clock is enabled going in (previous test cleanup may have left it disabled).
     pi_app.set_config("display", "show_clock", True)
@@ -493,8 +509,8 @@ def test_stage5_clock_toggle(pi_app: AppHarness) -> None:
         time.sleep(0.5)  # allow frame with clock disabled
         shot_off = pi_app.screenshot("stage5_clock_off")
         # The clock region (14,14 → ~300x120) should differ: clock text is present when ON
-        from PIL import Image
         import numpy as np
+        from PIL import Image
         clock_region = (0, 0, 300, 120)
         arr_on = np.array(Image.open(shot_on).convert("RGB").crop(clock_region))
         arr_off = np.array(Image.open(shot_off).convert("RGB").crop(clock_region))
@@ -506,6 +522,7 @@ def test_stage5_clock_toggle(pi_app: AppHarness) -> None:
 
 
 def test_stage5_sleep_dims_display(pi_app: AppHarness) -> None:
+    """Stage5 sleep dims display."""
     _return_to_slideshow(pi_app)
     _set_sleep_window_around_now(pi_app, wake_delta_min=2)
     assert _wait_for_state(pi_app, "SLEEPING", timeout=40, poll=0.5)
@@ -516,6 +533,7 @@ def test_stage5_sleep_dims_display(pi_app: AppHarness) -> None:
 
 
 def test_stage5_wake_restores(pi_app: AppHarness) -> None:
+    """Stage5 wake restores."""
     _return_to_slideshow(pi_app)
     pi_app.set_config("display", "brightness", 60)
     _set_sleep_window_around_now(pi_app, wake_delta_min=2)
@@ -534,12 +552,14 @@ def test_stage5_wake_restores(pi_app: AppHarness) -> None:
 
 
 def test_stage6_keyboard_appears(pi_app: AppHarness) -> None:
+    """Stage6 keyboard appears."""
     _ensure_wifi_password_keyboard(pi_app)
     assert pi_app.state() == "KEYBOARD"
     _return_to_slideshow(pi_app)
 
 
 def test_stage6_keyboard_typing(pi_app: AppHarness) -> None:
+    """Stage6 keyboard typing."""
     _ensure_wifi_password_keyboard(pi_app)
     _type_hello(pi_app)
     shot = pi_app.screenshot("stage6_keyboard_typing")
@@ -548,6 +568,7 @@ def test_stage6_keyboard_typing(pi_app: AppHarness) -> None:
 
 
 def test_stage6_keyboard_done(pi_app: AppHarness) -> None:
+    """Stage6 keyboard done."""
     _ensure_wifi_password_keyboard(pi_app)
     _tap_and_settle(pi_app, *KEY_DONE)
     assert _wait_for_state(pi_app, "SETTINGS", timeout=2)
@@ -555,6 +576,7 @@ def test_stage6_keyboard_done(pi_app: AppHarness) -> None:
 
 
 def test_stage6_password_masking(pi_app: AppHarness) -> None:
+    """Stage6 password masking."""
     _ensure_wifi_password_keyboard(pi_app)
     _type_hello(pi_app)
     _tap_and_settle(pi_app, *KEY_DONE)
@@ -570,6 +592,7 @@ def test_stage6_password_masking(pi_app: AppHarness) -> None:
 
 
 def test_stage7_wifi_scan_shows_networks(pi_app: AppHarness) -> None:
+    """Stage7 wifi scan shows networks."""
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_WIFI)
     _tap_and_settle(pi_app, *WIFI_SCAN_BTN, delay=1.0)
@@ -579,6 +602,7 @@ def test_stage7_wifi_scan_shows_networks(pi_app: AppHarness) -> None:
 
 
 def test_stage7_connect_secured(pi_app: AppHarness) -> None:
+    """Stage7 connect secured."""
     _ensure_wifi_password_keyboard(pi_app)
     _type_hello(pi_app)
     _tap_and_settle(pi_app, *KEY_DONE)
@@ -589,6 +613,7 @@ def test_stage7_connect_secured(pi_app: AppHarness) -> None:
 
 
 def test_stage7_forget_confirmation(pi_app: AppHarness) -> None:
+    """Stage7 forget confirmation."""
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_WIFI)
     _tap_and_settle(pi_app, 650, 158)
@@ -604,6 +629,7 @@ def test_stage7_forget_confirmation(pi_app: AppHarness) -> None:
 
 
 def test_stage8_device_info_displayed(pi_app: AppHarness) -> None:
+    """Stage8 device info displayed."""
     # Verify System section renders without crash and shows different content than slideshow.
     before = pi_app.screenshot("stage8_device_info_before")
     _open_settings(pi_app)
@@ -615,6 +641,7 @@ def test_stage8_device_info_displayed(pi_app: AppHarness) -> None:
 
 
 def test_stage8_shutdown_requires_confirm(pi_app: AppHarness) -> None:
+    """Stage8 shutdown requires confirm."""
     # Shutdown tap must show a confirm dialog; Cancel must NOT shut down.
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_SYSTEM)
@@ -629,6 +656,7 @@ def test_stage8_shutdown_requires_confirm(pi_app: AppHarness) -> None:
 
 
 def test_stage8_ota_check(pi_app: AppHarness) -> None:
+    """Stage8 ota check."""
     # OTA check must run without crashing and keep app in SETTINGS state.
     # The update result may already be cached from a prior run in this session,
     # so we just verify: button press doesn't crash, state remains SETTINGS.
@@ -645,6 +673,7 @@ def test_stage8_ota_check(pi_app: AppHarness) -> None:
 
 
 def test_stage9_sync_status_updates(pi_app: AppHarness) -> None:
+    """Stage9 sync status updates."""
     # Sync status row is in the Slideshow section; verify it updates after a sync.
     _open_settings(pi_app)
     _goto_nav(pi_app, NAV_SLIDESHOW)
@@ -658,6 +687,7 @@ def test_stage9_sync_status_updates(pi_app: AppHarness) -> None:
 
 
 def test_stage9_new_photo_appears(pi_app: AppHarness) -> None:
+    """Stage9 new photo appears."""
     _return_to_slideshow(pi_app)
     pi_app.set_config("slideshow", "interval", 3)
     before = pi_app.screenshot("stage9_new_photo_before")

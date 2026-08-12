@@ -1,12 +1,14 @@
+"""Settings panel with slideshow, display, Wi-Fi, and system sections."""
+
 from __future__ import annotations
 
 import shutil
 import socket
 import threading
+import zoneinfo
 from collections.abc import Callable
 from enum import Enum
 from typing import TYPE_CHECKING
-import zoneinfo
 
 import pygame
 
@@ -14,7 +16,6 @@ if TYPE_CHECKING:
     from piframe.app import App
     from piframe.sync_service import SyncService
     from piframe.types import WifiManagerProtocol, WifiNetwork, WifiResult
-    from piframe.wifi_manager import WifiManager
 
 from piframe.assets import (
     FONT_SIZE_BODY,
@@ -23,23 +24,23 @@ from piframe.assets import (
     Assets,
 )
 from piframe.config_store import ConfigStore
-from piframe.updater import apply_update, check_update
 from piframe.types import (
     COLOUR_BTN_PRIMARY,
     COLOUR_CONTENT_BG,
-    COLOUR_DIVIDER,
     COLOUR_DESTRUCTIVE,
+    COLOUR_DIVIDER,
     COLOUR_SIDEBAR_BG,
     COLOUR_TEXT_PRIMARY,
     COLOUR_TEXT_SECONDARY,
     EVT_UPDATE_RESULT,
-    UpdateResult,
-    WifiStatus,
     SCREEN_H,
     SCREEN_W,
     SETTINGS_CONTENT_X,
     SIDEBAR_W,
+    UpdateResult,
+    WifiStatus,
 )
+from piframe.updater import apply_update, check_update
 from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe.widgets.horizontal_slider import HorizontalSlider
 from piframe.widgets.nav_item import NavItem
@@ -52,6 +53,8 @@ from piframe.widgets.wifi_list_item import WifiListItem
 
 
 class Section(Enum):
+    """Settings panel sections."""
+
     SLIDESHOW = "Slideshow"
     DISPLAY = "Display"
     WIFI = "Wi-Fi"
@@ -66,16 +69,30 @@ WIFI_MAX_ITEMS = 8
 
 
 class SettingsPanel:
+    """Settings panel with sidebar navigation and four sections."""
+
     def __init__(
         self,
         assets: Assets,
         config: ConfigStore,
         on_brightness_change: Callable[[int], None] | None = None,
-        on_focus_text: Callable[["TextInput"], None] | None = None,
+        on_focus_text: Callable[[TextInput], None] | None = None,
         wifi_manager: WifiManagerProtocol | None = None,
         sync_service: SyncService | None = None,
         app_ref: App | None = None,
-    ):
+    ) -> None:
+        """Create a settings panel.
+
+        Args:
+            assets: Asset manager for fonts and icons.
+            config: Configuration store for reading and writing settings.
+            on_brightness_change: Callback when brightness is adjusted.
+            on_focus_text: Callback when a text input gains focus.
+            wifi_manager: Wi-Fi manager for network operations.
+            sync_service: Sync service for photo sync operations.
+            app_ref: Reference to the main app for state management.
+
+        """
         self._assets = assets
         self._config = config
         self._on_brightness_change = on_brightness_change
@@ -274,15 +291,19 @@ class SettingsPanel:
             self._wifi_manager.scan()
 
     def open(self) -> None:
+        """Open the settings panel."""
         self.sync_from_config()
         self._visible = True
 
     def close(self) -> None:
+        """Close the settings panel."""
         self._visible = False
 
     def sync_from_config(self) -> None:
         """Re-sync all widget visual states from current config values.
-        Call this after any programmatic config change so widgets stay in sync."""
+
+        Call this after any programmatic config change so widgets stay in sync.
+        """
         cfg = self._config.slideshow
         disp = self._config.display
         sleep = self._config.sleep
@@ -302,10 +323,12 @@ class SettingsPanel:
         self._sleep_enabled_toggle.set_value(sleep.enabled)
 
     def update(self, dt: float) -> None:
+        """Update all active widgets by the given time delta."""
         for w in self._active_widgets():
             w.update(dt)
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the settings panel onto the screen."""
         if not self._visible:
             return
         pygame.draw.rect(screen, COLOUR_SIDEBAR_BG[:3], (0, 0, SIDEBAR_W, SCREEN_H))
@@ -596,6 +619,7 @@ class SettingsPanel:
         return []
 
     def on_tap(self, event_or_pos: pygame.event.Event | tuple[int, int]) -> bool:
+        """Handle a tap event in the settings panel."""
         if isinstance(event_or_pos, tuple):
             event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=event_or_pos, button=1)
         else:
@@ -669,6 +693,7 @@ class SettingsPanel:
         return False
 
     def on_wifi_result(self, result: WifiResult) -> None:
+        """Process a Wi-Fi operation result."""
         if result.operation == "scan":
             if result.success:
                 self._wifi_networks = result.data or []  # type: ignore[assignment]
@@ -746,6 +771,7 @@ class SettingsPanel:
             self._app_ref._dialog = self._pending_dialog
 
     def on_update_result(self, result: UpdateResult) -> None:
+        """Process an update check result."""
         self._update_result = result
         if result.error:
             self._system_message = f"Update check failed: {result.error}"
@@ -755,6 +781,7 @@ class SettingsPanel:
             self._system_message = "No updates available"
 
     def refresh_sync_status(self) -> None:
+        """Refresh the sync status display string."""
         if self._sync_service is None:
             self._sync_status = "Never synced"
             return

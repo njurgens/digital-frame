@@ -25,6 +25,7 @@ def assert_screenshot_matches(
         Maximum fraction of differing pixels allowed (default 2%).
     ignore_rects:
         List of (x, y, w, h) regions blacked out before comparison (e.g. clock area).
+
     """
     actual_img = Image.open(actual_path).convert("RGB")
     actual = np.array(actual_img, dtype=int)

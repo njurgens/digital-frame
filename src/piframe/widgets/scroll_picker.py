@@ -1,3 +1,5 @@
+"""Scrollable list picker with drag-to-scroll and surface caching."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -12,7 +14,10 @@ if TYPE_CHECKING:
 from piframe.types import COLOUR_SCROLL_PICKER_HL
 from piframe.widgets.base import Widget
 
+
 class ScrollPicker(Widget):
+    """Scrollable list picker with drag-to-scroll and surface caching."""
+
     def __init__(
         self,
         rect: pygame.Rect,
@@ -23,6 +28,18 @@ class ScrollPicker(Widget):
         row_h: int = 44,
         visible_rows: int = 7,
     ) -> None:
+        """Create a scroll picker.
+
+        Args:
+            rect: Widget bounding rectangle.
+            items: List of items to display.
+            selected: Initially selected item index.
+            assets: Asset manager for fonts.
+            on_change: Callback when selection changes.
+            row_h: Height of each row in pixels.
+            visible_rows: Number of visible rows.
+
+        """
         super().__init__(rect)
         self._items: list[str] = items
         self._assets = assets
@@ -56,6 +73,7 @@ class ScrollPicker(Widget):
         return surf
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the scroll picker onto the screen."""
         if not self._items:
             return
         rect = self.rect
@@ -82,6 +100,7 @@ class ScrollPicker(Widget):
         screen.set_clip(None)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle drag events to scroll the picker."""
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1 and self.rect.collidepoint(event.pos):
             self._drag_y = event.pos[1]
             self._drag_offset = self._scroll_offset
@@ -102,12 +121,14 @@ class ScrollPicker(Widget):
         return False
 
     def get_selected(self) -> int:
+        """Get the currently selected item index."""
         if not self._items:
             return 0
         center_row = self.VISIBLE_ROWS // 2
-        return max(0, min(len(self._items) - 1, int(round(self._scroll_offset + center_row))))
+        return max(0, min(len(self._items) - 1, round(self._scroll_offset + center_row)))
 
     def set_selected(self, i: int) -> None:
+        """Set the selected item index."""
         if not self._items:
             self._scroll_offset = 0.0
             return

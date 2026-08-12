@@ -1,3 +1,4 @@
+"""Tests for SleepScheduler sleep/wake scheduling."""
 import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -9,48 +10,60 @@ from piframe.sleep_scheduler import is_sleep_time
 
 
 def t(h: int, m: int) -> datetime.time:
+    """Create a datetime.time from hour and minute values."""
     return datetime.time(h, m)
 
 
 def test_non_crossing_inside() -> None:
+    """Non crossing inside."""
     assert is_sleep_time(t(12, 0), t(9, 0), t(17, 0)) is True
 
 
 def test_non_crossing_before() -> None:
+    """Non crossing before."""
     assert is_sleep_time(t(8, 59), t(9, 0), t(17, 0)) is False
 
 
 def test_non_crossing_after() -> None:
+    """Non crossing after."""
     assert is_sleep_time(t(17, 0), t(9, 0), t(17, 0)) is False
 
 
 def test_non_crossing_at_boundary_start() -> None:
+    """Non crossing at boundary start."""
     assert is_sleep_time(t(9, 0), t(9, 0), t(17, 0)) is True
 
 
 def test_non_crossing_at_boundary_end() -> None:
+    """Non crossing at boundary end."""
     assert is_sleep_time(t(17, 0), t(9, 0), t(17, 0)) is False
 
 
 def test_crossing_in_evening() -> None:
+    """Crossing in evening."""
     assert is_sleep_time(t(23, 0), t(22, 0), t(7, 0)) is True
 
 
 def test_crossing_in_morning() -> None:
+    """Crossing in morning."""
     assert is_sleep_time(t(3, 0), t(22, 0), t(7, 0)) is True
 
 
 def test_crossing_outside() -> None:
+    """Crossing outside."""
     assert is_sleep_time(t(10, 0), t(22, 0), t(7, 0)) is False
 
 
 def test_crossing_at_sleep_boundary() -> None:
+    """Crossing at sleep boundary."""
     assert is_sleep_time(t(22, 0), t(22, 0), t(7, 0)) is True
 
 
 def test_crossing_at_wake_boundary() -> None:
+    """Crossing at wake boundary."""
     assert is_sleep_time(t(7, 0), t(22, 0), t(7, 0)) is False
 
 
 def test_equal_times_returns_false() -> None:
+    """Equal times returns false."""
     assert is_sleep_time(t(10, 0), t(10, 0), t(10, 0)) is False
