@@ -6,6 +6,20 @@ from piframe.config_store import ConfigStore
 
 
 class DimModule[T](Protocol):
-    """A module that constructs a service from config and optional dependencies."""
+    """Protocol for modules that construct a service from config and dependencies.
 
-    def create(self, config: ConfigStore, **deps: Any) -> T: ...
+    Subclasses decide which concrete implementation to instantiate based on
+    configuration values, keeping conditional logic out of ``App.__init__``.
+    """
+
+    def create(self, config: ConfigStore, **deps: Any) -> T:
+        """Construct and return a service instance.
+
+        Args:
+            config: Application configuration store.
+            **deps: Optional dependency objects required by the service.
+
+        Returns:
+            A fully initialised service instance.
+        """
+        ...

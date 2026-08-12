@@ -15,6 +15,13 @@ from piframe.types import TRANS_DURATION
 
 
 class SlideshowPlayer:
+    """Full-screen slideshow player with timed transitions.
+
+    Manages a playlist of photo paths, advancing on an interval and rendering
+    crossfade/slide/cut transitions between images.  The image directory is
+    rescanned each cycle so newly synced photos appear without a restart.
+    """
+
     def __init__(
         self,
         config: ConfigStore,
@@ -22,6 +29,15 @@ class SlideshowPlayer:
         screen_size: tuple[int, int],
         assets: Assets | None = None,
     ):
+        """Initialise the player and load the initial playlist.
+
+        Args:
+            config: Application configuration (interval, fit mode, shuffle, etc.).
+            cache: Photo cache for pre-rendered surfaces.
+            screen_size: ``(width, height)`` of the display.
+            assets: Asset provider for icons (used by the pause PiP indicator).
+        """
+
         self._config = config
         self._cache = cache
         self._assets = assets
@@ -41,6 +57,11 @@ class SlideshowPlayer:
         self.rescan()
 
     def rescan(self) -> None:
+        """Re-read the output directory and rebuild the playlist.
+
+        Loads all supported image files, optionally shuffles them, and
+        pre-loads the first slide into the cache.
+        """
         output_dir = Path(self._config.sync.output_dir)
         exts = {".jpg", ".jpeg", ".png", ".gif"}
         files = (
@@ -72,6 +93,14 @@ class SlideshowPlayer:
         return lst
 
     def update(self, dt: float) -> None:
+        """Tick the player by *dt* seconds.
+
+        Advances to the next slide when the interval elapses and drives
+        in-progress transitions toward completion.
+
+        Args:
+            dt: Elapsed time in seconds since the last tick.
+        """
         if self._paused or not self._playlist:
             return
         interval = self._config.slideshow.interval
@@ -88,6 +117,11 @@ class SlideshowPlayer:
                 self.advance()
 
     def advance(self, direction: int = 1) -> None:
+        """Move to the next (or previous) slide and start a transition.
+
+        Args:
+            direction: ``1`` for forward, ``-1`` for backward.
+        """
         if not self._playlist:
             return
         self._direction = direction
@@ -114,15 +148,23 @@ class SlideshowPlayer:
         self._elapsed = 0.0
 
     def go_back(self) -> None:
+        """Advance to the previous slide."""
         self.advance(direction=-1)
 
     def skip(self) -> None:
+        """Advance to the next slide."""
         self.advance(direction=1)
 
     def skip_next(self) -> None:
+        """Alias of :meth:`skip` for API compatibility."""
         return self.skip()
 
     def draw(self, screen: Surface) -> None:
+        """Render the current slide (and transition) onto *screen*.
+
+        Args:
+            screen: Target pygame surface.
+        """
         if self._current_surf is None:
             screen.fill((0, 0, 0))
             return
@@ -146,6 +188,11 @@ class SlideshowPlayer:
             screen.blit(self._current_surf, (0, 0))
 
     def draw_pip(self, screen: Surface) -> None:
+        """Draw a small pause indicator pill when the player is paused.
+
+        Args:
+            screen: Target pygame surface.
+        """
         if not self._paused:
             return
         pill_rect = pygame.Rect(12, 762, 26, 26)
@@ -163,8 +210,10 @@ class SlideshowPlayer:
 
     @property
     def is_paused(self) -> bool:
+        """Whether the slideshow timer is currently paused."""
         return self._paused
 
     @is_paused.setter
     def is_paused(self, value: bool):
+        """Set the paused state."""
         self._paused = value

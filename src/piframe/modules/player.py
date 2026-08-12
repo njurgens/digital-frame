@@ -9,6 +9,8 @@ from piframe.types import SCREEN_H, SCREEN_W
 
 
 class PlayerModule(DimModule[SlideshowPlayer]):
+    """Construct a ``SlideshowPlayer`` wired to a cache and assets."""
+
     def create(
         self,
         config: ConfigStore,
@@ -17,6 +19,17 @@ class PlayerModule(DimModule[SlideshowPlayer]):
         assets: Assets,
         **deps: object,
     ) -> SlideshowPlayer:
+        """Build a slideshow player with the given dependencies.
+
+        Args:
+            config: Application configuration.
+            cache: Photo cache for pre-rendered surfaces.
+            assets: Asset provider for icons.
+            **deps: Unused.
+
+        Returns:
+            A ``SlideshowPlayer`` instance.
+        """
         return SlideshowPlayer(
             config=config,
             cache=cache,

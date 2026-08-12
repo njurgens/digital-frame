@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 
 class SettingsModule(DimModule[SettingsPanel]):
+    """Construct a ``SettingsPanel`` with all required dependencies."""
+
     def create(
         self,
         config: ConfigStore,
@@ -27,6 +29,21 @@ class SettingsModule(DimModule[SettingsPanel]):
         app_ref: App,
         **deps: object,
     ) -> SettingsPanel:
+        """Build a settings panel wired to the app's services.
+
+        Args:
+            config: Application configuration.
+            assets: Asset provider for fonts and icons.
+            wifi_manager: Wifi manager for network operations.
+            sync_service: Sync service for photo sync status.
+            on_brightness_change: Callback invoked when brightness changes.
+            on_focus_text: Callback to show the keyboard for text input.
+            app_ref: Reference to the owning ``App`` instance.
+            **deps: Unused.
+
+        Returns:
+            A ``SettingsPanel`` instance.
+        """
         return SettingsPanel(
             assets=assets,
             config=config,
