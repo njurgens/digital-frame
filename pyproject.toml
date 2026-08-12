@@ -36,7 +36,7 @@ line-length = 99
 select = ["E", "F", "W", "I", "UP", "RUF", "ANN201", "ANN001", "D"]
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"
+convention = "google"
 
 [tool.basedpyright]
 pythonVersion = "3.13"
