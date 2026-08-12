@@ -1,4 +1,5 @@
 """Sync module: constructs a SyncService from config."""
+
 from __future__ import annotations
 
 from piframe.config_store import ConfigStore

@@ -1,4 +1,5 @@
 """OTA update checker and installer via GitHub releases."""
+
 from __future__ import annotations
 
 import json

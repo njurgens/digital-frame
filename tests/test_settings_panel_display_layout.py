@@ -1,4 +1,5 @@
 """Tests for settings panel display section layout."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +12,9 @@ from piframe.widgets.horizontal_slider import HorizontalSlider
 
 
 class _StubFont:
-    def render(self, _text: str, _colour: tuple[int, int, int]) -> tuple[pygame.Surface, pygame.Rect]:
+    def render(
+        self, _text: str, _colour: tuple[int, int, int]
+    ) -> tuple[pygame.Surface, pygame.Rect]:
         surf = pygame.Surface((24, 12), pygame.SRCALPHA)
         return surf, surf.get_rect()
 

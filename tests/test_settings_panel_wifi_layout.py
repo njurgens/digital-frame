@@ -1,4 +1,5 @@
 """Tests for settings panel Wi-Fi section layout."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,7 +13,9 @@ from piframe.types import WifiNetwork
 
 
 class _StubFont:
-    def render(self, _text: str, _colour: tuple[int, int, int]) -> tuple[pygame.Surface, pygame.Rect]:
+    def render(
+        self, _text: str, _colour: tuple[int, int, int]
+    ) -> tuple[pygame.Surface, pygame.Rect]:
         surf = pygame.Surface((24, 12), pygame.SRCALPHA)
         return surf, surf.get_rect()
 
@@ -109,7 +112,9 @@ def test_wifi_connect_result_clears_prompt_and_restores_visible_rows(tmp_path: P
     assert len(panel._wifi_items) == 3
 
 
-def test_wifi_list_allows_zero_visible_rows_when_no_space_above_password_input(tmp_path: Path) -> None:
+def test_wifi_list_allows_zero_visible_rows_when_no_space_above_password_input(
+    tmp_path: Path,
+) -> None:
     """Wifi list allows zero visible rows when no space above password input."""
     panel = _make_panel(tmp_path)
     panel._wifi_networks = [WifiNetwork("Secure", "WPA2", 80)]

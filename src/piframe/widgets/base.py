@@ -1,4 +1,5 @@
 """Abstract base class for all UI widgets."""
+
 from abc import ABC, abstractmethod
 
 import pygame

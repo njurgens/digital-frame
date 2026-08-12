@@ -1,4 +1,5 @@
 """Horizontal slider widget for value selection."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -10,7 +11,7 @@ from piframe.widgets.base import Widget
 
 
 class HorizontalSlider(Widget):
-    """Horizontal brightness/value slider widget (0–100)."""
+    """Horizontal brightness/value slider widget (0-100)."""
 
     def __init__(
         self,
@@ -23,7 +24,7 @@ class HorizontalSlider(Widget):
 
         Args:
         rect: Position and size of the slider.
-        initial_value: Starting value (0–100).
+        initial_value: Starting value (0-100).
         on_change: Callback invoked when the value changes.
 
         """
@@ -58,7 +59,9 @@ class HorizontalSlider(Widget):
         pygame.draw.rect(screen, COLOUR_SLIDER_TRACK[:3], track_rect)
 
         thumb_x = self._value_to_x(self.value)
-        fill_rect = pygame.Rect(track_rect.left, track_rect.top, thumb_x - rect.left, track_rect.height)
+        fill_rect = pygame.Rect(
+            track_rect.left, track_rect.top, thumb_x - rect.left, track_rect.height
+        )
         pygame.draw.rect(screen, COLOUR_SLIDER_FILL[:3], fill_rect)
         pygame.draw.circle(screen, COLOUR_SLIDER_THUMB[:3], (thumb_x, rect.centery), 11)
 

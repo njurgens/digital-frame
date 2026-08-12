@@ -159,7 +159,10 @@ class Keyboard:
                     surf, _ = icon_font.render(icon, COLOUR_TEXT_PRIMARY[:3])
                 else:
                     surf, _ = font.render(label, COLOUR_TEXT_PRIMARY[:3])
-                screen.blit(surf, (rect.centerx - surf.get_width() // 2, rect.centery - surf.get_height() // 2))
+                screen.blit(
+                    surf,
+                    (rect.centerx - surf.get_width() // 2, rect.centery - surf.get_height() // 2),
+                )
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Handle pygame events for key presses and releases."""
@@ -174,7 +177,11 @@ class Keyboard:
                         self._active_key = (r, c)
                         return True
             return False
-        if event.type == pygame.MOUSEBUTTONUP and getattr(event, "button", 0) == 1 and self._active_key is not None:
+        if (
+            event.type == pygame.MOUSEBUTTONUP
+            and getattr(event, "button", 0) == 1
+            and self._active_key is not None
+        ):
             r, c = self._active_key
             self._active_key = None
             if r < len(layer_keys) and c < len(layer_keys[r]):

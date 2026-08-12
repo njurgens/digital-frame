@@ -1,4 +1,5 @@
 """Sysfs backlight brightness control."""
+
 import logging
 
 BACKLIGHT_PATH = "/sys/class/backlight/10-0045/brightness"
@@ -14,7 +15,7 @@ class BacklightController:
 
     def set_brightness(self, percent: int) -> None:
         """
-        Set the backlight brightness to the given percentage (0–100).
+        Set the backlight brightness to the given percentage (0-100).
 
         Args:
             percent: Brightness percentage to set.
@@ -33,7 +34,7 @@ class BacklightController:
 
     def get_brightness(self) -> int:
         """
-        Read the current backlight brightness as a percentage (0–100).
+        Read the current backlight brightness as a percentage (0-100).
 
         Returns
         -------

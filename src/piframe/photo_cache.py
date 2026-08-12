@@ -37,7 +37,9 @@ class PhotoCache:
 
         """
         self._w, self._h = screen_size
-        self._cache_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "framesync"
+        self._cache_dir = (
+            Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "framesync"
+        )
         self._fit_mode = "fit"
         self._cache: OrderedDict[str, pygame.Surface] = OrderedDict()
         self._last_path: Path | None = None

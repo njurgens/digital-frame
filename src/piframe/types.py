@@ -1,4 +1,5 @@
 """Application types, constants, and colour palette."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,18 +14,23 @@ class WifiManagerProtocol(Protocol):
     def scan(self) -> None:
         """Scan for available Wi-Fi networks."""
         ...
+
     def connect(self, ssid: str, password: str | None) -> None:
         """Connect to a Wi-Fi network."""
         ...
+
     def forget(self, ssid: str) -> None:
         """Forget a saved Wi-Fi network."""
         ...
+
     def disconnect(self) -> None:
         """Disconnect from the current Wi-Fi network."""
         ...
+
     def get_status(self) -> None:
         """Get the current Wi-Fi connection status."""
         ...
+
 
 # Screen constants
 SCREEN_W = 1280

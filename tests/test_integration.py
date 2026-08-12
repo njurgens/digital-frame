@@ -112,7 +112,9 @@ def _backlight_percent(harness: AppHarness) -> int:
     return round(raw / 255 * 100)
 
 
-def _wait_for_state(harness: AppHarness, state: str, timeout: float = 10.0, poll: float = 0.2) -> bool:
+def _wait_for_state(
+    harness: AppHarness, state: str, timeout: float = 10.0, poll: float = 0.2
+) -> bool:
     end = time.time() + timeout
     while time.time() < end:
         try:
@@ -188,6 +190,7 @@ def _restart_app(harness: AppHarness, timeout: float = 20.0) -> None:
     )
     # Wait for socket to come up and answer
     import socket as _socket
+
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -212,7 +215,12 @@ def _restart_app(harness: AppHarness, timeout: float = 20.0) -> None:
     pytest.fail(f"App did not restart within {timeout}s")
 
 
-def _images_differ(a: Path, b: Path, ignore_rects: list[tuple[int, int, int, int]] | None = None, min_fraction: float = 0.01) -> bool:
+def _images_differ(
+    a: Path,
+    b: Path,
+    ignore_rects: list[tuple[int, int, int, int]] | None = None,
+    min_fraction: float = 0.01,
+) -> bool:
     arr_a = np.array(Image.open(a).convert("RGB"), dtype=int)
     arr_b = np.array(Image.open(b).convert("RGB"), dtype=int)
     if arr_a.shape != arr_b.shape:
@@ -286,7 +294,9 @@ def test_stage1_directory_rescan(pi_app: AppHarness) -> None:
         time.sleep(5)  # allow at least one full rescan + display cycle
         shot_after = pi_app.screenshot("stage1_directory_rescan_after")
         # Verify the slideshow is still cycling (the photo should have changed at least once)
-        assert _images_differ(shot_before, shot_after, ignore_rects=CLOCK_IGNORE, min_fraction=0.02)
+        assert _images_differ(
+            shot_before, shot_after, ignore_rects=CLOCK_IGNORE, min_fraction=0.02
+        )
         assert pi_app.state() == "SLIDESHOW"
     finally:
         _remote_run(pi_app, f"rm -f {SLIDESHOW_DIR}/_test_rescan.jpg")
@@ -338,6 +348,7 @@ def test_stage2_pause_pip_visible(pi_app: AppHarness) -> None:
     # PiP pill is at (12, 762, 26, 26). Paused screenshot should differ in that region.
     import numpy as np
     from PIL import Image
+
     pip_region = (12, 756, 38, 794)  # x1, y1, x2, y2
     arr_paused = np.array(Image.open(shot_paused).convert("RGB").crop(pip_region))
     arr_unpaused = np.array(Image.open(shot_unpaused).convert("RGB").crop(pip_region))
@@ -456,12 +467,14 @@ def test_stage4_shuffle_toggle(pi_app: AppHarness) -> None:
     # Toggle region (1210-1264, 226-258) should change visual state
     import numpy as np
     from PIL import Image
+
     toggle_region = (1210, 226, 1264, 258)
     arr_b = np.array(Image.open(shot_before).convert("RGB").crop(toggle_region))
     arr_a = np.array(Image.open(shot_after).convert("RGB").crop(toggle_region))
     diff = np.abs(arr_b.astype(int) - arr_a.astype(int))
-    assert np.mean(np.any(diff > 20, axis=2)) > 0.05, \
+    assert np.mean(np.any(diff > 20, axis=2)) > 0.05, (
         "Shuffle toggle region did not change when toggled"
+    )
     pi_app.set_config("slideshow", "shuffle", True)
     _return_to_slideshow(pi_app)
 
@@ -478,12 +491,14 @@ def test_stage4_fit_fill_toggle(pi_app: AppHarness) -> None:
     # The fit/fill segmented control region should change active segment color
     import numpy as np
     from PIL import Image
+
     ctrl_region = (880, 155, 1265, 190)
     arr_b = np.array(Image.open(shot_before).convert("RGB").crop(ctrl_region))
     arr_a = np.array(Image.open(shot_after).convert("RGB").crop(ctrl_region))
     diff = np.abs(arr_b.astype(int) - arr_a.astype(int))
-    assert np.mean(np.any(diff > 20, axis=2)) > 0.05, \
+    assert np.mean(np.any(diff > 20, axis=2)) > 0.05, (
         "Fit/fill control region did not change when toggled"
+    )
     pi_app.set_config("slideshow", "fit_mode", "fit")  # restore (also syncs widget)
     _return_to_slideshow(pi_app)
 
@@ -512,12 +527,14 @@ def test_stage5_clock_toggle(pi_app: AppHarness) -> None:
         # The clock region (14,14 → ~300x120) should differ: clock text is present when ON
         import numpy as np
         from PIL import Image
+
         clock_region = (0, 0, 300, 120)
         arr_on = np.array(Image.open(shot_on).convert("RGB").crop(clock_region))
         arr_off = np.array(Image.open(shot_off).convert("RGB").crop(clock_region))
         diff = np.abs(arr_on.astype(int) - arr_off.astype(int))
-        assert np.mean(np.any(diff > 20, axis=2)) > 0.01, \
+        assert np.mean(np.any(diff > 20, axis=2)) > 0.01, (
             "Clock region did not change when clock was disabled"
+        )
     finally:
         pi_app.set_config("display", "show_clock", True)
 
@@ -705,4 +722,3 @@ def test_stage9_new_photo_appears(pi_app: AppHarness) -> None:
     finally:
         _remote_run(pi_app, f"rm -f {SLIDESHOW_DIR}/_test_new_photo.jpg")
         pi_app.set_config("slideshow", "interval", 30)
-

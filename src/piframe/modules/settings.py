@@ -1,4 +1,5 @@
 """Settings module: constructs a SettingsPanel with all required dependencies."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

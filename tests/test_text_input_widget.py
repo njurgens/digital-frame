@@ -1,4 +1,5 @@
 """Tests for TextInput widget rendering and interaction."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock
@@ -32,7 +33,9 @@ def _make_assets():
 
 def test_draw_without_assets_still_draws_border() -> None:
     """Draw without assets still draws border."""
-    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), placeholder="pw", password_mode=True, assets=None)
+    ti = TextInput(
+        rect=pygame.Rect(0, 0, 200, 44), placeholder="pw", password_mode=True, assets=None
+    )
     ti.append("abc")
     screen = pygame.Surface((220, 60), pygame.SRCALPHA)
     screen.fill((0, 0, 0, 0))
@@ -156,7 +159,11 @@ def test_draw_password_narrow_field_uses_clamped_clip_width() -> None:
 def test_handle_event_focus_inside_and_outside() -> None:
     """Handle event focus inside and outside."""
     focused = []
-    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets(), on_focus=lambda: focused.append(True))
+    ti = TextInput(
+        rect=pygame.Rect(0, 0, 200, 44),
+        assets=_make_assets(),
+        on_focus=lambda: focused.append(True),
+    )
 
     inside = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(50, 20), button=1)
     outside = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(250, 20), button=1)
@@ -171,7 +178,9 @@ def test_handle_event_focus_inside_and_outside() -> None:
 def test_on_change_paths_and_text_property() -> None:
     """On change paths and text property."""
     changes = []
-    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets(), on_change=changes.append)
+    ti = TextInput(
+        rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets(), on_change=changes.append
+    )
     ti.append("a")
     ti.append("b")
     ti.backspace()

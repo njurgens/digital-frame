@@ -1,4 +1,5 @@
 """Tests for virtual keyboard input handling."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock

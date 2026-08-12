@@ -1,4 +1,5 @@
 """Tests for ClockWidget rendering and timezone updates."""
+
 from __future__ import annotations
 
 import time

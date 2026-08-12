@@ -1,4 +1,5 @@
 """Tests for WifiManager nmcli integration and mock."""
+
 import os
 from collections.abc import Callable
 from unittest.mock import patch
@@ -11,12 +12,7 @@ from piframe.wifi_manager import WifiManager
 
 def make_scan_output() -> str:
     """Make scan output."""
-    return (
-        "HomeNetwork:WPA2:85\n"
-        "GuestWifi:WPA2:60\n"
-        "OpenCafe::45\n"
-        "WeakSignal:WPA2:20\n"
-    )
+    return "HomeNetwork:WPA2:85\nGuestWifi:WPA2:60\nOpenCafe::45\nWeakSignal:WPA2:20\n"
 
 
 def run_async_inline(manager: WifiManager, method_name: str, *args) -> None:
@@ -24,7 +20,13 @@ def run_async_inline(manager: WifiManager, method_name: str, *args) -> None:
     captured = []
 
     class ImmediateThread:
-        def __init__(self, *a: object, target: Callable[..., object] | None = None, daemon: bool | None = None, **kw: object):
+        def __init__(
+            self,
+            *a: object,
+            target: Callable[..., object] | None = None,
+            daemon: bool | None = None,
+            **kw: object,
+        ):
             _ = a, daemon, kw
             captured.append(target)
 

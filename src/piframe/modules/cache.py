@@ -1,4 +1,5 @@
 """Cache module: constructs a PhotoCache from config."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,4 +1,5 @@
 """Background sleep/wake scheduler using configurable times."""
+
 from __future__ import annotations
 
 import datetime

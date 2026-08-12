@@ -1,4 +1,5 @@
 """Vertical slider widget for value selection."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -10,7 +11,7 @@ from piframe.widgets.base import Widget
 
 
 class VerticalSlider(Widget):
-    """Vertical brightness/value slider widget (0–100)."""
+    """Vertical brightness/value slider widget (0-100)."""
 
     def __init__(
         self,
@@ -23,7 +24,7 @@ class VerticalSlider(Widget):
 
         Args:
         rect: Position and size of the slider.
-        initial_value: Starting value (0–100).
+        initial_value: Starting value (0-100).
         on_change: Callback invoked when the value changes.
 
         """

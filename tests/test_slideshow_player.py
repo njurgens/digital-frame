@@ -1,4 +1,5 @@
 """Tests for SlideshowPlayer transitions and playlist management."""
+
 from __future__ import annotations
 
 import time

@@ -1,4 +1,5 @@
 """Tests for widget rendering output."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock

@@ -1,4 +1,5 @@
 """Screenshot comparison utilities for Tier 3 integration tests."""
+
 from pathlib import Path
 
 import numpy as np
@@ -42,8 +43,7 @@ def assert_screenshot_matches(
 
     if actual.shape != golden.shape:
         raise AssertionError(
-            f"{golden_name}: size mismatch — actual {actual.shape[:2]}, "
-            f"golden {golden.shape[:2]}"
+            f"{golden_name}: size mismatch — actual {actual.shape[:2]}, golden {golden.shape[:2]}"
         )
 
     # Black out ignored regions in both images before comparison

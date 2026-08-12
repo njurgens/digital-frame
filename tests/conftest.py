@@ -1,4 +1,5 @@
 """Shared pytest fixtures for all test tiers."""
+
 from __future__ import annotations
 
 import json
@@ -23,6 +24,7 @@ import pytest
 # ---------------------------------------------------------------------------
 # Tier 1 / 2 — local fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session", autouse=True)
 def pygame_init() -> Generator[None]:
@@ -53,17 +55,19 @@ def mock_nmcli() -> Generator[MagicMock]:
 
 DEVICE_HOST = "10.1.7.58"
 DEVICE_USER = "frame"
-DEVICE_KEY  = Path.home() / ".ssh" / "id_ed25519"
-APP_DIR     = "/home/frame/digital-frame"
-SOCK_PATH   = "/tmp/piframe_test.sock"
-GOLDEN_DIR  = Path(__file__).parent / "golden"
+DEVICE_KEY = Path.home() / ".ssh" / "id_ed25519"
+APP_DIR = "/home/frame/digital-frame"
+SOCK_PATH = "/tmp/piframe_test.sock"
+GOLDEN_DIR = Path(__file__).parent / "golden"
 BRIDGE_PORT = 9901  # local TCP port forwarded to SOCK_PATH via socat
 
 
 class AppHarness:
     """Thin wrapper around the test-harness socket protocol."""
 
-    def __init__(self, ssh: paramiko.SSHClient, host: str, port: int, sock_path: str | None = None) -> None:
+    def __init__(
+        self, ssh: paramiko.SSHClient, host: str, port: int, sock_path: str | None = None
+    ) -> None:
         """
         Create an app test harness.
 
@@ -167,7 +171,7 @@ def pi_app() -> Generator[AppHarness]:
 
     # When running on-device the Unix socket is directly accessible.
     # When running from a remote machine, fall back to socat TCP bridge.
-    _on_device = (DEVICE_HOST in ("127.0.0.1", "localhost") or _is_on_device())
+    _on_device = DEVICE_HOST in ("127.0.0.1", "localhost") or _is_on_device()
 
     def _app_is_ready() -> bool:
         """Return True if the app's Unix socket is up and answering."""
@@ -226,6 +230,7 @@ def _is_on_device() -> bool:
     """Return True if this process is running directly on the Pi."""
     try:
         import subprocess
+
         out = subprocess.check_output(["hostname", "-I"], text=True)
         return DEVICE_HOST in out.split()
     except Exception:

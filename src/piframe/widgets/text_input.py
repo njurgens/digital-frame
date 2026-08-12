@@ -1,4 +1,5 @@
 """Single-line text input widget with optional password masking."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -110,7 +111,11 @@ class TextInput(Widget):
         font = self._assets.font(18)
 
         # Reserve space for the eye icon when in password mode
-        text_right = rect.right - (_EYE_HIT_SIZE + _EYE_PADDING * 2) if self._password_mode else rect.right - 8
+        text_right = (
+            rect.right - (_EYE_HIT_SIZE + _EYE_PADDING * 2)
+            if self._password_mode
+            else rect.right - 8
+        )
         text_right = max(rect.x + 8, text_right)
 
         if not self._text:
@@ -147,7 +152,11 @@ class TextInput(Widget):
             if pos is None:
                 return False
             # Eye icon tap toggles password visibility
-            if self._password_mode and self.rect.collidepoint(pos) and self._eye_rect().collidepoint(pos):
+            if (
+                self._password_mode
+                and self.rect.collidepoint(pos)
+                and self._eye_rect().collidepoint(pos)
+            ):
                 self._show_text = not self._show_text
                 return True
             if self.rect.collidepoint(pos):

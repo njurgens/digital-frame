@@ -1,4 +1,5 @@
 """Tests for ConfigStore loading, merging, and flushing."""
+
 import os
 import time
 from pathlib import Path
@@ -17,7 +18,7 @@ def write_toml(path: Path, content: str) -> None:
 def test_load_from_file(tmp_path: Path) -> None:
     """Load from file."""
     p = tmp_path / "config.toml"
-    write_toml(p, '[slideshow]\ninterval = 15\n')
+    write_toml(p, "[slideshow]\ninterval = 15\n")
     cfg = ConfigStore(p)
     assert cfg.slideshow.interval == 15.0
 
@@ -42,7 +43,7 @@ def test_load_malformed_toml_creates_backup(tmp_path: Path) -> None:
 def test_interval_clamped_below_min(tmp_path: Path) -> None:
     """Interval clamped below min."""
     p = tmp_path / "config.toml"
-    write_toml(p, '[slideshow]\ninterval = -5.0\n')
+    write_toml(p, "[slideshow]\ninterval = -5.0\n")
     cfg = ConfigStore(p)
     assert cfg.slideshow.interval == 1.0
 
@@ -50,7 +51,7 @@ def test_interval_clamped_below_min(tmp_path: Path) -> None:
 def test_brightness_clamped_above_max(tmp_path: Path) -> None:
     """Brightness clamped above max."""
     p = tmp_path / "config.toml"
-    write_toml(p, '[display]\nbrightness = 200\n')
+    write_toml(p, "[display]\nbrightness = 200\n")
     cfg = ConfigStore(p)
     assert cfg.display.brightness == 100
 
@@ -83,7 +84,11 @@ def test_protected_keys_never_overwritten(tmp_path: Path) -> None:
     p = tmp_path / "config.toml"
     write_toml(
         p,
-        '[sync]\nshare_url = "https://secret"\npassword = "pw"\noutput_dir = "/data"\ncache_dir = "/cache"\n',
+        "[sync]\n"
+        'share_url = "https://secret"\n'
+        'password = "pw"\n'
+        'output_dir = "/data"\n'
+        'cache_dir = "/cache"\n',
     )
     cfg = ConfigStore(p)
     cfg.set("sync", "share_url", "OVERWRITTEN")

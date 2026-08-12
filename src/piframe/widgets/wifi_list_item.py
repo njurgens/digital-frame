@@ -1,4 +1,5 @@
 """Wi-Fi network list item widget."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -82,7 +83,9 @@ class WifiListItem(Widget):
             screen.blit(sec_surf, (x_ssid, rect.centery + 4))
 
             if is_connected:
-                pygame.draw.circle(screen, COLOUR_CONNECTED[:3], (rect.right - 16, rect.centery), 4)
+                pygame.draw.circle(
+                    screen, COLOUR_CONNECTED[:3], (rect.right - 16, rect.centery), 4
+                )
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Handle tap and long-press events on the network item."""

@@ -156,7 +156,9 @@ class SettingsPanel:
             segments=interval_labels,
             selected=interval_selected,
             assets=self._assets,
-            on_change=lambda i, _: self._config.set("slideshow", "interval", float(self._interval_values[i])),
+            on_change=lambda i, _: self._config.set(
+                "slideshow", "interval", float(self._interval_values[i])
+            ),
         )
 
         fit_options = ["Fit", "Fill"]
@@ -167,7 +169,9 @@ class SettingsPanel:
             segments=fit_options,
             selected=fit_selected,
             assets=self._assets,
-            on_change=lambda i, _: self._config.set("slideshow", "fit_mode", "fill" if i == 1 else "fit"),
+            on_change=lambda i, _: self._config.set(
+                "slideshow", "fit_mode", "fill" if i == 1 else "fit"
+            ),
         )
 
         shuffle_rect = pygame.Rect(SCREEN_W - 68, 228, 50, 28)
@@ -267,7 +271,9 @@ class SettingsPanel:
             placeholder="Password",
             password_mode=True,
             assets=self._assets,
-            on_focus=lambda: self._on_focus_text(self._wifi_password_input) if self._on_focus_text else None,
+            on_focus=lambda: (
+                self._on_focus_text(self._wifi_password_input) if self._on_focus_text else None
+            ),
         )
         self._wifi_scan_rect = pygame.Rect(CONTENT_X, 136, 200, 44)
         self._wifi_forget_rect = pygame.Rect(CONTENT_X + 212, 136, 200, 44)
@@ -345,7 +351,9 @@ class SettingsPanel:
         for item in self._nav_items:
             item.draw(screen)
 
-        pygame.draw.rect(screen, COLOUR_CONTENT_BG[:3], (SIDEBAR_W, 0, SCREEN_W - SIDEBAR_W, SCREEN_H))
+        pygame.draw.rect(
+            screen, COLOUR_CONTENT_BG[:3], (SIDEBAR_W, 0, SCREEN_W - SIDEBAR_W, SCREEN_H)
+        )
         title_font = self._assets.font_bold(FONT_SIZE_HEADING)
         title_surf, _ = title_font.render(self._active_section.value, COLOUR_TEXT_PRIMARY[:3])
         screen.blit(title_surf, (SETTINGS_CONTENT_X + 18, 18))
@@ -404,7 +412,9 @@ class SettingsPanel:
             screen.blit(surf, (content_x, y_offset))
             widget.draw(screen)
 
-        pct_surf, pct_rect = body_font.render(f"{self._brightness_slider.value}%", COLOUR_TEXT_PRIMARY[:3])
+        pct_surf, pct_rect = body_font.render(
+            f"{self._brightness_slider.value}%", COLOUR_TEXT_PRIMARY[:3]
+        )
         pct_rect.midright = (content_x + content_w - 18, self._brightness_slider.rect.centery)
         screen.blit(pct_surf, pct_rect)
 
@@ -443,7 +453,9 @@ class SettingsPanel:
         )
 
         if self._wifi_status and self._wifi_status.connected:
-            pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_forget_rect, border_radius=6)
+            pygame.draw.rect(
+                screen, COLOUR_BTN_PRIMARY[:3], self._wifi_forget_rect, border_radius=6
+            )
             forget_surf, _ = body_font.render("Forget current", COLOUR_TEXT_PRIMARY[:3])
             screen.blit(
                 forget_surf,
@@ -463,7 +475,9 @@ class SettingsPanel:
             )
             screen.blit(prompt_surf, (content_x, 276))
             self._wifi_password_input.draw(screen)
-            pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_connect_rect, border_radius=6)
+            pygame.draw.rect(
+                screen, COLOUR_BTN_PRIMARY[:3], self._wifi_connect_rect, border_radius=6
+            )
             connect_surf, _ = body_font.render("Connect", COLOUR_TEXT_PRIMARY[:3])
             screen.blit(
                 connect_surf,
@@ -473,7 +487,9 @@ class SettingsPanel:
                 ),
             )
 
-    def _draw_button(self, screen: pygame.Surface, rect: pygame.Rect, label: str, destructive: bool = False) -> None:
+    def _draw_button(
+        self, screen: pygame.Surface, rect: pygame.Rect, label: str, destructive: bool = False
+    ) -> None:
         body_font = self._assets.font(FONT_SIZE_BODY)
         bg = COLOUR_DESTRUCTIVE[:3] if destructive else COLOUR_BTN_PRIMARY[:3]
         pygame.draw.rect(screen, bg, rect, border_radius=6)
@@ -551,11 +567,16 @@ class SettingsPanel:
         # App version from git tag; falls back to a hardcoded constant
         try:
             import subprocess
-            tag = subprocess.check_output(
-                ["git", "-C", "/home/frame/digital-frame", "describe", "--tags", "--abbrev=0"],
-                stderr=subprocess.DEVNULL,
-                timeout=2,
-            ).decode().strip()
+
+            tag = (
+                subprocess.check_output(
+                    ["git", "-C", "/home/frame/digital-frame", "describe", "--tags", "--abbrev=0"],
+                    stderr=subprocess.DEVNULL,
+                    timeout=2,
+                )
+                .decode()
+                .strip()
+            )
         except Exception:
             tag = getattr(self, "_APP_VERSION", "dev")
         rows.append(("Version", tag))
@@ -587,10 +608,12 @@ class SettingsPanel:
 
         # Storage usage for the photos directory
         try:
-            photos_dir = self._config.sync.output_dir if self._config else "/home/frame/Pictures/slideshow"
+            photos_dir = (
+                self._config.sync.output_dir if self._config else "/home/frame/Pictures/slideshow"
+            )
             usage = shutil.disk_usage(photos_dir)
-            used_gb = usage.used / (1024 ** 3)
-            total_gb = usage.total / (1024 ** 3)
+            used_gb = usage.used / (1024**3)
+            total_gb = usage.total / (1024**3)
             storage = f"{used_gb:.1f} / {total_gb:.0f} GB"
         except Exception:
             storage = "unknown"
@@ -675,7 +698,11 @@ class SettingsPanel:
             if hasattr(self, "_check_update_rect") and self._check_update_rect.collidepoint(pos):
                 self._check_update_async()
                 return True
-            if self._install_update_rect and self._install_update_rect.collidepoint(pos) and self._update_result is not None:
+            if (
+                self._install_update_rect
+                and self._install_update_rect.collidepoint(pos)
+                and self._update_result is not None
+            ):
                 self._apply_update_async(self._update_result.tarball_url)
                 return True
             if hasattr(self, "_restart_rect") and self._restart_rect.collidepoint(pos):
@@ -716,7 +743,9 @@ class SettingsPanel:
                 self._wifi_manager.get_status()
 
     def _rebuild_wifi_items(self) -> None:
-        current_ssid = self._wifi_status.ssid if self._wifi_status and self._wifi_status.connected else ""
+        current_ssid = (
+            self._wifi_status.ssid if self._wifi_status and self._wifi_status.connected else ""
+        )
         self._wifi_items = []
         max_items = WIFI_MAX_ITEMS
         if self._wifi_password_ssid:
@@ -808,7 +837,9 @@ class SettingsPanel:
         def _worker() -> None:
             try:
                 tag_name, tarball_url = check_update(repo)
-                result = UpdateResult(available=bool(tarball_url), tag_name=tag_name, tarball_url=tarball_url)
+                result = UpdateResult(
+                    available=bool(tarball_url), tag_name=tag_name, tarball_url=tarball_url
+                )
             except Exception as exc:
                 result = UpdateResult(available=False, error=str(exc))
             if EVT_UPDATE_RESULT is not None:

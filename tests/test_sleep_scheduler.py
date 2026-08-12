@@ -1,4 +1,5 @@
 """Tests for SleepScheduler sleep/wake scheduling."""
+
 import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"

@@ -1,4 +1,5 @@
 """Hour/minute time picker with popup scroll pickers."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -38,8 +39,8 @@ class TimePicker(Widget):
 
         Args:
         rect: Position and size of the pill button.
-        initial_hour: Starting hour (0–23).
-        initial_minute: Starting minute (0–59).
+        initial_hour: Starting hour (0-23).
+        initial_minute: Starting minute (0-59).
         assets: Asset provider for fonts.
         on_change: Callback invoked when the time is confirmed.
 
@@ -94,7 +95,9 @@ class TimePicker(Widget):
         if not self._popup_open:
             return
         pygame.draw.rect(screen, COLOUR_DIALOG_BG[:3], self._popup_rect, border_radius=8)
-        pygame.draw.rect(screen, COLOUR_DIALOG_BORDER[:3], self._popup_rect, width=1, border_radius=8)
+        pygame.draw.rect(
+            screen, COLOUR_DIALOG_BORDER[:3], self._popup_rect, width=1, border_radius=8
+        )
         self._hour_picker.draw(screen)
         self._min_picker.draw(screen)
         done_rect = pygame.Rect(self._popup_rect.right - 40, self._popup_rect.y + 8, 32, 32)

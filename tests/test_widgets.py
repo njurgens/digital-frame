@@ -1,4 +1,5 @@
 """Tests for widget base class and common behaviour."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock
@@ -67,10 +68,16 @@ def test_drag_to_midpoint_gives_50() -> None:
 def test_value_clamped_to_range() -> None:
     """Value clamped to range."""
     sl = make_slider(50)
-    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.top - 50), button=1))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.top - 50), button=1)
+    )
     assert sl.value == 100
-    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(120, sl.rect.top - 50), button=1))
-    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.bottom + 50), button=1))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(120, sl.rect.top - 50), button=1)
+    )
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.bottom + 50), button=1)
+    )
     assert sl.value == 0
 
 
@@ -80,7 +87,9 @@ def test_on_change_called_during_drag() -> None:
     rect = pygame.Rect(100, 100, 40, 200)
     sl = VerticalSlider(rect=rect, initial_value=50, on_change=lambda v: changes.append(v))
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 150), button=1))
-    sl.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(120, 200), rel=(0, 50), buttons=(1, 0, 0)))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(120, 200), rel=(0, 50), buttons=(1, 0, 0))
+    )
     assert len(changes) >= 1
 
 
@@ -104,7 +113,9 @@ def test_horizontal_slider_on_change_called_during_drag() -> None:
     rect = pygame.Rect(100, 100, 200, 40)
     sl = HorizontalSlider(rect=rect, initial_value=50, on_change=lambda v: changes.append(v))
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 120), button=1))
-    sl.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 120), rel=(80, 0), buttons=(1, 0, 0)))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 120), rel=(80, 0), buttons=(1, 0, 0))
+    )
     assert len(changes) >= 1
 
 
@@ -166,7 +177,9 @@ def test_scroll_picker_drag_scroll() -> None:
     sp = ScrollPicker(rect=rect, items=items, selected=0, assets=assets)
     initial_offset = sp._scroll_offset
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
-    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 156), rel=(0, -44), buttons=(1, 0, 0)))
+    sp.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 156), rel=(0, -44), buttons=(1, 0, 0))
+    )
     assert sp._scroll_offset > initial_offset
 
 
@@ -177,7 +190,9 @@ def test_scroll_picker_snap_on_release() -> None:
     assets = make_mock_assets()
     sp = ScrollPicker(rect=rect, items=items, selected=5, assets=assets)
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
-    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 178), rel=(0, -22), buttons=(1, 0, 0)))
+    sp.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 178), rel=(0, -22), buttons=(1, 0, 0))
+    )
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(200, 178), button=1))
     assert sp._scroll_offset == int(sp._scroll_offset)
 
@@ -189,7 +204,9 @@ def test_scroll_picker_clamp_min() -> None:
     assets = make_mock_assets()
     sp = ScrollPicker(rect=rect, items=items, selected=0, assets=assets)
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
-    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 500), rel=(0, 300), buttons=(1, 0, 0)))
+    sp.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 500), rel=(0, 300), buttons=(1, 0, 0))
+    )
     assert sp._scroll_offset >= 0
 
 

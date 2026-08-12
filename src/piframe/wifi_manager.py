@@ -39,6 +39,7 @@ class WifiManager:
 
     def scan(self) -> None:
         """Scan for available Wi-Fi networks."""
+
         def _thread() -> None:
             ok, output = self._run_cmd(
                 "sudo nmcli -t -f SSID,SECURITY,SIGNAL dev wifi list --rescan yes",
@@ -73,6 +74,7 @@ class WifiManager:
 
     def connect(self, ssid: str, password: str | None) -> None:
         """Connect to a Wi-Fi network."""
+
         def _thread() -> None:
             if password:
                 cmd = f"sudo nmcli dev wifi connect {ssid!r} password {password!r}"
@@ -85,6 +87,7 @@ class WifiManager:
 
     def forget(self, ssid: str) -> None:
         """Forget a saved Wi-Fi network."""
+
         def _thread() -> None:
             ok, output = self._run_cmd(f"sudo nmcli connection delete {ssid!r}", timeout=5)
             self._post(WifiResult("forget", ok, error=None if ok else output))
@@ -93,6 +96,7 @@ class WifiManager:
 
     def disconnect(self) -> None:
         """Disconnect from the current Wi-Fi network."""
+
         def _thread() -> None:
             ok, output = self._run_cmd("sudo nmcli dev disconnect wlan0", timeout=5)
             self._post(WifiResult("disconnect", ok, error=None if ok else output))
@@ -101,6 +105,7 @@ class WifiManager:
 
     def get_status(self) -> None:
         """Get the current Wi-Fi connection status."""
+
         def _thread() -> None:
             ok, output = self._run_cmd(
                 "sudo nmcli -t -f GENERAL.CONNECTION,IP4.ADDRESS device show wlan0",

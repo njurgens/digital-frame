@@ -1,4 +1,5 @@
 """Wifi module: selects real or mock wifi manager based on config."""
+
 from __future__ import annotations
 
 from piframe.config_store import ConfigStore

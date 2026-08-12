@@ -102,7 +102,11 @@ class ScrollPicker(Widget):
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Handle drag events to scroll the picker."""
-        if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1 and self.rect.collidepoint(event.pos):
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and getattr(event, "button", 0) == 1
+            and self.rect.collidepoint(event.pos)
+        ):
             self._drag_y = event.pos[1]
             self._drag_offset = self._scroll_offset
             return True
@@ -111,7 +115,11 @@ class ScrollPicker(Widget):
                 self._drag_offset - (event.pos[1] - self._drag_y) / self.ROW_H
             )
             return True
-        if event.type == pygame.MOUSEBUTTONUP and self._drag_y is not None and getattr(event, "button", 0) == 1:
+        if (
+            event.type == pygame.MOUSEBUTTONUP
+            and self._drag_y is not None
+            and getattr(event, "button", 0) == 1
+        ):
             self._scroll_offset = self._clamp_offset(float(round(self._scroll_offset)))
             center_row = self.VISIBLE_ROWS // 2
             selected = max(0, min(len(self._items) - 1, int(self._scroll_offset + center_row)))

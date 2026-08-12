@@ -100,7 +100,9 @@ class OverlayUI:
         pygame.draw.rect(button, COLOUR_OVERLAY_BTN_BD, button_rect, width=1, border_radius=12)
         screen.blit(button, rect.topleft)
 
-    def _draw_icon_centered(self, screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]) -> None:
+    def _draw_icon_centered(
+        self, screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]
+    ) -> None:
         surf, r = self._assets.icon(size).render(icon, (255, 255, 255))
         r.center = center
         screen.blit(surf, r)
@@ -130,7 +132,9 @@ class OverlayUI:
         self._slider.draw(screen)
 
         pct_text = f"{self._brightness}%"
-        pct_surf, pct_rect = self._assets.font(FONT_SIZE_SECONDARY).render(pct_text, (255, 255, 255))
+        pct_surf, pct_rect = self._assets.font(FONT_SIZE_SECONDARY).render(
+            pct_text, (255, 255, 255)
+        )
         pct_rect.center = BRIGHTNESS_LABEL_CENTER
         screen.blit(pct_surf, pct_rect)
 

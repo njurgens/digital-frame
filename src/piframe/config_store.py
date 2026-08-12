@@ -1,4 +1,5 @@
 """TOML-based configuration store with typed section accessors."""
+
 from __future__ import annotations
 
 import logging

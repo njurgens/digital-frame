@@ -1,4 +1,5 @@
 """Tests for PhotoCache caching, rendering, and invalidation."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -9,7 +10,9 @@ import pytest
 from piframe.photo_cache import MAX_CACHE, PhotoCache
 
 
-@pytest.mark.skipif(pytest.importorskip("PIL", reason="PIL is required") is None, reason="PIL is required")
+@pytest.mark.skipif(
+    pytest.importorskip("PIL", reason="PIL is required") is None, reason="PIL is required"
+)
 def test_cache_key_format(tmp_path: Path) -> None:
     """Cache key format."""
     cache = PhotoCache((1280, 800))

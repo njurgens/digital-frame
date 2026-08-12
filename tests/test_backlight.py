@@ -1,4 +1,5 @@
 """Tests for BacklightController brightness control."""
+
 import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
