@@ -15,24 +15,33 @@ import pygame.freetype
 
 if TYPE_CHECKING:
     import socket
-from pygame import Rect, Surface
 
-from piframe.assets import Assets, IC_PAUSE
+from piframe import types as app_types
+from piframe.assets import Assets
 from piframe.backlight import BacklightController
 from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
 from piframe.keyboard import Keyboard
+from piframe.modules import (
+    CacheModule,
+    PlayerModule,
+    SettingsModule,
+    SyncModule,
+    WifiModule,
+)
 from piframe.overlay_ui import OverlayUI
-from piframe.photo_cache import PhotoCache
-from piframe.settings_panel import SettingsPanel
 from piframe.sleep_scheduler import SleepScheduler
-from piframe.sync_service import SyncService
-from piframe.updater import apply_update, check_update
-from piframe.wifi_manager import WifiManager
+from piframe.types import (
+    FPS,
+    SCREEN_H,
+    SCREEN_W,
+    SIDEBAR_W,
+    WAKE_GRACE,
+    AppState,
+    init_events,
+)
 from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe.widgets.text_input import TextInput
-from piframe import types as app_types
-from piframe.types import AppState, FPS, SCREEN_H, SCREEN_W, SIDEBAR_W, TRANS_DURATION, WAKE_GRACE, init_events
 
 _SWIPE_MIN_DX = 60
 _SWIPE_MAX_DT = 0.4
@@ -40,193 +49,13 @@ _SWIPE_MAX_SLOPE = 0.5
 _TAP_MAX_DIST = 20.0
 
 
-class MockWifiManager:
-    def scan(self) -> None:
-        import threading as _threading
-        from piframe.types import WifiNetwork, WifiResult
-        from piframe import types as _types
-
-        def _post() -> None:
-            import time as _time
-            _time.sleep(0.2)
-            networks = [
-                WifiNetwork(ssid="MockNetwork-WPA2", security="WPA2", signal=85),
-                WifiNetwork(ssid="MockNetwork-Open", security="--", signal=60),
-            ]
-            result = WifiResult("scan", True, data=networks)
-            try:
-                if _types.EVT_WIFI_RESULT is not None:
-                    pygame.event.post(pygame.event.Event(_types.EVT_WIFI_RESULT, result=result))
-            except Exception:
-                pass
-
-        _threading.Thread(target=_post, daemon=True).start()
-
-    def connect(self, ssid: str, password: str | None = None) -> None:
-        _ = ssid, password
-        return None
-
-    def forget(self, ssid: str) -> None:
-        _ = ssid
-        return None
-
-    def disconnect(self) -> None:
-        return None
-
-    def get_status(self) -> None:
-        return None
-
-
-class SlideshowPlayer:
-    def __init__(self, config: ConfigStore, cache: PhotoCache, screen_size: tuple[int, int], assets: Assets | None = None):
-        self._config = config
-        self._cache = cache
-        self._assets = assets
-        self._w, self._h = screen_size
-        self._playlist: list[Path] = []
-        self._index: int = 0
-        self._current_surf: Surface | None = None
-        self._next_surf: Surface | None = None
-        self._elapsed: float = 0.0
-        self._trans_t: float = 0.0
-        self._in_transition: bool = False
-        self._trans_start: float = 0.0
-        self._direction: int = 1
-        self._paused: bool = False
-
-        self._slide_rect: Rect = Rect(0, 0, self._w, self._h)
-        self.rescan()
-
-    def rescan(self) -> None:
-        output_dir = Path(self._config.sync.output_dir)
-        exts = {".jpg", ".jpeg", ".png", ".gif"}
-        files = sorted([p for p in output_dir.iterdir() if p.suffix.lower() in exts]) if output_dir.exists() else []
-        self._playlist = files
-        if self._config.slideshow.shuffle:
-            self._playlist = self._fisher_yates(self._playlist)
-        self._index = 0
-        if self._playlist:
-            self._current_surf = self._cache.get(
-                self._playlist[0],
-                self._config.slideshow.fit_mode,
-                self._w,
-                self._h,
-            )
-        else:
-            self._current_surf = None
-
-    def _fisher_yates(self, items: list) -> list:
-        import random
-
-        lst = list(items)
-        for i in range(len(lst) - 1, 0, -1):
-            j = random.randint(0, i)
-            lst[i], lst[j] = lst[j], lst[i]
-        return lst
-
-    def update(self, dt: float) -> None:
-        if self._paused or not self._playlist:
-            return
-        interval = self._config.slideshow.interval
-        trans_dur = TRANS_DURATION
-
-        if self._in_transition:
-            elapsed = time.monotonic() - self._trans_start
-            self._trans_t = min(1.0, elapsed / trans_dur)
-            if self._trans_t >= 1.0:
-                self._commit_transition()
-        else:
-            self._elapsed += dt
-            if self._elapsed >= interval:
-                self.advance()
-
-    def advance(self, direction: int = 1) -> None:
-        if not self._playlist:
-            return
-        self._direction = direction
-        next_idx = (self._index + direction) % len(self._playlist)
-        self._next_surf = self._cache.get(
-            self._playlist[next_idx],
-            self._config.slideshow.fit_mode,
-            self._w,
-            self._h,
-        )
-        self._index = next_idx
-        self._start_transition()
-
-    def _start_transition(self) -> None:
-        self._trans_start = time.monotonic()
-        self._in_transition = True
-        self._trans_t = 0.0
-
-    def _commit_transition(self) -> None:
-        self._trans_t = 1.0
-        self._current_surf = self._next_surf
-        self._next_surf = None
-        self._in_transition = False
-        self._elapsed = 0.0
-
-    def go_back(self) -> None:
-        self.advance(direction=-1)
-
-    def skip(self) -> None:
-        self.advance(direction=1)
-
-    def skip_next(self) -> None:
-        return self.skip()
-
-    def draw(self, screen: Surface) -> None:
-        if self._current_surf is None:
-            screen.fill((0, 0, 0))
-            return
-        if self._in_transition and self._next_surf is not None:
-            trans = self._config.slideshow.transition
-            if trans == "crossfade":
-                screen.blit(self._current_surf, (0, 0))
-                alpha_surf = self._next_surf.copy()
-                alpha_surf.set_alpha(int(self._trans_t * 255))
-                screen.blit(alpha_surf, (0, 0))
-            elif trans == "slide":
-                cur_x = int(-self._direction * self._trans_t * self._w)
-                next_x = int(self._direction * (1.0 - self._trans_t) * self._w)
-                screen.blit(self._current_surf, (cur_x, 0))
-                screen.blit(self._next_surf, (next_x, 0))
-            else:
-                screen.blit(self._next_surf if self._trans_t >= 0.5 else self._current_surf, (0, 0))
-        else:
-            screen.blit(self._current_surf, (0, 0))
-
-    def draw_pip(self, screen: Surface) -> None:
-        if not self._paused:
-            return
-        pill_rect = pygame.Rect(12, 762, 26, 26)
-        pygame.draw.rect(screen, (0, 0, 0), pill_rect, border_radius=13)
-        if self._assets is not None:
-            icon_font = self._assets.icon(24)
-            icon_surf, _ = icon_font.render(IC_PAUSE, (255, 255, 255))
-            screen.blit(
-                icon_surf,
-                (
-                    pill_rect.centerx - icon_surf.get_width() // 2,
-                    pill_rect.centery - icon_surf.get_height() // 2,
-                ),
-            )
-
-    @property
-    def is_paused(self) -> bool:
-        return self._paused
-
-    @is_paused.setter
-    def is_paused(self, value: bool):
-        self._paused = value
-
-
 class App:
     def __init__(self) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument("--test-harness", action="store_true")
-        parser.add_argument("--mock-wifi", action="store_true")
-        parser.add_argument("--windowed", action="store_true", help="Run in a window instead of fullscreen")
+        parser.add_argument(
+            "--windowed", action="store_true", help="Run in a window instead of fullscreen"
+        )
         self._args = parser.parse_args()
 
         pygame.init()
@@ -255,22 +84,21 @@ class App:
         config_path = Path(__file__).parent.parent / "config.toml"
         self._config = ConfigStore(config_path)
 
-        self._cache = PhotoCache(cache_dir=Path(self._config.sync.cache_dir))
-
+        # Modules construct services — conditional logic is encapsulated
+        self._cache = CacheModule().create(self._config)
         self._clock_w = ClockWidget(self._assets)
-
-        self._sync: SyncService | None = SyncService(self._config)
-        self._player = SlideshowPlayer(self._config, self._cache, (SCREEN_W, SCREEN_H), self._assets)
+        self._sync = SyncModule().create(self._config)
+        self._player = PlayerModule().create(self._config, cache=self._cache, assets=self._assets)
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
-        self._wifi = MockWifiManager() if self._args.mock_wifi else WifiManager()
-        self._settings = SettingsPanel(
-            self._assets,
+        self._wifi = WifiModule().create(self._config)
+        self._settings = SettingsModule().create(
             self._config,
-            on_brightness_change=self._on_brightness_change,
-            on_focus_text=self._on_focus_text,
+            assets=self._assets,
             wifi_manager=self._wifi,
             sync_service=self._sync,
+            on_brightness_change=self._on_brightness_change,
+            on_focus_text=self._on_focus_text,
             app_ref=self,
         )
         self._sleep = SleepScheduler(self._config)
@@ -339,7 +167,9 @@ class App:
             if self._state == AppState.KEYBOARD:
                 if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
                     kb_rect = pygame.Rect(0, 450, SCREEN_W, 350)
-                    if event.type == pygame.MOUSEBUTTONDOWN and not kb_rect.collidepoint(event.pos):
+                    if event.type == pygame.MOUSEBUTTONDOWN and not kb_rect.collidepoint(
+                        event.pos
+                    ):
                         self._keyboard.detach()
                         self._state = AppState.SETTINGS
                         continue
@@ -373,7 +203,11 @@ class App:
                 if self._state == AppState.SLEEPING:
                     self._exit_sleep()
                     self._suppress_next_tap = True
-            elif event.type == pygame.MOUSEMOTION and event.buttons[0] and self._state == AppState.OVERLAY:
+            elif (
+                event.type == pygame.MOUSEMOTION
+                and event.buttons[0]
+                and self._state == AppState.OVERLAY
+            ):
                 self._overlay.on_drag(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and getattr(event, "button", 0) == 1:
                 if self._suppress_next_tap:
@@ -403,7 +237,11 @@ class App:
 
         abs_dx = abs(dx)
         abs_dy = abs(dy)
-        if elapsed < _SWIPE_MAX_DT and abs_dx > _SWIPE_MIN_DX and abs_dy <= abs_dx * _SWIPE_MAX_SLOPE:
+        if (
+            elapsed < _SWIPE_MAX_DT
+            and abs_dx > _SWIPE_MIN_DX
+            and abs_dy <= abs_dx * _SWIPE_MAX_SLOPE
+        ):
             if dx < 0:
                 self._player.skip()
             else:
@@ -542,7 +380,7 @@ class App:
         t = threading.Thread(target=self._harness_loop, args=(server,), daemon=True)
         t.start()
 
-    def _harness_loop(self, server: "socket.socket") -> None:
+    def _harness_loop(self, server: socket.socket) -> None:
         while True:
             conn = None
             try:
@@ -568,7 +406,7 @@ class App:
                     except Exception:
                         pass
 
-    def _handle_harness_cmd(self, msg: dict, conn: "socket.socket") -> None:
+    def _handle_harness_cmd(self, msg: dict, conn: socket.socket) -> None:
         import threading
 
         cmd = msg.get("cmd")

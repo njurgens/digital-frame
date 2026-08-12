@@ -174,7 +174,7 @@ def pi_app() -> Generator[AppHarness, None, None]:
         # Try to start it.
         ssh.exec_command(
             f"XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 "
-            f"nohup python3 {APP_DIR}/slideshow.py --test-harness --mock-wifi "
+            f"nohup python3 {APP_DIR}/slideshow.py --test-harness "
             f"</dev/null >>/tmp/slideshow.log 2>&1 &"
         )
         for _ in range(10):

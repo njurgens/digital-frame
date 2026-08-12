@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+from piframe.assets import Assets
+from piframe.config_store import ConfigStore
+from piframe.di import DimModule
+from piframe.settings_panel import SettingsPanel
+from piframe.sync_service import SyncService
+from piframe.types import WifiManagerProtocol
+
+if TYPE_CHECKING:
+    from piframe.app import App
+
+
+class SettingsModule(DimModule[SettingsPanel]):
+    def create(
+        self,
+        config: ConfigStore,
+        *,
+        assets: Assets,
+        wifi_manager: WifiManagerProtocol,
+        sync_service: SyncService,
+        on_brightness_change: Callable[[int], None],
+        on_focus_text: Callable,
+        app_ref: App,
+        **deps: object,
+    ) -> SettingsPanel:
+        return SettingsPanel(
+            assets=assets,
+            config=config,
+            on_brightness_change=on_brightness_change,
+            on_focus_text=on_focus_text,
+            wifi_manager=wifi_manager,
+            sync_service=sync_service,
+            app_ref=app_ref,
+        )

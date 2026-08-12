@@ -120,3 +120,44 @@ class WifiManager:
             self._post(WifiResult("status", True, data=status))
 
         threading.Thread(target=_thread, daemon=True).start()
+
+
+class MockWifiManager:
+    """Mock implementation of WifiManagerProtocol for development/testing."""
+
+    def scan(self) -> None:
+        import threading as _threading
+
+        from piframe import types as _types
+        from piframe.types import WifiNetwork, WifiResult
+
+        def _post() -> None:
+            import time as _time
+
+            _time.sleep(0.2)
+            networks = [
+                WifiNetwork(ssid="MockNetwork-WPA2", security="WPA2", signal=85),
+                WifiNetwork(ssid="MockNetwork-Open", security="--", signal=60),
+            ]
+            result = WifiResult("scan", True, data=networks)
+            try:
+                if _types.EVT_WIFI_RESULT is not None:
+                    pygame.event.post(pygame.event.Event(_types.EVT_WIFI_RESULT, result=result))
+            except Exception:
+                pass
+
+        _threading.Thread(target=_post, daemon=True).start()
+
+    def connect(self, ssid: str, password: str | None = None) -> None:
+        _ = ssid, password
+        return None
+
+    def forget(self, ssid: str) -> None:
+        _ = ssid
+        return None
+
+    def disconnect(self) -> None:
+        return None
+
+    def get_status(self) -> None:
+        return None

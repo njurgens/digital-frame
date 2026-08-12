@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pygame
 
-from piframe.app import SlideshowPlayer
+from piframe.slideshow_player import SlideshowPlayer
 from piframe.types import TRANS_DURATION
 
 
