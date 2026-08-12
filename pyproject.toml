@@ -32,6 +32,7 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "RUF", "ANN201", "ANN001", "D"]
+ignore = ["D203", "D212"]  # prefer D211 (blank line before class) and D213 (summary on second line)
 
 [tool.basedpyright]
 pythonVersion = "3.13"
