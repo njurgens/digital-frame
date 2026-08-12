@@ -35,7 +35,8 @@ class BacklightController:
         """
         Read the current backlight brightness as a percentage (0–100).
 
-        Returns:
+        Returns
+        -------
             The current brightness percentage, or 50 if the sysfs path is
             unreadable.
 

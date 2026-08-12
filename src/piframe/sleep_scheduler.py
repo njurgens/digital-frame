@@ -21,7 +21,7 @@ def is_sleep_time(now: datetime.time, sleep_t: datetime.time, wake_t: datetime.t
     sleep_t: The sleep time.
     wake_t: The wake time.
 
-    Returns:
+    Returns
     -------
     True if *now* is between *sleep_t* and *wake_t*.
 

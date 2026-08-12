@@ -22,7 +22,7 @@ class DimModule[T](Protocol):
             config: Application configuration store.
             **deps: Optional dependency objects required by the service.
 
-        Returns:
+        Returns
         -------
             A fully initialised service instance.
 

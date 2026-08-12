@@ -18,7 +18,7 @@ class WifiModule(DimModule[WifiManagerProtocol]):
             config: Application configuration.
             **deps: Unused.
 
-        Returns:
+        Returns
         -------
             A wifi manager implementing ``WifiManagerProtocol``.
 
