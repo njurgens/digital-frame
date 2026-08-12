@@ -16,6 +16,7 @@ _PROTECTED = {
 }
 
 _DEFAULTS = {
+    "app": {"mock_wifi": False},
     "slideshow": {"interval": 30.0, "fit_mode": "fit", "shuffle": True, "transition": "crossfade"},
     "display": {"brightness": 72, "show_clock": True, "timezone_auto": True},
     "sleep": {"enabled": False, "sleep_time": "22:00", "wake_time": "07:00"},
@@ -35,6 +36,15 @@ _CLAMP = {
     ("display", "brightness"): (0, 100),
     ("sync", "interval_minutes"): (1, 1440),
 }
+
+
+class _AppCfg:
+    def __init__(self, data: dict):
+        self._d = data
+
+    @property
+    def mock_wifi(self) -> bool:
+        return bool(self._d.get("mock_wifi", False))
 
 
 class _SlideshowCfg:
@@ -234,6 +244,10 @@ class ConfigStore:
                 return tomllib.load(f)
         except Exception:
             return {}
+
+    @property
+    def app(self) -> _AppCfg:
+        return _AppCfg(self._data.setdefault("app", {}))
 
     @property
     def slideshow(self) -> _SlideshowCfg:

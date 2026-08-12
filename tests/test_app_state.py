@@ -54,7 +54,7 @@ def make_app(tmp_path: Path) -> App:
     app._swipe_start_pos = None
     app._swipe_start_time = None
     app._suppress_next_tap = False
-    app._args = MagicMock(test_harness=False, mock_wifi=False)
+    app._args = MagicMock(test_harness=False)
     return app
 
 

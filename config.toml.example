@@ -1,6 +1,9 @@
 # Copy this file to config.toml and fill in your OneDrive credentials.
 # config.toml is excluded from version control (it contains secrets).
 
+[app]
+mock_wifi = false    # use MockWifiManager instead of WifiManager
+
 [slideshow]
 interval    = 30        # seconds between slides
 fit_mode    = "fit"     # "fit" = blurred bars, "fill" = cropped
