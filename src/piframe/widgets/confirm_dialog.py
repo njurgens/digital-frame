@@ -42,7 +42,8 @@ class ConfirmDialog(Widget):
         on_cancel: Callable[[], None] | None = None,
         assets: Assets | None = None,
     ) -> None:
-        """Create a confirmation dialog.
+        """
+        Create a confirmation dialog.
 
         Args:
         title: Dialog title text.

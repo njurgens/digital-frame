@@ -52,7 +52,8 @@ class Keyboard:
     """On-screen virtual keyboard with alpha, numeric, and extended layers."""
 
     def __init__(self, assets: Assets, on_done: Callable[[], None] | None = None) -> None:
-        """Create a virtual keyboard.
+        """
+        Create a virtual keyboard.
 
         Args:
             assets: Asset manager for fonts and icons.

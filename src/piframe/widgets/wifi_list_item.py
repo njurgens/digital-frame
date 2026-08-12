@@ -30,7 +30,8 @@ class WifiListItem(Widget):
         on_tap: Callable[[WifiNetwork], None] | None = None,
         on_long_press: Callable[[WifiNetwork], None] | None = None,
     ) -> None:
-        """Create a Wi-Fi network list item.
+        """
+        Create a Wi-Fi network list item.
 
         Args:
         rect: Position and size of the item.

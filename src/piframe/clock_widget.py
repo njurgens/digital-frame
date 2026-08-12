@@ -18,7 +18,8 @@ class ClockWidget:
     _TZ_DEFAULT = "America/Los_Angeles"
 
     def __init__(self, assets: Assets) -> None:
-        """Create a clock widget.
+        """
+        Create a clock widget.
 
         Args:
             assets: Asset manager for fonts.

@@ -64,7 +64,8 @@ class AppHarness:
     """Thin wrapper around the test-harness socket protocol."""
 
     def __init__(self, ssh: paramiko.SSHClient, host: str, port: int, sock_path: str | None = None) -> None:
-        """Create an app test harness.
+        """
+        Create an app test harness.
 
         Args:
             ssh: SSH client for connecting to the Pi.

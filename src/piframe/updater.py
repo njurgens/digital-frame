@@ -11,7 +11,8 @@ GITHUB_API = "https://api.github.com/repos/{repo}/releases/latest"
 
 
 def check_update(repo: str) -> tuple[str, str]:
-    """Check GitHub for the latest release of the given repo.
+    """
+    Check GitHub for the latest release of the given repo.
 
     Args:
     repo: GitHub repository in the format *owner/repo*.
@@ -36,7 +37,8 @@ def _safe_extract(tf: tarfile.TarFile, destination: Path) -> None:
 
 
 def apply_update(tarball_url: str) -> None:
-    """Download and apply an update from a tarball URL.
+    """
+    Download and apply an update from a tarball URL.
 
     Args:
     tarball_url: URL of the release tarball to install.

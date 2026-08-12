@@ -18,7 +18,8 @@ class VerticalSlider(Widget):
         initial_value: int = 50,
         on_change: Callable[[int], None] | None = None,
     ):
-        """Create a vertical slider.
+        """
+        Create a vertical slider.
 
         Args:
         rect: Position and size of the slider.

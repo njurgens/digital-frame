@@ -172,14 +172,16 @@ class _UpdateCfg:
 
 
 class ConfigStore:
-    """TOML-based configuration store with typed section accessors.
+    """
+    TOML-based configuration store with typed section accessors.
 
     Reads from disk on init, merges user overrides, protects secrets,
     and flushes changes back to disk on a delay.
     """
 
     def __init__(self, path: str | Path) -> None:
-        """Initialise the config store from a TOML file.
+        """
+        Initialise the config store from a TOML file.
 
         Args:
             path: Path to the TOML configuration file.

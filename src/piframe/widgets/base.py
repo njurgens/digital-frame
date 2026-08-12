@@ -8,7 +8,8 @@ class Widget(ABC):
     """Abstract base class for all UI widgets."""
 
     def __init__(self, rect: pygame.Rect):
-        """Create a widget at the given rect.
+        """
+        Create a widget at the given rect.
 
         Args:
         rect: Position and size of the widget.

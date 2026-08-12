@@ -47,7 +47,8 @@ class OverlayUI:
     """Bottom overlay with playback controls, brightness slider, and auto-dismiss."""
 
     def __init__(self, assets: Assets, config: ConfigStore):
-        """Create an overlay UI.
+        """
+        Create an overlay UI.
 
         Args:
             assets: Asset manager for fonts and icons.

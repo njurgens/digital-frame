@@ -13,7 +13,8 @@ from piframe.config_store import ConfigStore
 
 
 def is_sleep_time(now: datetime.time, sleep_t: datetime.time, wake_t: datetime.time) -> bool:
-    """Determine whether the given time falls within the sleep window.
+    """
+    Determine whether the given time falls within the sleep window.
 
     Args:
     now: The current time to check.
@@ -38,7 +39,8 @@ class SleepScheduler:
     """Background thread that posts sleep/wake events based on schedule."""
 
     def __init__(self, config: ConfigStore) -> None:
-        """Create a sleep scheduler.
+        """
+        Create a sleep scheduler.
 
         Args:
             config: Application configuration store.

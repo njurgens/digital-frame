@@ -18,7 +18,8 @@ class HorizontalSlider(Widget):
         initial_value: int = 50,
         on_change: Callable[[int], None] | None = None,
     ):
-        """Create a horizontal slider.
+        """
+        Create a horizontal slider.
 
         Args:
         rect: Position and size of the slider.

@@ -20,7 +20,8 @@ class PlayerModule(DimModule[SlideshowPlayer]):
         assets: Assets,
         **deps: object,
     ) -> SlideshowPlayer:
-        """Build a slideshow player with the given dependencies.
+        """
+        Build a slideshow player with the given dependencies.
 
         Args:
             config: Application configuration.

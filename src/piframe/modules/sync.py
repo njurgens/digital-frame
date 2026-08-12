@@ -10,7 +10,8 @@ class SyncModule(DimModule[SyncService]):
     """Construct a ``SyncService`` backed by the config store."""
 
     def create(self, config: ConfigStore, **deps: object) -> SyncService:
-        """Build a sync service that polls framesync on an interval.
+        """
+        Build a sync service that polls framesync on an interval.
 
         Args:
             config: Application configuration.
