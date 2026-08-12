@@ -1,4 +1,5 @@
 """Player module: constructs a SlideshowPlayer with its dependencies."""
+
 from __future__ import annotations
 
 from piframe.assets import Assets
@@ -20,7 +21,8 @@ class PlayerModule(DimModule[SlideshowPlayer]):
         assets: Assets,
         **deps: object,
     ) -> SlideshowPlayer:
-        """Build a slideshow player with the given dependencies.
+        """
+        Build a slideshow player with the given dependencies.
 
         Args:
             config: Application configuration.
@@ -28,7 +30,8 @@ class PlayerModule(DimModule[SlideshowPlayer]):
             assets: Asset provider for icons.
             **deps: Unused.
 
-        Returns:
+        Returns
+        -------
             A ``SlideshowPlayer`` instance.
 
         """

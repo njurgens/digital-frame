@@ -1,3 +1,5 @@
+"""Tests for OverlayUI rendering and interaction."""
+
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -11,7 +13,9 @@ from piframe.types import COLOUR_OVERLAY_BTN_BG
 
 
 class _StubFont:
-    def render(self, _text: str, _colour: tuple[int, int, int]) -> tuple[pygame.Surface, pygame.Rect]:
+    def render(
+        self, _text: str, _colour: tuple[int, int, int]
+    ) -> tuple[pygame.Surface, pygame.Rect]:
         surf = pygame.Surface((8, 8), pygame.SRCALPHA)
         surf.fill((*_colour, 255))
         return surf, surf.get_rect()
@@ -33,6 +37,7 @@ def _make_overlay(tmp_path: Path) -> OverlayUI:
 
 
 def test_overlay_button_background_preserves_alpha(tmp_path: Path) -> None:
+    """Overlay button background preserves alpha."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     rect = pygame.Rect(200, 200, 48, 48)
@@ -47,7 +52,10 @@ def test_overlay_button_background_preserves_alpha(tmp_path: Path) -> None:
     assert outside[3] == 0
 
 
-def test_show_and_hide_manage_visibility_and_flags(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_show_and_hide_manage_visibility_and_flags(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Show and hide manage visibility and flags."""
     overlay = _make_overlay(tmp_path)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
     overlay.show()
@@ -60,7 +68,10 @@ def test_show_and_hide_manage_visibility_and_flags(tmp_path: Path, monkeypatch: 
     assert overlay._dragging_slider is False
 
 
-def test_show_while_paused_has_no_dismiss_timer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_show_while_paused_has_no_dismiss_timer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Show while paused has no dismiss timer."""
     overlay = _make_overlay(tmp_path)
     overlay._paused = True
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
@@ -69,6 +80,7 @@ def test_show_while_paused_has_no_dismiss_timer(tmp_path: Path, monkeypatch: pyt
 
 
 def test_update_hides_after_timer_expiry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Update hides after timer expiry."""
     overlay = _make_overlay(tmp_path)
     overlay._visible = True
     overlay._dismiss_at = 10.0
@@ -79,13 +91,17 @@ def test_update_hides_after_timer_expiry(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_draw_noop_when_hidden(tmp_path: Path) -> None:
+    """Draw noop when hidden."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     overlay.draw(screen)
     assert screen.get_at((640, 400))[3] == 0
 
 
-def test_draw_visible_renders_scrim_and_progress_bar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_draw_visible_renders_scrim_and_progress_bar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Draw visible renders scrim and progress bar."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
@@ -96,7 +112,10 @@ def test_draw_visible_renders_scrim_and_progress_bar(tmp_path: Path, monkeypatch
     assert screen.get_at((10, 1))[3] == 255
 
 
-def test_draw_hides_progress_bar_when_paused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_draw_hides_progress_bar_when_paused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Draw hides progress bar when paused."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 10.0)
@@ -106,7 +125,10 @@ def test_draw_hides_progress_bar_when_paused(tmp_path: Path, monkeypatch: pytest
     assert screen.get_at((10, 1))[3] < 255
 
 
-def test_draw_uses_play_icon_when_paused_and_pause_when_playing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_draw_uses_play_icon_when_paused_and_pause_when_playing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Draw uses play icon when paused and pause when playing."""
     overlay = _make_overlay(tmp_path)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 1.0)
     overlay.show()
@@ -128,7 +150,10 @@ def test_draw_uses_play_icon_when_paused_and_pause_when_playing(tmp_path: Path, 
     assert captured[1] == IC_PAUSE
 
 
-def test_draw_renders_visible_playback_icons(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_draw_renders_visible_playback_icons(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Draw renders visible playback icons."""
     overlay = _make_overlay(tmp_path)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 10.0)
     overlay.show()
@@ -141,6 +166,7 @@ def test_draw_renders_visible_playback_icons(tmp_path: Path, monkeypatch: pytest
 
 
 def test_on_tap_routes_actions(tmp_path: Path) -> None:
+    """On tap routes actions."""
     overlay = _make_overlay(tmp_path)
     overlay.show()
     assert overlay.on_tap(DISMISS_BAR.center) == "dismiss"
@@ -152,6 +178,7 @@ def test_on_tap_routes_actions(tmp_path: Path) -> None:
 
 
 def test_on_drag_updates_brightness_and_uses_slider_callback(tmp_path: Path) -> None:
+    """On drag updates brightness and uses slider callback."""
     overlay = _make_overlay(tmp_path)
     overlay.show()
     slider_cb = Mock()
@@ -165,6 +192,7 @@ def test_on_drag_updates_brightness_and_uses_slider_callback(tmp_path: Path) -> 
 
 
 def test_on_drag_uses_overlay_callback_when_slider_callback_missing(tmp_path: Path) -> None:
+    """On drag uses overlay callback when slider callback missing."""
     overlay = _make_overlay(tmp_path)
     overlay.show()
     overlay._slider.on_change = None
@@ -176,6 +204,7 @@ def test_on_drag_uses_overlay_callback_when_slider_callback_missing(tmp_path: Pa
 
 
 def test_drag_helpers_and_setters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Drag helpers and setters."""
     overlay = _make_overlay(tmp_path)
     overlay._dragging_slider = True
     overlay.stop_drag()

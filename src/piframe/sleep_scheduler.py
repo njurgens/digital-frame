@@ -1,3 +1,5 @@
+"""Background sleep/wake scheduler using configurable times."""
+
 from __future__ import annotations
 
 import datetime
@@ -7,11 +9,24 @@ import time
 
 import pygame
 
-from piframe.config_store import ConfigStore
 from piframe import types
+from piframe.config_store import ConfigStore
 
 
 def is_sleep_time(now: datetime.time, sleep_t: datetime.time, wake_t: datetime.time) -> bool:
+    """
+    Determine whether the given time falls within the sleep window.
+
+    Args:
+    now: The current time to check.
+    sleep_t: The sleep time.
+    wake_t: The wake time.
+
+    Returns
+    -------
+    True if *now* is between *sleep_t* and *wake_t*.
+
+    """
     now_m = now.hour * 60 + now.minute
     sleep_m = sleep_t.hour * 60 + sleep_t.minute
     wake_m = wake_t.hour * 60 + wake_t.minute
@@ -23,7 +38,16 @@ def is_sleep_time(now: datetime.time, sleep_t: datetime.time, wake_t: datetime.t
 
 
 class SleepScheduler:
-    def __init__(self, config: ConfigStore):
+    """Background thread that posts sleep/wake events based on schedule."""
+
+    def __init__(self, config: ConfigStore) -> None:
+        """
+        Create a sleep scheduler.
+
+        Args:
+            config: Application configuration store.
+
+        """
         self._config = config
         self._stop_event = threading.Event()
         self._kick_event = threading.Event()
@@ -67,12 +91,15 @@ class SleepScheduler:
             self._kick_event.clear()
 
     def set_grace(self, until: float) -> None:
+        """Set a grace period during which sleep is suspended."""
         self._grace_until = until
 
     def kick(self) -> None:
         """Interrupt the sleep-check wait and re-evaluate immediately."""
+        """Interrupt the sleep-check wait and re-evaluate immediately."""
         self._kick_event.set()
 
     def stop(self) -> None:
+        """Stop the background scheduler thread."""
         self._stop_event.set()
         self._kick_event.set()

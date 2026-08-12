@@ -1,3 +1,5 @@
+"""Tests for virtual keyboard input handling."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock
@@ -12,7 +14,8 @@ from piframe.keyboard import IC_BACKSPACE, IC_SHIFT, IC_SHIFT_LOCK, Keyboard
 
 
 @pytest.fixture(scope="module", autouse=True)
-def pygame_init() -> Generator[None, None, None]:
+def pygame_init() -> Generator[None]:
+    """Pygame init."""
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -29,6 +32,7 @@ def _make_assets():
 
 
 def test_keyboard_draw_uses_icon_font_for_shift_and_backspace() -> None:
+    """Keyboard draw uses icon font for shift and backspace."""
     assets = _make_assets()
     kb = Keyboard(assets)
     kb.attach(MagicMock())
@@ -44,6 +48,7 @@ def test_keyboard_draw_uses_icon_font_for_shift_and_backspace() -> None:
 
 
 def test_keyboard_draw_uses_shift_lock_icon_when_shift_enabled() -> None:
+    """Keyboard draw uses shift lock icon when shift enabled."""
     assets = _make_assets()
     kb = Keyboard(assets)
     kb.attach(MagicMock())
@@ -58,6 +63,7 @@ def test_keyboard_draw_uses_shift_lock_icon_when_shift_enabled() -> None:
 
 
 def test_attach_and_detach_manage_visibility_state() -> None:
+    """Attach and detach manage visibility state."""
     kb = Keyboard(_make_assets())
     target = MagicMock()
     kb.attach(target)
@@ -69,12 +75,14 @@ def test_attach_and_detach_manage_visibility_state() -> None:
 
 
 def test_handle_event_returns_false_when_hidden() -> None:
+    """Handle event returns false when hidden."""
     kb = Keyboard(_make_assets())
     evt = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(10, 10), button=1)
     assert kb.handle_event(evt) is False
 
 
 def test_handle_event_mouse_down_selects_key_and_mouse_up_emits() -> None:
+    """Handle event mouse down selects key and mouse up emits."""
     kb = Keyboard(_make_assets())
     target = MagicMock()
     kb.attach(target)
@@ -88,6 +96,7 @@ def test_handle_event_mouse_down_selects_key_and_mouse_up_emits() -> None:
 
 
 def test_handle_event_mouse_down_outside_keys_is_not_consumed() -> None:
+    """Handle event mouse down outside keys is not consumed."""
     kb = Keyboard(_make_assets())
     kb.attach(MagicMock())
     down = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(2, 2), button=1)
@@ -95,6 +104,7 @@ def test_handle_event_mouse_down_outside_keys_is_not_consumed() -> None:
 
 
 def test_emit_backspace_space_done_and_shift_paths() -> None:
+    """Emit backspace space done and shift paths."""
     on_done = MagicMock()
     kb = Keyboard(_make_assets(), on_done=on_done)
     target = MagicMock()
@@ -115,6 +125,7 @@ def test_emit_backspace_space_done_and_shift_paths() -> None:
 
 
 def test_emit_layer_switches_and_shifted_character() -> None:
+    """Emit layer switches and shifted character."""
     kb = Keyboard(_make_assets())
     target = MagicMock()
     kb.attach(target)

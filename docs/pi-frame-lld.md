@@ -141,17 +141,17 @@ digital-frame/
 ### 2.1 Screen constants (`piframe/types.py`)
 
 ```python
-SCREEN_W        = 1280
-SCREEN_H        = 800
-RIGHT_COL_W     = 80      # overlay right column
-SIDEBAR_W       = 333     # settings sidebar (≈26 % of screen width)
-BOTTOM_BAR_H    = 88      # overlay bottom bar
-SETTINGS_CONTENT_X = SIDEBAR_W          # 333
+SCREEN_W = 1280
+SCREEN_H = 800
+RIGHT_COL_W = 80  # overlay right column
+SIDEBAR_W = 333  # settings sidebar (≈26 % of screen width)
+BOTTOM_BAR_H = 88  # overlay bottom bar
+SETTINGS_CONTENT_X = SIDEBAR_W  # 333
 SETTINGS_CONTENT_W = SCREEN_W - SIDEBAR_W  # 947
-FPS             = 30
-TRANS_DURATION  = 0.5     # seconds for crossfade / slide
-OVERLAY_DISMISS = 5.0     # seconds before overlay auto-dismisses
-WAKE_GRACE      = 30.0    # seconds of grace after tap-to-wake
+FPS = 30
+TRANS_DURATION = 0.5  # seconds for crossfade / slide
+OVERLAY_DISMISS = 5.0  # seconds before overlay auto-dismisses
+WAKE_GRACE = 30.0  # seconds of grace after tap-to-wake
 ```
 
 ### 2.2 State machine enums (`piframe/types.py`)
@@ -159,17 +159,19 @@ WAKE_GRACE      = 30.0    # seconds of grace after tap-to-wake
 ```python
 from enum import Enum, auto
 
+
 class AppState(Enum):
     SLIDESHOW = auto()
-    OVERLAY   = auto()
-    SETTINGS  = auto()
-    KEYBOARD  = auto()
-    SLEEPING  = auto()
+    OVERLAY = auto()
+    SETTINGS = auto()
+    KEYBOARD = auto()
+    SLEEPING = auto()
+
 
 class AppEvent(Enum):
-    SLEEP           = auto()
-    WAKE            = auto()
-    SYNC_COMPLETE   = auto()
+    SLEEP = auto()
+    WAKE = auto()
+    SYNC_COMPLETE = auto()
     OVERLAY_DISMISS = auto()
 ```
 
@@ -197,10 +199,10 @@ State-transition table (all guards listed):
 import pygame
 
 EVT_SYNC_COMPLETE = pygame.USEREVENT + 1  # posted by SyncService
-EVT_SLEEP         = pygame.USEREVENT + 2  # posted by SleepScheduler
-EVT_WAKE          = pygame.USEREVENT + 3  # posted by SleepScheduler
+EVT_SLEEP = pygame.USEREVENT + 2  # posted by SleepScheduler
+EVT_WAKE = pygame.USEREVENT + 3  # posted by SleepScheduler
 EVT_UPDATE_RESULT = pygame.USEREVENT + 4  # posted by OTA check thread
-EVT_WIFI_RESULT   = pygame.USEREVENT + 5  # posted by WifiManager threads
+EVT_WIFI_RESULT = pygame.USEREVENT + 5  # posted by WifiManager threads
 ```
 
 ### 2.4 Dataclasses (`piframe/types.py`)
@@ -209,45 +211,52 @@ EVT_WIFI_RESULT   = pygame.USEREVENT + 5  # posted by WifiManager threads
 from dataclasses import dataclass, field
 from datetime import datetime
 
+
 @dataclass
 class SyncStatus:
     last_sync_time: datetime | None = None
-    photo_count:    int             = 0
-    in_progress:    bool            = False
-    last_error:     str | None      = None
+    photo_count: int = 0
+    in_progress: bool = False
+    last_error: str | None = None
+
 
 @dataclass
 class WifiNetwork:
-    ssid:     str
-    security: str   # "" → open network
-    signal:   int   # 0–100
+    ssid: str
+    security: str  # "" → open network
+    signal: int  # 0–100
 
     @property
     def signal_level(self) -> int:
         """Returns 0, 1, or 2 for icon strength tier."""
-        if self.signal >= 67: return 2
-        if self.signal >= 34: return 1
+        if self.signal >= 67:
+            return 2
+        if self.signal >= 34:
+            return 1
         return 0
+
 
 @dataclass
 class WifiStatus:
-    connected:  bool
-    ssid:       str   # "" if disconnected
-    ip_address: str   # "" if disconnected
+    connected: bool
+    ssid: str  # "" if disconnected
+    ip_address: str  # "" if disconnected
+
 
 @dataclass
 class WifiResult:
-    operation: str          # "scan"|"connect"|"forget"|"disconnect"|"status"
-    success:   bool
-    data:      object | None = None
-    error:     str | None    = None
+    operation: str  # "scan"|"connect"|"forget"|"disconnect"|"status"
+    success: bool
+    data: object | None = None
+    error: str | None = None
+
 
 @dataclass
 class UpdateResult:
-    available:   bool
-    tag_name:    str  = ""
-    tarball_url: str  = ""
-    error:       str | None = None
+    available: bool
+    tag_name: str = ""
+    tarball_url: str = ""
+    error: str | None = None
 ```
 
 ### 2.5 Colour palette (`piframe/types.py`)
@@ -255,81 +264,81 @@ class UpdateResult:
 All colours are 4-tuples `(R, G, B, A)`.
 
 ```python
-COLOUR_SCRIM              = (  0,   0,   0, 140)
-COLOUR_OVERLAY_BTN_BG     = (255, 255, 255,  30)
-COLOUR_OVERLAY_BTN_BD     = (255, 255, 255,  51)
-COLOUR_PROGRESS_BAR       = (255, 255, 255, 179)
-COLOUR_SIDEBAR_BG         = ( 24,  24,  24, 255)
-COLOUR_CONTENT_BG         = ( 17,  17,  17, 255)
-COLOUR_NAV_ACTIVE_BG      = (255, 255, 255,  23)
-COLOUR_TOGGLE_ON          = ( 55, 138, 221, 255)
-COLOUR_TOGGLE_OFF         = ( 80,  80,  80, 255)
-COLOUR_TOGGLE_THUMB       = (255, 255, 255, 255)
-COLOUR_DESTRUCTIVE        = (242,  75,  74, 255)
-COLOUR_CONNECTED          = ( 83,  74, 183, 255)
-COLOUR_TEXT_PRIMARY       = (255, 255, 255, 255)
-COLOUR_TEXT_SECONDARY     = (153, 153, 153, 255)
-COLOUR_TEXT_CAPTION       = (102, 102, 102, 255)
-COLOUR_DIVIDER            = (255, 255, 255,  20)
-COLOUR_SLIDER_TRACK       = (255, 255, 255,  51)
-COLOUR_SLIDER_THUMB       = (255, 255, 255, 255)
-COLOUR_SLIDER_FILL        = (255, 255, 255, 179)
-COLOUR_KEY_BG             = ( 50,  50,  50, 255)
-COLOUR_KEY_BG_SPECIAL     = ( 80,  80,  80, 255)
-COLOUR_KEY_BG_ACTIVE      = (100, 100, 100, 255)
-COLOUR_SCROLL_PICKER_HL   = (255, 255, 255,  25)
-COLOUR_PILL_BG            = ( 50,  50,  50, 255)
-COLOUR_PILL_BORDER        = (255, 255, 255,  51)
-COLOUR_DIALOG_BG          = ( 30,  30,  30, 245)
-COLOUR_DIALOG_BORDER      = (255, 255, 255,  30)
-COLOUR_BTN_PRIMARY        = ( 55, 138, 221, 255)
-COLOUR_BTN_SECONDARY      = ( 60,  60,  60, 255)
-COLOUR_WIFI_STRENGTH_0    = ( 80,  80,  80, 255)
-COLOUR_WIFI_STRENGTH_1    = (255, 255, 255, 255)
-COLOUR_CLOCK_TEXT         = (255, 255, 255, 220)
-COLOUR_OVERLAY_SCRIM      = (  0,   0,   0,  90)
+COLOUR_SCRIM = (0, 0, 0, 140)
+COLOUR_OVERLAY_BTN_BG = (255, 255, 255, 30)
+COLOUR_OVERLAY_BTN_BD = (255, 255, 255, 51)
+COLOUR_PROGRESS_BAR = (255, 255, 255, 179)
+COLOUR_SIDEBAR_BG = (24, 24, 24, 255)
+COLOUR_CONTENT_BG = (17, 17, 17, 255)
+COLOUR_NAV_ACTIVE_BG = (255, 255, 255, 23)
+COLOUR_TOGGLE_ON = (55, 138, 221, 255)
+COLOUR_TOGGLE_OFF = (80, 80, 80, 255)
+COLOUR_TOGGLE_THUMB = (255, 255, 255, 255)
+COLOUR_DESTRUCTIVE = (242, 75, 74, 255)
+COLOUR_CONNECTED = (83, 74, 183, 255)
+COLOUR_TEXT_PRIMARY = (255, 255, 255, 255)
+COLOUR_TEXT_SECONDARY = (153, 153, 153, 255)
+COLOUR_TEXT_CAPTION = (102, 102, 102, 255)
+COLOUR_DIVIDER = (255, 255, 255, 20)
+COLOUR_SLIDER_TRACK = (255, 255, 255, 51)
+COLOUR_SLIDER_THUMB = (255, 255, 255, 255)
+COLOUR_SLIDER_FILL = (255, 255, 255, 179)
+COLOUR_KEY_BG = (50, 50, 50, 255)
+COLOUR_KEY_BG_SPECIAL = (80, 80, 80, 255)
+COLOUR_KEY_BG_ACTIVE = (100, 100, 100, 255)
+COLOUR_SCROLL_PICKER_HL = (255, 255, 255, 25)
+COLOUR_PILL_BG = (50, 50, 50, 255)
+COLOUR_PILL_BORDER = (255, 255, 255, 51)
+COLOUR_DIALOG_BG = (30, 30, 30, 245)
+COLOUR_DIALOG_BORDER = (255, 255, 255, 30)
+COLOUR_BTN_PRIMARY = (55, 138, 221, 255)
+COLOUR_BTN_SECONDARY = (60, 60, 60, 255)
+COLOUR_WIFI_STRENGTH_0 = (80, 80, 80, 255)
+COLOUR_WIFI_STRENGTH_1 = (255, 255, 255, 255)
+COLOUR_CLOCK_TEXT = (255, 255, 255, 220)
+COLOUR_OVERLAY_SCRIM = (0, 0, 0, 90)
 ```
 
 ### 2.6 Font & icon constants (`piframe/assets.py`, `piframe/keyboard.py`)
 
 ```python
-FONT_SIZE_CLOCK       = 48
-FONT_SIZE_HEADING     = 24
-FONT_SIZE_BODY        = 18
-FONT_SIZE_NAV         = 20
-FONT_SIZE_SECONDARY   = 14
-FONT_SIZE_KEY         = 16
+FONT_SIZE_CLOCK = 48
+FONT_SIZE_HEADING = 24
+FONT_SIZE_BODY = 18
+FONT_SIZE_NAV = 20
+FONT_SIZE_SECONDARY = 14
+FONT_SIZE_KEY = 16
 
-ICON_SIZE_NORMAL      = 24
-ICON_SIZE_OVERLAY     = 32
+ICON_SIZE_NORMAL = 24
+ICON_SIZE_OVERLAY = 32
 
 # Material Icons codepoints
-IC_SETTINGS     = "\ue8b8"
-IC_PLAY         = "\ue037"
-IC_PAUSE        = "\ue034"
-IC_SKIP_PREV    = "\ue044"
-IC_SKIP_NEXT    = "\ue043"
-IC_ARROW_BACK   = "\ue5d5"
-IC_ARROW_FWD    = "\ue5dc"
-IC_INFO         = "\ue87d"
-IC_WIFI         = "\ue8f4"
-IC_WIFI_OFF     = "\ue8f5"
-IC_SYNC         = "\ue1d8"
-IC_CLOSE        = "\ue5cd"
-IC_CHECK        = "\ue876"
-IC_CHEVRON_L    = "\ue5c4"
-IC_CHEVRON_R    = "\ue5c8"
-IC_EXPAND_MORE  = "\ue5cf"
-IC_EXPAND_LESS  = "\ue5ce"
-IC_BRIGHTNESS   = "\ue896"
-IC_SCHEDULE     = "\ue8b5"
-IC_PERSON       = "\ue7ef"
-IC_DELETE       = "\ue872"
+IC_SETTINGS = "\ue8b8"
+IC_PLAY = "\ue037"
+IC_PAUSE = "\ue034"
+IC_SKIP_PREV = "\ue044"
+IC_SKIP_NEXT = "\ue043"
+IC_ARROW_BACK = "\ue5d5"
+IC_ARROW_FWD = "\ue5dc"
+IC_INFO = "\ue87d"
+IC_WIFI = "\ue8f4"
+IC_WIFI_OFF = "\ue8f5"
+IC_SYNC = "\ue1d8"
+IC_CLOSE = "\ue5cd"
+IC_CHECK = "\ue876"
+IC_CHEVRON_L = "\ue5c4"
+IC_CHEVRON_R = "\ue5c8"
+IC_EXPAND_MORE = "\ue5cf"
+IC_EXPAND_LESS = "\ue5ce"
+IC_BRIGHTNESS = "\ue896"
+IC_SCHEDULE = "\ue8b5"
+IC_PERSON = "\ue7ef"
+IC_DELETE = "\ue872"
 
 # Keyboard-specific Material Icons codepoints (piframe/keyboard.py)
-IC_SHIFT        = "\ue5d8"
-IC_SHIFT_LOCK   = "\ue318"
-IC_BACKSPACE    = "\ue14a"
+IC_SHIFT = "\ue5d8"
+IC_SHIFT_LOCK = "\ue318"
+IC_BACKSPACE = "\ue14a"
 ```
 
 ---
@@ -349,26 +358,26 @@ class App:
     def __init__(self) -> None:
         pygame.init()
         pygame.freetype.init()
-        self._screen:    pygame.Surface        # pygame.display.set_mode(...)
-        self._clock:     pygame.time.Clock
-        self._state:     AppState
-        self._config:    ConfigStore
-        self._assets:    Assets
-        self._player:    SlideshowPlayer
-        self._cache:     PhotoCache
-        self._overlay:   OverlayUI
-        self._settings:  SettingsPanel
-        self._keyboard:  Keyboard
-        self._clock_w:   ClockWidget
+        self._screen: pygame.Surface  # pygame.display.set_mode(...)
+        self._clock: pygame.time.Clock
+        self._state: AppState
+        self._config: ConfigStore
+        self._assets: Assets
+        self._player: SlideshowPlayer
+        self._cache: PhotoCache
+        self._overlay: OverlayUI
+        self._settings: SettingsPanel
+        self._keyboard: Keyboard
+        self._clock_w: ClockWidget
         self._backlight: BacklightController
-        self._sync:      SyncService
-        self._sleep:     SleepScheduler
-        self._wifi:      WifiManager
+        self._sync: SyncService
+        self._sleep: SleepScheduler
+        self._wifi: WifiManager
         # Swipe-detection state
-        self._swipe_start_pos:  tuple[int,int] | None
+        self._swipe_start_pos: tuple[int, int] | None
         self._swipe_start_time: float | None
         # Active modal dialog (may be None)
-        self._dialog:    ConfirmDialog | None
+        self._dialog: ConfirmDialog | None
 ```
 
 #### Initialisation sequence (in `__init__`)
@@ -414,15 +423,18 @@ def run(self) -> None:
 #### `_classify_pointer_up(pos)`
 
 ```python
-if _swipe_start_pos is None or _swipe_start_time is None: return
+if _swipe_start_pos is None or _swipe_start_time is None:
+    return
 dx = pos[0] - _swipe_start_pos[0]
 dy = pos[1] - _swipe_start_pos[1]
 elapsed = time.monotonic() - _swipe_start_time
 _swipe_start_pos = None
 _swipe_start_time = None
 if elapsed < 0.4 and abs(dx) > 60 and abs(dy) <= abs(dx) * 0.5:
-    if dx < 0: _player.skip()
-    else:      _player.go_back()
+    if dx < 0:
+        _player.skip()
+    else:
+        _player.go_back()
     return
 if dx * dx + dy * dy > 20 * 20:
     return  # drag/no-op
@@ -450,6 +462,7 @@ Custom events (`EVT_SYNC_COMPLETE`, `EVT_SLEEP`, `EVT_WAKE`, `EVT_UPDATE_RESULT`
 def _enter_sleep(self) -> None:
     self._backlight.set_brightness(0)
     self._state = AppState.SLEEPING
+
 
 def _exit_sleep(self) -> None:
     self._backlight.set_brightness(self._config.display.brightness)
@@ -486,16 +499,19 @@ Steps 1–3 are skipped in SETTINGS / KEYBOARD states.
 def restart(self) -> None:
     self._cleanup()
     import os, sys
+
     env = os.environ.copy()
     env["XDG_RUNTIME_DIR"] = "/run/user/1000"
-    env["WAYLAND_DISPLAY"]  = "wayland-0"
+    env["WAYLAND_DISPLAY"] = "wayland-0"
     os.execve(sys.executable, [sys.executable] + sys.argv, env)
+
 
 def _shutdown(self) -> None:
     self._cleanup()
     subprocess.run(["sudo", "shutdown", "-h", "now"], check=False)
     pygame.quit()
     sys.exit(0)
+
 
 def _cleanup(self) -> None:
     self._sync.stop()
@@ -516,9 +532,9 @@ surfaces to disk as PNG for fast reload.
 #### Constants
 
 ```python
-MAX_CACHE      = 6
-_CACHE_VERSION = 2   # bump when rendering pipeline changes
-BLUR_RADIUS    = 40
+MAX_CACHE = 6
+_CACHE_VERSION = 2  # bump when rendering pipeline changes
+BLUR_RADIUS = 40
 ```
 
 #### Data members
@@ -630,8 +646,8 @@ Output: pygame.Surface (SCREEN_W × SCREEN_H, RGBA)
 #### `pygame_image_from_pil(pil_img) -> pygame.Surface` (module-level helper)
 
 ```python
-raw  = pil_img.tobytes()
-mode = pil_img.mode          # "RGB" or "RGBA"
+raw = pil_img.tobytes()
+mode = pil_img.mode  # "RGB" or "RGBA"
 size = pil_img.size
 return pygame.image.frombuffer(raw, size, mode).convert_alpha()
 ```
@@ -667,7 +683,9 @@ the playlist and first frame.
 
 ```python
 output_dir = Path(_config.sync.output_dir)
-files = sorted([p for p in output_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".gif"}])
+files = sorted(
+    [p for p in output_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".gif"}]
+)
 _playlist = files
 if _config.slideshow.shuffle:
     _playlist = _fisher_yates(_playlist)
@@ -687,7 +705,8 @@ for i in range(len(lst) - 1, 0, -1):
 #### `update(dt: float)`
 
 ```python
-if _paused or not _playlist: return
+if _paused or not _playlist:
+    return
 
 if _in_transition:
     _trans_t = min(1.0, (time.monotonic() - _trans_start) / TRANS_DURATION)
@@ -704,15 +723,18 @@ if _elapsed >= _config.slideshow.interval:
 
 ```python
 def advance(self, direction: int = 1) -> None:
-    if not _playlist: return
+    if not _playlist:
+        return
     _direction = direction
     next_idx = (_index + direction) % len(_playlist)
     _next_surf = _cache.get(_playlist[next_idx], _config.slideshow.fit_mode, _w, _h)
     _index = next_idx
     _start_transition()
 
+
 def go_back(self) -> None:
     advance(direction=-1)
+
 
 def skip(self) -> None:
     advance(direction=1)
@@ -767,7 +789,7 @@ state is SLIDESHOW:
 
 ```python
 pip_surf = pygame.Surface((26, 26), pygame.SRCALPHA)
-pygame.draw.rect(pip_surf, COLOUR_OVERLAY_BTN_BG, (0,0,26,26), border_radius=6)
+pygame.draw.rect(pip_surf, COLOUR_OVERLAY_BTN_BG, (0, 0, 26, 26), border_radius=6)
 assets.icon(IC_PAUSE, 14).blit(pip_surf, (6, 6))
 screen.blit(pip_surf, (12, 762))
 ```
@@ -782,6 +804,7 @@ screen.blit(pip_surf, (12, 762))
 ```python
 @property
 def is_paused(self) -> bool: ...
+
 
 @is_paused.setter
 def is_paused(self, value: bool) -> None: ...
@@ -810,38 +833,39 @@ dismiss timer.
 #### Layout constants
 
 ```python
-GEAR_CENTER    = (1240, 33)
-GEAR_RECT      = pygame.Rect(1221, 14, 38, 38)
-SUN_HI_CENTER  = (1240, 108)
-SUN_LO_CENTER  = (1240, 744)
-SLIDER_RECT    = pygame.Rect(1238, 130, 4, 588)  # track rect
+GEAR_CENTER = (1240, 33)
+GEAR_RECT = pygame.Rect(1221, 14, 38, 38)
+SUN_HI_CENTER = (1240, 108)
+SUN_LO_CENTER = (1240, 744)
+SLIDER_RECT = pygame.Rect(1238, 130, 4, 588)  # track rect
 BRIGHTNESS_LABEL_CENTER = (1240, 776)
 
-PREV_RECT  = pygame.Rect(508,  732, 48, 48)
-PLAY_RECT  = pygame.Rect(572,  728, 56, 56)
-NEXT_RECT  = pygame.Rect(644,  732, 48, 48)
+PREV_RECT = pygame.Rect(508, 732, 48, 48)
+PLAY_RECT = pygame.Rect(572, 728, 56, 56)
+NEXT_RECT = pygame.Rect(644, 732, 48, 48)
 DISMISS_BAR = pygame.Rect(0, 0, 1280, 3)
 ```
 
 #### `show()`
 
 ```python
-_visible   = True
-dismissed  = False
+_visible = True
+dismissed = False
 _dismiss_at = time.monotonic() + OVERLAY_DISMISS if not _paused else None
 ```
 
 #### `hide()`
 
 ```python
-_visible  = False
+_visible = False
 dismissed = True
 ```
 
 #### `update(dt)`
 
 ```python
-if not _visible: return
+if not _visible:
+    return
 if _dismiss_at and time.monotonic() >= _dismiss_at:
     hide()
 ```
@@ -901,9 +925,9 @@ section content to section helpers. Dispatches all widget interactions.
 ```python
 class Section(Enum):
     SLIDESHOW = "Slideshow"
-    DISPLAY   = "Display"
-    WIFI      = "Wi-Fi"
-    SYSTEM    = "System"
+    DISPLAY = "Display"
+    WIFI = "Wi-Fi"
+    SYSTEM = "System"
 ```
 
 #### Data members
@@ -1009,6 +1033,8 @@ def _worker():
         result = UpdateResult(available=False, error=str(e))
     evt = pygame.event.Event(EVT_UPDATE_RESULT, result=result)
     pygame.event.post(evt)
+
+
 threading.Thread(target=_worker, daemon=True).start()
 ```
 
@@ -1076,16 +1102,16 @@ Row y tops:  Row 0: 462  Row 1: 545  Row 2: 628  Row 3: 711
 #### `attach(target: TextInput)`
 
 ```python
-_target  = target
+_target = target
 _visible = True
-_layer   = "alpha"
-_shift   = False
+_layer = "alpha"
+_shift = False
 ```
 
 #### `detach()`
 
 ```python
-_target  = None
+_target = None
 _visible = False
 ```
 
@@ -1109,17 +1135,29 @@ _visible = False
 ```python
 key = current_layer_keys[row][col]
 match key:
-    case "BACKSPACE": _target.backspace()
-    case "SPACE":     _target.append(" ")
-    case "DONE":      detach(); on_done_callback()
-    case "SHIFT":     _shift = not _shift
-    case "123":       _layer = "numeric";  _shift = False
-    case "#+=":       _layer = "extended"; _shift = False
-    case "ABC":       _layer = "alpha";    _shift = False
+    case "BACKSPACE":
+        _target.backspace()
+    case "SPACE":
+        _target.append(" ")
+    case "DONE":
+        detach()
+        on_done_callback()
+    case "SHIFT":
+        _shift = not _shift
+    case "123":
+        _layer = "numeric"
+        _shift = False
+    case "#+=":
+        _layer = "extended"
+        _shift = False
+    case "ABC":
+        _layer = "alpha"
+        _shift = False
     case _:
         ch = key.upper() if _shift else key.lower()
         _target.append(ch)
-        if _shift: _shift = False  # single-shot
+        if _shift:
+            _shift = False  # single-shot
 ```
 
 ---
@@ -1149,7 +1187,8 @@ def _ticker(self):
     while not _stop_event.is_set():
         now = datetime.datetime.now(_timezone)
         _render_surfaces(now)
-        with _lock: _dirty = True
+        with _lock:
+            _dirty = True
         seconds_until = 60 - now.second
         _stop_event.wait(timeout=seconds_until)
 ```
@@ -1158,7 +1197,7 @@ def _ticker(self):
 
 ```python
 with _lock:
-    time_str = now.strftime("%-I:%M %p")   # e.g. "3:04 PM"
+    time_str = now.strftime("%-I:%M %p")  # e.g. "3:04 PM"
     date_str = now.strftime("%A, %B %-d")  # e.g. "Monday, January 6"
     _time_surf = assets.font_bold(FONT_SIZE_CLOCK).render(time_str, COLOUR_CLOCK_TEXT)
     _date_surf = assets.font(FONT_SIZE_BODY).render(date_str, COLOUR_TEXT_SECONDARY)
@@ -1168,10 +1207,11 @@ with _lock:
 
 ```python
 with _lock:
-    if not _time_surf: return
+    if not _time_surf:
+        return
     # Drop shadow: offset (+2, +2) in black at alpha 120
     shadow = pygame.Surface(_time_surf.get_size(), pygame.SRCALPHA)
-    shadow.blit(_time_surf, (0,0))
+    shadow.blit(_time_surf, (0, 0))
     shadow.set_alpha(120)
     screen.blit(shadow, (16, 16))
     screen.blit(_time_surf, (14, 14))
@@ -1229,18 +1269,19 @@ with _status_lock:
     _status.in_progress = True
 try:
     from framesync import sync_folder, load_config
+
     cfg = load_config()
     sync_folder(cfg)
     with _status_lock:
         _status.last_sync_time = datetime.datetime.now()
-        _status.in_progress    = False
-        _status.last_error     = None
-        _status.photo_count    = len(list(Path(cfg["output_dir"]).glob("*.jp*g")))
+        _status.in_progress = False
+        _status.last_error = None
+        _status.photo_count = len(list(Path(cfg["output_dir"]).glob("*.jp*g")))
     pygame.event.post(pygame.event.Event(EVT_SYNC_COMPLETE))
 except Exception as e:
     with _status_lock:
         _status.in_progress = False
-        _status.last_error  = str(e)
+        _status.last_error = str(e)
     logging.error("SyncService error: %s", e)
 ```
 
@@ -1286,8 +1327,8 @@ and `EVT_WAKE` as the current time enters or leaves the sleep window.
 ```python
 def _run(self):
     while not _stop_event.wait(timeout=30):
-        cfg      = _config.sleep
-        now_t    = datetime.datetime.now().time()
+        cfg = _config.sleep
+        now_t = datetime.datetime.now().time()
         in_grace = time.monotonic() < _grace_until
 
         if not cfg.enabled or in_grace:
@@ -1309,11 +1350,13 @@ def _run(self):
 
 ```python
 def is_sleep_time(now, sleep_t, wake_t):
-    now_m   = now.hour     * 60 + now.minute
+    now_m = now.hour * 60 + now.minute
     sleep_m = sleep_t.hour * 60 + sleep_t.minute
-    wake_m  = wake_t.hour  * 60 + wake_t.minute
-    if sleep_m == wake_m: return False
-    if sleep_m < wake_m:  return sleep_m <= now_m < wake_m
+    wake_m = wake_t.hour * 60 + wake_t.minute
+    if sleep_m == wake_m:
+        return False
+    if sleep_m < wake_m:
+        return sleep_m <= now_m < wake_m
     return now_m >= sleep_m or now_m < wake_m  # midnight-crossing
 ```
 
@@ -1447,9 +1490,12 @@ def _write_toml(data: dict) -> None:
     for section, values in data.items():
         lines.append(f"[{section}]")
         for k, v in values.items():
-            if isinstance(v, bool):  lines.append(f"{k} = {str(v).lower()}")
-            elif isinstance(v, int): lines.append(f"{k} = {v}")
-            elif isinstance(v, str): lines.append(f'{k} = "{v}"')
+            if isinstance(v, bool):
+                lines.append(f"{k} = {str(v).lower()}")
+            elif isinstance(v, int):
+                lines.append(f"{k} = {v}")
+            elif isinstance(v, str):
+                lines.append(f'{k} = "{v}"')
         lines.append("")
     _path.write_text("\n".join(lines))
 ```
@@ -1462,7 +1508,7 @@ def _write_toml(data: dict) -> None:
 
 ```python
 BACKLIGHT_PATH = "/sys/class/backlight/10-0045/brightness"
-MAX_VALUE      = 255
+MAX_VALUE = 255
 ```
 
 #### Data members
@@ -1475,7 +1521,8 @@ MAX_VALUE      = 255
 
 ```python
 percent = max(0, min(100, percent))
-if percent == _last_percent: return
+if percent == _last_percent:
+    return
 sysfs_val = max(0, min(MAX_VALUE, round(percent / 100 * MAX_VALUE)))
 try:
     with open(BACKLIGHT_PATH, "w") as f:
@@ -1556,9 +1603,7 @@ cmd = "sudo nmcli -t -f GENERAL.CONNECTION,IP4.ADDRESS device show wlan0"
 #### `_run_cmd(cmd: str, timeout: int) -> tuple[bool, str]`
 
 ```python
-result = subprocess.run(
-    cmd, shell=True, capture_output=True, text=True, timeout=timeout
-)
+result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
 return result.returncode == 0, result.stdout + result.stderr
 ```
 
@@ -1572,17 +1617,17 @@ Central loader for all fonts and icon surfaces. Loaded once at startup by `App`.
 #### Data members
 
 ```python
-_font_regular: pygame.freetype.Font   # NotoSans-Regular.ttf
-_font_bold:    pygame.freetype.Font   # NotoSans-Bold.ttf
-_icon_font:    pygame.freetype.Font   # MaterialIcons-Regular.ttf
+_font_regular: pygame.freetype.Font  # NotoSans-Regular.ttf
+_font_bold: pygame.freetype.Font  # NotoSans-Bold.ttf
+_icon_font: pygame.freetype.Font  # MaterialIcons-Regular.ttf
 ```
 
 #### `load()` (called once by App)
 
 ```python
 Assets._font_regular = pygame.freetype.Font("piframe/assets/fonts/NotoSans-Regular.ttf")
-Assets._font_bold    = pygame.freetype.Font("piframe/assets/fonts/NotoSans-Bold.ttf")
-Assets._icon_font    = pygame.freetype.Font("piframe/assets/fonts/MaterialIcons-Regular.ttf")
+Assets._font_bold = pygame.freetype.Font("piframe/assets/fonts/NotoSans-Bold.ttf")
+Assets._icon_font = pygame.freetype.Font("piframe/assets/fonts/MaterialIcons-Regular.ttf")
 ```
 
 #### `font(size: int) -> pygame.freetype.Font`
@@ -1596,7 +1641,7 @@ Returns `_font_bold` with `.size = size`.
 #### `icon(codepoint: str, size: int) -> pygame.Surface`
 
 ```python
-surf, _ = _icon_font.render(codepoint, fgcolor=(255,255,255,255), size=size)
+surf, _ = _icon_font.render(codepoint, fgcolor=(255, 255, 255, 255), size=size)
 return surf
 ```
 
@@ -1617,6 +1662,7 @@ class Widget:
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Return True if event consumed."""
         return False
+
     def update(self, dt: float) -> None: ...
 ```
 
@@ -1651,8 +1697,10 @@ class Widget:
 target = 1.0 if _on else 0.0
 if _anim_t != target:
     delta = _speed * dt
-    if _on: _anim_t = min(1.0, _anim_t + delta)
-    else:   _anim_t = max(0.0, _anim_t - delta)
+    if _on:
+        _anim_t = min(1.0, _anim_t + delta)
+    else:
+        _anim_t = max(0.0, _anim_t - delta)
 ```
 
 #### `draw(screen)`
@@ -1668,7 +1716,8 @@ On `MOUSEBUTTONDOWN` in `rect`:
 
 ```python
 _on = not _on
-if on_change: on_change(_on)
+if on_change:
+    on_change(_on)
 return True
 ```
 
@@ -1692,6 +1741,7 @@ return True
 ```python
 def _value_to_y(self, value: int) -> int:
     return self.rect.top + 11 + int((1.0 - value / 100) * (self.rect.height - 22))
+
 
 def _y_to_value(self, y: int) -> int:
     raw = 1.0 - (y - self.rect.top - 11) / (self.rect.height - 22)
@@ -1734,6 +1784,7 @@ Display brightness control.
 ```python
 def _value_to_x(self, value: int) -> int:
     return self.rect.left + 11 + int((value / 100) * (self.rect.width - 22))
+
 
 def _x_to_value(self, x: int) -> int:
     raw = (x - self.rect.left - 11) / (self.rect.width - 22)
@@ -2003,14 +2054,16 @@ Single-line text field. The `Keyboard` attaches to it.
 
 ```python
 _text += ch
-if on_change: on_change(_text)
+if on_change:
+    on_change(_text)
 ```
 
 #### `backspace()`
 
 ```python
 _text = _text[:-1]
-if on_change: on_change(_text)
+if on_change:
+    on_change(_text)
 ```
 
 #### `draw(screen)`
@@ -2328,11 +2381,13 @@ skip `config.toml`, `assets/`, `.git`. On exception: log, clean up staging files
 ```python
 GITHUB_API = "https://api.github.com/repos/{repo}/releases/latest"
 
+
 def check_update(repo: str) -> tuple[str, str]:
     url = GITHUB_API.format(repo=repo)
     with urllib.request.urlopen(url, timeout=10) as r:
         data = json.loads(r.read())
     return data["tag_name"], data["tarball_url"]
+
 
 def apply_update(tarball_url: str) -> None:
     staging_tar = "/tmp/pi-frame-update.tar.gz"
@@ -2343,8 +2398,12 @@ def apply_update(tarball_url: str) -> None:
             tf.extractall(staging_dir)
         src = next(Path(staging_dir).iterdir())
         dst = Path(__file__).parent
-        shutil.copytree(src, dst, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns("config.toml","assets",".git"))
+        shutil.copytree(
+            src,
+            dst,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("config.toml", "assets", ".git"),
+        )
     finally:
         Path(staging_tar).unlink(missing_ok=True)
         shutil.rmtree(staging_dir, ignore_errors=True)
@@ -2364,7 +2423,7 @@ def restart(self) -> None:
     self._cleanup()
     env = os.environ.copy()
     env["XDG_RUNTIME_DIR"] = "/run/user/1000"
-    env["WAYLAND_DISPLAY"]  = "wayland-0"
+    env["WAYLAND_DISPLAY"] = "wayland-0"
     os.execve(sys.executable, [sys.executable] + sys.argv, env)
 ```
 
@@ -2387,8 +2446,8 @@ Example keys: `IMG_0042_fit_v2.png`, `IMG_0042_fill_v2.png`.
 **Decision:** `_direction = +1` for forward; `-1` for go_back.
 
 ```python
-cur_x  = int(-_direction * _trans_progress * SCREEN_W)
-next_x = int( _direction * (1.0 - _trans_progress) * SCREEN_W)
+cur_x = int(-_direction * _trans_progress * SCREEN_W)
+next_x = int(_direction * (1.0 - _trans_progress) * SCREEN_W)
 ```
 
 Forward: current slides left off-screen; next slides in from right.
@@ -2402,11 +2461,13 @@ Backward: current slides right; next slides in from left.
 
 ```python
 def is_sleep_time(now, sleep_t, wake_t) -> bool:
-    now_m   = now.hour     * 60 + now.minute
+    now_m = now.hour * 60 + now.minute
     sleep_m = sleep_t.hour * 60 + sleep_t.minute
-    wake_m  = wake_t.hour  * 60 + wake_t.minute
-    if sleep_m == wake_m: return False
-    if sleep_m < wake_m:  return sleep_m <= now_m < wake_m
+    wake_m = wake_t.hour * 60 + wake_t.minute
+    if sleep_m == wake_m:
+        return False
+    if sleep_m < wake_m:
+        return sleep_m <= now_m < wake_m
     return now_m >= sleep_m or now_m < wake_m
 ```
 

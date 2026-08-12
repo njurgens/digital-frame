@@ -1,3 +1,5 @@
+"""Segmented toggle control for mutually exclusive options."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -13,6 +15,8 @@ from piframe.widgets.base import Widget
 
 
 class SegmentedControl(Widget):
+    """Segmented toggle control for mutually exclusive options."""
+
     def __init__(
         self,
         rect: pygame.Rect,
@@ -21,6 +25,17 @@ class SegmentedControl(Widget):
         assets: Assets | None = None,
         on_change: Callable[[int, str], None] | None = None,
     ) -> None:
+        """
+        Create a segmented control.
+
+        Args:
+        rect: Position and size of the control.
+        segments: List of segment labels.
+        selected: Initial selected index.
+        assets: Asset provider for fonts.
+        on_change: Callback invoked when the selection changes.
+
+        """
         super().__init__(rect)
         self._segments: list[str] = segments
         self._selected: int = max(0, min(len(segments) - 1, selected)) if segments else 0
@@ -29,15 +44,18 @@ class SegmentedControl(Widget):
 
     @property
     def selected(self) -> int:
+        """The index of the currently selected segment."""
         return self._selected
 
     def set_selected(self, i: int) -> None:
+        """Set the selected segment index."""
         if not self._segments:
             self._selected = 0
             return
         self._selected = max(0, min(len(self._segments) - 1, i))
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the segmented control with active segment highlighted."""
         if not self._segments:
             return
         seg_w = self.rect.width // len(self._segments)
@@ -53,6 +71,7 @@ class SegmentedControl(Widget):
             screen.blit(surf, text_rect.topleft)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle tap events to select a segment."""
         if (
             event.type == pygame.MOUSEBUTTONDOWN
             and getattr(event, "button", 0) == 1

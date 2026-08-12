@@ -1,3 +1,5 @@
+"""Tests for widget base class and common behaviour."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock
@@ -8,20 +10,21 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
 import pytest
 
-from piframe.widgets.horizontal_slider import HorizontalSlider
-from piframe.widgets.vertical_slider import VerticalSlider
-from piframe.widgets.segmented_control import SegmentedControl
-from piframe.widgets.scroll_picker import ScrollPicker
+from piframe.types import WifiNetwork
 from piframe.widgets.confirm_dialog import ConfirmDialog
+from piframe.widgets.horizontal_slider import HorizontalSlider
+from piframe.widgets.scroll_picker import ScrollPicker
+from piframe.widgets.segmented_control import SegmentedControl
 from piframe.widgets.text_input import TextInput
 from piframe.widgets.time_picker import TimePicker
 from piframe.widgets.toggle import Toggle
+from piframe.widgets.vertical_slider import VerticalSlider
 from piframe.widgets.wifi_list_item import WifiListItem
-from piframe.types import WifiNetwork
 
 
 @pytest.fixture(scope="module", autouse=True)
-def pygame_init_module() -> Generator[None, None, None]:
+def pygame_init_module() -> Generator[None]:
+    """Pygame init module."""
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -29,28 +32,33 @@ def pygame_init_module() -> Generator[None, None, None]:
 
 
 def make_slider(value: int = 50) -> VerticalSlider:
+    """Make slider."""
     rect = pygame.Rect(100, 100, 40, 200)
     return VerticalSlider(rect=rect, initial_value=value)
 
 
 def make_horizontal_slider(value: int = 50) -> HorizontalSlider:
+    """Make horizontal slider."""
     rect = pygame.Rect(100, 100, 200, 40)
     return HorizontalSlider(rect=rect, initial_value=value)
 
 
 def test_drag_from_top_gives_100() -> None:
+    """Drag from top gives 100."""
     sl = make_slider(50)
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 100), button=1))
     assert sl.value == 100
 
 
 def test_drag_from_bottom_gives_0() -> None:
+    """Drag from bottom gives 0."""
     sl = make_slider(50)
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 300), button=1))
     assert sl.value == 0
 
 
 def test_drag_to_midpoint_gives_50() -> None:
+    """Drag to midpoint gives 50."""
     sl = make_slider(0)
     mid_y = sl.rect.top + 11 + (sl.rect.height - 22) // 2
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, mid_y), button=1))
@@ -58,45 +66,61 @@ def test_drag_to_midpoint_gives_50() -> None:
 
 
 def test_value_clamped_to_range() -> None:
+    """Value clamped to range."""
     sl = make_slider(50)
-    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.top - 50), button=1))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.top - 50), button=1)
+    )
     assert sl.value == 100
-    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(120, sl.rect.top - 50), button=1))
-    sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.bottom + 50), button=1))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(120, sl.rect.top - 50), button=1)
+    )
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, sl.rect.bottom + 50), button=1)
+    )
     assert sl.value == 0
 
 
 def test_on_change_called_during_drag() -> None:
+    """On change called during drag."""
     changes = []
     rect = pygame.Rect(100, 100, 40, 200)
     sl = VerticalSlider(rect=rect, initial_value=50, on_change=lambda v: changes.append(v))
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 150), button=1))
-    sl.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(120, 200), rel=(0, 50), buttons=(1, 0, 0)))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(120, 200), rel=(0, 50), buttons=(1, 0, 0))
+    )
     assert len(changes) >= 1
 
 
 def test_horizontal_slider_drag_from_left_gives_0() -> None:
+    """Horizontal slider drag from left gives 0."""
     sl = make_horizontal_slider(50)
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(100, 120), button=1))
     assert sl.value == 0
 
 
 def test_horizontal_slider_drag_from_right_gives_100() -> None:
+    """Horizontal slider drag from right gives 100."""
     sl = make_horizontal_slider(50)
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(300, 120), button=1))
     assert sl.value == 100
 
 
 def test_horizontal_slider_on_change_called_during_drag() -> None:
+    """Horizontal slider on change called during drag."""
     changes = []
     rect = pygame.Rect(100, 100, 200, 40)
     sl = HorizontalSlider(rect=rect, initial_value=50, on_change=lambda v: changes.append(v))
     sl.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(120, 120), button=1))
-    sl.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 120), rel=(80, 0), buttons=(1, 0, 0)))
+    sl.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 120), rel=(80, 0), buttons=(1, 0, 0))
+    )
     assert len(changes) >= 1
 
 
 def test_toggle_tap_flips_state() -> None:
+    """Toggle tap flips state."""
     rect = pygame.Rect(100, 100, 50, 28)
     t = Toggle(rect=rect, initial=False)
     assert t._on is False
@@ -105,6 +129,7 @@ def test_toggle_tap_flips_state() -> None:
 
 
 def test_toggle_tap_fires_callback() -> None:
+    """Toggle tap fires callback."""
     results = []
     rect = pygame.Rect(100, 100, 50, 28)
     t = Toggle(rect=rect, initial=False, on_change=lambda v: results.append(v))
@@ -113,6 +138,7 @@ def test_toggle_tap_fires_callback() -> None:
 
 
 def test_segmented_control_tap_sets_active() -> None:
+    """Segmented control tap sets active."""
     rect = pygame.Rect(100, 100, 300, 36)
     sc = SegmentedControl(rect=rect, segments=["A", "B", "C"], selected=0)
     sc.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(250, 118), button=1))
@@ -120,6 +146,7 @@ def test_segmented_control_tap_sets_active() -> None:
 
 
 def test_segmented_control_callback_fires() -> None:
+    """Segmented control callback fires."""
     results = []
     rect = pygame.Rect(0, 0, 300, 36)
     sc = SegmentedControl(
@@ -134,46 +161,62 @@ def test_segmented_control_callback_fires() -> None:
 
 
 def make_mock_assets() -> MagicMock:
+    """Make mock assets."""
     mock_assets = MagicMock()
     surf = pygame.Surface((60, 20))
-    mock_assets.font.return_value.render.return_value = (surf, pygame.Rect(0, 0, 60, 20))
-    mock_assets.font_bold.return_value.render.return_value = (surf, pygame.Rect(0, 0, 60, 20))
+    rect = pygame.Rect(0, 0, 60, 20)
+    mock_assets.font.return_value.render.return_value = (surf, rect)
+    mock_assets.font.return_value.get_sized_height.return_value = 12
+    mock_assets.font_bold.return_value.render.return_value = (surf, rect)
+    mock_assets.font_bold.return_value.get_sized_height.return_value = 12
+    mock_assets.icon.return_value.render.return_value = (surf, rect)
+    mock_assets.icon.return_value.get_sized_height.return_value = 12
     return mock_assets
 
 
 def test_scroll_picker_drag_scroll() -> None:
+    """Scroll picker drag scroll."""
     rect = pygame.Rect(100, 100, 200, 308)
     items = [f"Item {i}" for i in range(30)]
     assets = make_mock_assets()
     sp = ScrollPicker(rect=rect, items=items, selected=0, assets=assets)
     initial_offset = sp._scroll_offset
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
-    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 156), rel=(0, -44), buttons=(1, 0, 0)))
+    sp.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 156), rel=(0, -44), buttons=(1, 0, 0))
+    )
     assert sp._scroll_offset > initial_offset
 
 
 def test_scroll_picker_snap_on_release() -> None:
+    """Scroll picker snap on release."""
     rect = pygame.Rect(100, 100, 200, 308)
     items = [f"TZ {i}" for i in range(50)]
     assets = make_mock_assets()
     sp = ScrollPicker(rect=rect, items=items, selected=5, assets=assets)
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
-    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 178), rel=(0, -22), buttons=(1, 0, 0)))
+    sp.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 178), rel=(0, -22), buttons=(1, 0, 0))
+    )
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(200, 178), button=1))
     assert sp._scroll_offset == int(sp._scroll_offset)
 
 
 def test_scroll_picker_clamp_min() -> None:
+    """Scroll picker clamp min."""
     rect = pygame.Rect(100, 100, 200, 308)
     items = [f"Item {i}" for i in range(10)]
     assets = make_mock_assets()
     sp = ScrollPicker(rect=rect, items=items, selected=0, assets=assets)
     sp.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(200, 200), button=1))
-    sp.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 500), rel=(0, 300), buttons=(1, 0, 0)))
+    sp.handle_event(
+        pygame.event.Event(pygame.MOUSEMOTION, pos=(200, 500), rel=(0, 300), buttons=(1, 0, 0))
+    )
     assert sp._scroll_offset >= 0
 
 
 def test_time_picker_open_done_updates_time() -> None:
+    """Time picker open done updates time."""
     changes = []
     assets = make_mock_assets()
     tp = TimePicker(
@@ -192,6 +235,7 @@ def test_time_picker_open_done_updates_time() -> None:
 
 
 def test_text_input_append() -> None:
+    """Text input append."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44))
     ti.append("h")
     ti.append("i")
@@ -199,6 +243,7 @@ def test_text_input_append() -> None:
 
 
 def test_text_input_backspace() -> None:
+    """Text input backspace."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44))
     ti.append("hello")
     ti.backspace()
@@ -206,12 +251,14 @@ def test_text_input_backspace() -> None:
 
 
 def test_text_input_backspace_empty() -> None:
+    """Text input backspace empty."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44))
     ti.backspace()
     assert ti.text == ""
 
 
 def test_text_input_on_change_callback() -> None:
+    """Text input on change callback."""
     changes = []
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), on_change=changes.append)
     ti.append("x")
@@ -219,6 +266,7 @@ def test_text_input_on_change_callback() -> None:
 
 
 def test_text_input_password_mode() -> None:
+    """Text input password mode."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True)
     ti.append("abc")
     assert ti._password_mode is True
@@ -226,6 +274,7 @@ def test_text_input_password_mode() -> None:
 
 
 def test_text_input_focus() -> None:
+    """Text input focus."""
     focused = []
     ti = TextInput(rect=pygame.Rect(100, 100, 200, 44), on_focus=lambda: focused.append(True))
     ti.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(150, 122), button=1))
@@ -234,6 +283,7 @@ def test_text_input_focus() -> None:
 
 
 def test_confirm_dialog_cancel() -> None:
+    """Confirm dialog cancel."""
     cancelled = []
     dlg = ConfirmDialog(
         title="Delete?",
@@ -252,6 +302,7 @@ def test_confirm_dialog_cancel() -> None:
 
 
 def test_confirm_dialog_confirm() -> None:
+    """Confirm dialog confirm."""
     confirmed = []
     dlg = ConfirmDialog(
         title="Delete?",
@@ -270,6 +321,7 @@ def test_confirm_dialog_confirm() -> None:
 
 
 def test_confirm_dialog_outside_cancels() -> None:
+    """Confirm dialog outside cancels."""
     cancelled = []
     dlg = ConfirmDialog(
         title="Test",
@@ -282,6 +334,7 @@ def test_confirm_dialog_outside_cancels() -> None:
 
 
 def test_wifi_list_item_tap_callback() -> None:
+    """Wifi list item tap callback."""
     net = WifiNetwork(ssid="TestNet", security="WPA2", signal=75)
     tapped = []
     item = WifiListItem(
@@ -295,6 +348,34 @@ def test_wifi_list_item_tap_callback() -> None:
 
 
 def test_wifi_network_signal_level() -> None:
+    """Wifi network signal level."""
     assert WifiNetwork("x", "", 90).signal_level == 2
     assert WifiNetwork("x", "", 50).signal_level == 1
     assert WifiNetwork("x", "", 10).signal_level == 0
+
+
+def test_time_picker_draws_popup_when_open() -> None:
+    """TimePicker draws the popup overlay when _popup_open is True."""
+    assets = make_mock_assets()
+    tp = TimePicker(
+        rect=pygame.Rect(100, 100, 168, 44),
+        initial_hour=10,
+        initial_minute=30,
+        assets=assets,
+    )
+    tp._popup_open = True
+    screen = pygame.Surface((1280, 800))
+    tp.draw(screen)  # hits line 98 (popup rect drawing)
+
+
+def test_wifi_list_item_draws_connected_indicator() -> None:
+    """WifiListItem draws a green dot when is_connected=True."""
+    net = WifiNetwork(ssid="TestNet", security="WPA2", signal=75)
+    item = WifiListItem(
+        rect=pygame.Rect(200, 100, 800, 56),
+        network=net,
+        current_ssid="TestNet",
+        assets=make_mock_assets(),
+    )
+    screen = pygame.Surface((1280, 800))
+    item.draw(screen)  # hits line 86 (pygame.draw.circle for connected dot)

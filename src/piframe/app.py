@@ -1,3 +1,5 @@
+"""Main application module for the Pi Frame digital photo frame."""
+
 from __future__ import annotations
 
 import argparse
@@ -50,7 +52,10 @@ _TAP_MAX_DIST = 20.0
 
 
 class App:
+    """Main application class for the Pi Frame digital photo frame."""
+
     def __init__(self) -> None:
+        """Initialise all services and enter the main loop."""
         parser = argparse.ArgumentParser()
         parser.add_argument("--test-harness", action="store_true")
         parser.add_argument(
@@ -127,6 +132,7 @@ class App:
         self._state = AppState.SETTINGS
 
     def run(self) -> None:
+        """Run the main application loop."""
         prev_time = time.monotonic()
         while True:
             now = time.monotonic()
@@ -337,11 +343,12 @@ class App:
         self._config.flush_now()
 
     def restart(self) -> None:
+        """Restart the application by re-executing the process."""
         self._cleanup()
         env = os.environ.copy()
         env["XDG_RUNTIME_DIR"] = "/run/user/1000"
         env["WAYLAND_DISPLAY"] = "wayland-0"
-        os.execve(sys.executable, [sys.executable] + sys.argv, env)
+        os.execve(sys.executable, [sys.executable, *sys.argv], env)
 
     def _shutdown(self) -> None:
         self._cleanup()

@@ -1,4 +1,5 @@
 """Sync module: constructs a SyncService from config."""
+
 from __future__ import annotations
 
 from piframe.config_store import ConfigStore
@@ -10,13 +11,15 @@ class SyncModule(DimModule[SyncService]):
     """Construct a ``SyncService`` backed by the config store."""
 
     def create(self, config: ConfigStore, **deps: object) -> SyncService:
-        """Build a sync service that polls framesync on an interval.
+        """
+        Build a sync service that polls framesync on an interval.
 
         Args:
             config: Application configuration.
             **deps: Unused.
 
-        Returns:
+        Returns
+        -------
             A ``SyncService`` instance.
 
         """

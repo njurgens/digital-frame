@@ -1,11 +1,18 @@
+"""Single-line text input widget with optional password masking."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
 
 import pygame
 
-from piframe.assets import Assets, IC_VISIBILITY, IC_VISIBILITY_OFF
-from piframe.types import COLOUR_BTN_PRIMARY, COLOUR_DIVIDER, COLOUR_TEXT_CAPTION, COLOUR_TEXT_PRIMARY
+from piframe.assets import IC_VISIBILITY, IC_VISIBILITY_OFF, Assets
+from piframe.types import (
+    COLOUR_BTN_PRIMARY,
+    COLOUR_DIVIDER,
+    COLOUR_TEXT_CAPTION,
+    COLOUR_TEXT_PRIMARY,
+)
 from piframe.widgets.base import Widget
 
 _EYE_ICON_SIZE = 20
@@ -15,6 +22,8 @@ _MASK_CHAR = "•"
 
 
 class TextInput(Widget):
+    """Single-line text input field with optional password masking."""
+
     def __init__(
         self,
         rect: pygame.Rect,
@@ -24,6 +33,18 @@ class TextInput(Widget):
         on_focus: Callable[[], None] | None = None,
         on_change: Callable[[str], None] | None = None,
     ) -> None:
+        """
+        Create a text input field.
+
+        Args:
+        rect: Position and size of the input.
+        placeholder: Placeholder text shown when empty.
+        password_mode: Whether to mask the input as bullets.
+        assets: Asset provider for fonts and icons.
+        on_focus: Callback invoked when the field gains focus.
+        on_change: Callback invoked when the text changes.
+
+        """
         super().__init__(rect)
         self._text: str = ""
         self._placeholder: str = placeholder
@@ -36,24 +57,29 @@ class TextInput(Widget):
 
     @property
     def text(self) -> str:
+        """The current text content of the input field."""
         return self._text
 
     def clear(self) -> None:
+        """Clear the input text."""
         self._text = ""
         if self.on_change:
             self.on_change(self._text)
 
     def append(self, ch: str) -> None:
+        """Append a character to the input text."""
         self._text += ch
         if self.on_change:
             self.on_change(self._text)
 
     def backspace(self) -> None:
+        """Remove the last character from the input text."""
         self._text = self._text[:-1]
         if self.on_change:
             self.on_change(self._text)
 
     def set_focused(self, focused: bool) -> None:
+        """Set the focused state of the input field."""
         self._focused = focused
 
     def _eye_rect(self) -> pygame.Rect:
@@ -67,13 +93,14 @@ class TextInput(Widget):
         )
 
     def _masked(self) -> bool:
-        """True when text should be rendered as bullet characters."""
+        """Indicate whether text should be rendered as bullet characters."""
         return self._password_mode and not self._show_text
 
     def _display_text(self) -> str:
         return _MASK_CHAR * len(self._text) if self._masked() else self._text
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the text input with border, text, and cursor."""
         rect = self.rect
         border_colour = COLOUR_BTN_PRIMARY[:3] if self._focused else COLOUR_DIVIDER[:3]
         pygame.draw.rect(screen, border_colour, rect, 1, border_radius=4)
@@ -84,7 +111,11 @@ class TextInput(Widget):
         font = self._assets.font(18)
 
         # Reserve space for the eye icon when in password mode
-        text_right = rect.right - (_EYE_HIT_SIZE + _EYE_PADDING * 2) if self._password_mode else rect.right - 8
+        text_right = (
+            rect.right - (_EYE_HIT_SIZE + _EYE_PADDING * 2)
+            if self._password_mode
+            else rect.right - 8
+        )
         text_right = max(rect.x + 8, text_right)
 
         if not self._text:
@@ -115,12 +146,17 @@ class TextInput(Widget):
             screen.blit(icon_surf, icon_rect)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle tap events for focus and password visibility toggle."""
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1:
             pos = getattr(event, "pos", None)
             if pos is None:
                 return False
             # Eye icon tap toggles password visibility
-            if self._password_mode and self.rect.collidepoint(pos) and self._eye_rect().collidepoint(pos):
+            if (
+                self._password_mode
+                and self.rect.collidepoint(pos)
+                and self._eye_rect().collidepoint(pos)
+            ):
                 self._show_text = not self._show_text
                 return True
             if self.rect.collidepoint(pos):

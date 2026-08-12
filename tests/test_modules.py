@@ -36,12 +36,14 @@ def config(tmp_path: Path) -> ConfigStore:
 
 
 def test_wifi_module_selects_real(config: ConfigStore) -> None:
+    """Wifi module selects real."""
     """WifiModule returns WifiManager when mock_wifi is False."""
     wifi = WifiModule().create(config)
     assert isinstance(wifi, WifiManager)
 
 
 def test_wifi_module_selects_mock(config: ConfigStore) -> None:
+    """Wifi module selects mock."""
     """WifiModule returns MockWifiManager when mock_wifi is True."""
     config.set("app", "mock_wifi", True)
     wifi = WifiModule().create(config)
@@ -49,12 +51,14 @@ def test_wifi_module_selects_mock(config: ConfigStore) -> None:
 
 
 def test_cache_module_sets_cache_dir(config: ConfigStore) -> None:
+    """Cache module sets cache dir."""
     """CacheModule passes the configured cache_dir to PhotoCache."""
     cache = CacheModule().create(config)
     assert cache._cache_dir == Path("/home/frame/.cache/framesync")
 
 
 def test_cache_module_sets_screen_size(config: ConfigStore) -> None:
+    """Cache module sets screen size."""
     """CacheModule passes the screen size constants to PhotoCache."""
     cache = CacheModule().create(config)
     assert cache._w == 1280
@@ -62,12 +66,14 @@ def test_cache_module_sets_screen_size(config: ConfigStore) -> None:
 
 
 def test_sync_module_creates_service(config: ConfigStore) -> None:
+    """Sync module creates service."""
     """SyncModule returns a SyncService instance."""
     sync = SyncModule().create(config)
     assert isinstance(sync, SyncService)
 
 
 def test_player_module_passes_deps(config: ConfigStore) -> None:
+    """Player module passes deps."""
     """PlayerModule wires cache and assets into the SlideshowPlayer."""
     cache = MagicMock(spec=PhotoCache)
     assets = MagicMock(spec=Assets)

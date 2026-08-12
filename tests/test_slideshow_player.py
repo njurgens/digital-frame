@@ -1,3 +1,5 @@
+"""Tests for SlideshowPlayer transitions and playlist management."""
+
 from __future__ import annotations
 
 import time
@@ -30,6 +32,7 @@ def _make_surface() -> pygame.Surface:
 
 
 def test_fisher_yates_contains_same_items(tmp_path: Path) -> None:
+    """Fisher yates contains same items."""
     cfg = _make_config(tmp_path)
     cache = MagicMock()
     cache.get.return_value = _make_surface()
@@ -43,6 +46,7 @@ def test_fisher_yates_contains_same_items(tmp_path: Path) -> None:
 
 
 def test_interval_timer_and_advance(tmp_path: Path) -> None:
+    """Interval timer and advance."""
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -60,6 +64,7 @@ def test_interval_timer_and_advance(tmp_path: Path) -> None:
 
 
 def test_transition_progress_and_clamp(tmp_path: Path) -> None:
+    """Transition progress and clamp."""
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -82,6 +87,7 @@ def test_transition_progress_and_clamp(tmp_path: Path) -> None:
 
 
 def test_advance_forward_and_backward(tmp_path: Path) -> None:
+    """Advance forward and backward."""
     _make_files(tmp_path, 4)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -99,6 +105,7 @@ def test_advance_forward_and_backward(tmp_path: Path) -> None:
 
 
 def test_paused_stops_update(tmp_path: Path) -> None:
+    """Paused stops update."""
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()
@@ -113,6 +120,7 @@ def test_paused_stops_update(tmp_path: Path) -> None:
 
 
 def test_go_back_and_skip_start_transitions_with_direction(tmp_path: Path) -> None:
+    """Go back and skip start transitions with direction."""
     _make_files(tmp_path, 3)
     cfg = _make_config(tmp_path)
     cache = MagicMock()

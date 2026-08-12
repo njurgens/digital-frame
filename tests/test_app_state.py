@@ -1,3 +1,5 @@
+"""Tests for app state transitions and event handling."""
+
 from __future__ import annotations
 
 import os
@@ -18,7 +20,8 @@ import pytest
 
 
 @pytest.fixture(scope="module", autouse=True)
-def pg() -> Generator[None, None, None]:
+def pg() -> Generator[None]:
+    """Initialise pygame for the test module."""
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -26,6 +29,7 @@ def pg() -> Generator[None, None, None]:
 
 
 def make_app(tmp_path: Path) -> App:
+    """Build an App instance with mocked dependencies."""
     from piframe.config_store import ConfigStore
     from piframe.types import AppState, init_events
 
@@ -59,6 +63,7 @@ def make_app(tmp_path: Path) -> App:
 
 
 def test_slideshow_tap_transitions_to_overlay(tmp_path: Path) -> None:
+    """Slideshow tap transitions to overlay."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -69,6 +74,7 @@ def test_slideshow_tap_transitions_to_overlay(tmp_path: Path) -> None:
 
 
 def test_overlay_tap_outside_controls_returns_to_slideshow(tmp_path: Path) -> None:
+    """Overlay tap outside controls returns to slideshow."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -79,6 +85,7 @@ def test_overlay_tap_outside_controls_returns_to_slideshow(tmp_path: Path) -> No
 
 
 def test_overlay_dismissed_flag_returns_to_slideshow(tmp_path: Path) -> None:
+    """Overlay dismissed flag returns to slideshow."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -89,6 +96,7 @@ def test_overlay_dismissed_flag_returns_to_slideshow(tmp_path: Path) -> None:
 
 
 def test_overlay_settings_action_transitions_to_settings(tmp_path: Path) -> None:
+    """Overlay settings action transitions to settings."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -100,6 +108,7 @@ def test_overlay_settings_action_transitions_to_settings(tmp_path: Path) -> None
 
 
 def test_play_pause_tap_toggles_player(tmp_path: Path) -> None:
+    """Play pause tap toggles player."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -112,6 +121,7 @@ def test_play_pause_tap_toggles_player(tmp_path: Path) -> None:
 
 
 def test_on_focus_text_transitions_to_keyboard(tmp_path: Path) -> None:
+    """On focus text transitions to keyboard."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -123,6 +133,7 @@ def test_on_focus_text_transitions_to_keyboard(tmp_path: Path) -> None:
 
 
 def test_keyboard_done_returns_to_settings(tmp_path: Path) -> None:
+    """Keyboard done returns to settings."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -132,6 +143,7 @@ def test_keyboard_done_returns_to_settings(tmp_path: Path) -> None:
 
 
 def test_sleeping_tap_wakes_to_overlay(tmp_path: Path) -> None:
+    """Sleeping tap wakes to overlay."""
     app = make_app(tmp_path)
     from piframe.types import AppState
 
@@ -144,7 +156,10 @@ def test_sleeping_tap_wakes_to_overlay(tmp_path: Path) -> None:
     app._sleep.set_grace.assert_called_once()  # type: ignore[union-attr]
 
 
-def test_pointer_up_diagonal_drag_does_not_dispatch_tap(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_diagonal_drag_does_not_dispatch_tap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up diagonal drag does not dispatch tap."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (100, 100)
     app._swipe_start_time = 10.0
@@ -158,7 +173,10 @@ def test_pointer_up_diagonal_drag_does_not_dispatch_tap(tmp_path: Path, monkeypa
     app._player.go_back.assert_not_called()  # type: ignore[union-attr]
 
 
-def test_pointer_up_allows_diagonal_horizontal_swipe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_allows_diagonal_horizontal_swipe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up allows diagonal horizontal swipe."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (400, 300)
     app._swipe_start_time = 10.0
@@ -171,7 +189,10 @@ def test_pointer_up_allows_diagonal_horizontal_swipe(tmp_path: Path, monkeypatch
     app._dispatch_tap.assert_not_called()
 
 
-def test_pointer_up_short_movement_dispatches_tap(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_short_movement_dispatches_tap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up short movement dispatches tap."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (100, 100)
     app._swipe_start_time = 10.0
@@ -184,6 +205,7 @@ def test_pointer_up_short_movement_dispatches_tap(tmp_path: Path, monkeypatch: p
 
 
 def test_pointer_up_without_start_tracking_is_noop(tmp_path: Path) -> None:
+    """Pointer up without start tracking is noop."""
     app = make_app(tmp_path)
     app._swipe_start_pos = None
     app._swipe_start_time = None
@@ -194,7 +216,10 @@ def test_pointer_up_without_start_tracking_is_noop(tmp_path: Path) -> None:
     app._dispatch_tap.assert_not_called()
 
 
-def test_pointer_up_accepts_swipe_at_slope_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_accepts_swipe_at_slope_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up accepts swipe at slope boundary."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (100, 100)
     app._swipe_start_time = 10.0
@@ -207,7 +232,10 @@ def test_pointer_up_accepts_swipe_at_slope_boundary(tmp_path: Path, monkeypatch:
     app._dispatch_tap.assert_not_called()
 
 
-def test_pointer_up_rejects_swipe_just_over_slope_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_rejects_swipe_just_over_slope_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up rejects swipe just over slope boundary."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (100, 100)
     app._swipe_start_time = 10.0
@@ -220,7 +248,10 @@ def test_pointer_up_rejects_swipe_just_over_slope_boundary(tmp_path: Path, monke
     app._dispatch_tap.assert_not_called()
 
 
-def test_pointer_up_tap_distance_boundary_dispatches_tap(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_tap_distance_boundary_dispatches_tap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up tap distance boundary dispatches tap."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (100, 100)
     app._swipe_start_time = 10.0
@@ -232,7 +263,10 @@ def test_pointer_up_tap_distance_boundary_dispatches_tap(tmp_path: Path, monkeyp
     app._dispatch_tap.assert_called_once_with((120, 100))
 
 
-def test_pointer_up_rejects_swipe_at_elapsed_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pointer_up_rejects_swipe_at_elapsed_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pointer up rejects swipe at elapsed boundary."""
     app = make_app(tmp_path)
     app._swipe_start_pos = (100, 100)
     app._swipe_start_time = 10.0
@@ -243,3 +277,17 @@ def test_pointer_up_rejects_swipe_at_elapsed_boundary(tmp_path: Path, monkeypatc
 
     app._player.go_back.assert_not_called()  # type: ignore[union-attr]
     app._dispatch_tap.assert_not_called()
+
+
+def test_restart_calls_execve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """restart() calls os.execve to re-execute the process."""
+    import sys
+
+    captured: list[tuple] = []
+    monkeypatch.setattr(os, "execve", lambda *a, **k: captured.append((a, k)))
+
+    app = make_app(tmp_path)
+    app.restart()
+
+    assert len(captured) == 1
+    assert captured[0][0][0] == sys.executable

@@ -1,3 +1,5 @@
+"""Tests for widget rendering output."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock
@@ -17,7 +19,8 @@ from piframe.widgets.vertical_slider import VerticalSlider
 
 
 @pytest.fixture(scope="module", autouse=True)
-def init_pygame() -> Generator[None, None, None]:
+def init_pygame() -> Generator[None]:
+    """Init pygame."""
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -33,12 +36,14 @@ def _mock_assets():
 
 
 def pixel_mean(surface: pygame.Surface, rect: pygame.Rect) -> "np.ndarray":
+    """Pixel mean."""
     sub = surface.subsurface(rect)
     arr = pygame.surfarray.array3d(sub)
     return arr.mean(axis=(0, 1))
 
 
 def test_toggle_on_thumb_on_right() -> None:
+    """Toggle on thumb on right."""
     surf = pygame.Surface((50, 28))
     surf.fill((0, 0, 0))
     toggle = Toggle(rect=pygame.Rect(0, 0, 50, 28), initial=True)
@@ -49,6 +54,7 @@ def test_toggle_on_thumb_on_right() -> None:
 
 
 def test_toggle_off_thumb_on_left() -> None:
+    """Toggle off thumb on left."""
     surf = pygame.Surface((50, 28))
     surf.fill((128, 128, 128))
     toggle = Toggle(rect=pygame.Rect(0, 0, 50, 28), initial=False)
@@ -59,6 +65,7 @@ def test_toggle_off_thumb_on_left() -> None:
 
 
 def test_vertical_slider_at_100_thumb_near_top() -> None:
+    """Vertical slider at 100 thumb near top."""
     surf = pygame.Surface((40, 200))
     surf.fill((0, 0, 0))
     slider = VerticalSlider(rect=pygame.Rect(0, 0, 40, 200), initial_value=100)
@@ -69,6 +76,7 @@ def test_vertical_slider_at_100_thumb_near_top() -> None:
 
 
 def test_vertical_slider_at_0_thumb_near_bottom() -> None:
+    """Vertical slider at 0 thumb near bottom."""
     surf = pygame.Surface((40, 200))
     surf.fill((0, 0, 0))
     slider = VerticalSlider(rect=pygame.Rect(0, 0, 40, 200), initial_value=0)
@@ -79,6 +87,7 @@ def test_vertical_slider_at_0_thumb_near_bottom() -> None:
 
 
 def test_horizontal_slider_at_100_thumb_near_right() -> None:
+    """Horizontal slider at 100 thumb near right."""
     surf = pygame.Surface((200, 40))
     surf.fill((0, 0, 0))
     slider = HorizontalSlider(rect=pygame.Rect(0, 0, 200, 40), initial_value=100)
@@ -89,6 +98,7 @@ def test_horizontal_slider_at_100_thumb_near_right() -> None:
 
 
 def test_horizontal_slider_at_0_thumb_near_left() -> None:
+    """Horizontal slider at 0 thumb near left."""
     surf = pygame.Surface((200, 40))
     surf.fill((0, 0, 0))
     slider = HorizontalSlider(rect=pygame.Rect(0, 0, 200, 40), initial_value=0)
@@ -99,6 +109,7 @@ def test_horizontal_slider_at_0_thumb_near_left() -> None:
 
 
 def test_segmented_control_active_segment_filled() -> None:
+    """Segmented control active segment filled."""
     surf = pygame.Surface((300, 44))
     surf.fill((20, 20, 20))
     seg = SegmentedControl(
@@ -114,6 +125,7 @@ def test_segmented_control_active_segment_filled() -> None:
 
 
 def test_confirm_dialog_scrim_drawn() -> None:
+    """Confirm dialog scrim drawn."""
     surf = pygame.Surface((1280, 800))
     surf.fill((255, 255, 255))
     dlg = ConfirmDialog(
@@ -129,6 +141,7 @@ def test_confirm_dialog_scrim_drawn() -> None:
 
 
 def test_confirm_dialog_confirm_button_region() -> None:
+    """Confirm dialog confirm button region."""
     surf = pygame.Surface((1280, 800))
     surf.fill((40, 40, 40))
     dlg = ConfirmDialog(

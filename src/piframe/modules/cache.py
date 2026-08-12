@@ -1,4 +1,5 @@
 """Cache module: constructs a PhotoCache from config."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,13 +14,15 @@ class CacheModule(DimModule[PhotoCache]):
     """Construct a ``PhotoCache`` with screen size and cache dir from config."""
 
     def create(self, config: ConfigStore, **deps: object) -> PhotoCache:
-        """Build a photo cache pointing at the configured cache directory.
+        """
+        Build a photo cache pointing at the configured cache directory.
 
         Args:
             config: Application configuration.
             **deps: Unused.
 
-        Returns:
+        Returns
+        -------
             A ``PhotoCache`` instance.
 
         """

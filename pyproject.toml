@@ -19,6 +19,8 @@ slideshow = "piframe.app:main"
 dev = [
     "ruff",
     "pytest",
+    "pytest-cov",
+    "diff-cover",
     "basedpyright>=1.39.9",
 ]
 
@@ -32,6 +34,9 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "RUF", "ANN201", "ANN001", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.basedpyright]
 pythonVersion = "3.13"

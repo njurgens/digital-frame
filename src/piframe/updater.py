@@ -1,3 +1,5 @@
+"""OTA update checker and installer via GitHub releases."""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +12,17 @@ GITHUB_API = "https://api.github.com/repos/{repo}/releases/latest"
 
 
 def check_update(repo: str) -> tuple[str, str]:
+    """
+    Check GitHub for the latest release of the given repo.
+
+    Args:
+    repo: GitHub repository in the format *owner/repo*.
+
+    Returns
+    -------
+    A tuple of (tag_name, tarball_url) for the latest release.
+
+    """
     url = GITHUB_API.format(repo=repo)
     with urllib.request.urlopen(url, timeout=10) as resp:
         data = json.loads(resp.read())
@@ -26,6 +39,13 @@ def _safe_extract(tf: tarfile.TarFile, destination: Path) -> None:
 
 
 def apply_update(tarball_url: str) -> None:
+    """
+    Download and apply an update from a tarball URL.
+
+    Args:
+    tarball_url: URL of the release tarball to install.
+
+    """
     repo_root = Path(__file__).resolve().parent.parent
     staging_dir = repo_root / ".update-staging"
     staging_tar = staging_dir / "release.tar.gz"

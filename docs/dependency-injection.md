@@ -215,9 +215,7 @@ class App:
         self._wifi = WifiModule().create(self._config)
         self._cache = CacheModule().create(self._config)
         self._sync = SyncModule().create(self._config)
-        self._player = PlayerModule().create(
-            self._config, cache=self._cache, assets=self._assets
-        )
+        self._player = PlayerModule().create(self._config, cache=self._cache, assets=self._assets)
         self._settings = SettingsModule().create(
             self._config,
             assets=self._assets,
@@ -248,6 +246,7 @@ When a new service needs environment-based swapping (e.g. album provider), add a
 ```python
 # piframe/modules/album.py
 
+
 class AlbumModule(DimModule[IAlbumProvider]):
     def create(self, config: ConfigStore, **deps: object) -> IAlbumProvider:
         match config.app.album_provider:
@@ -274,7 +273,7 @@ For tests, bypass the module and construct directly:
 ```python
 def test_slideshow_with_mock_wifi():
     config = ConfigStore(test_config_path)
-    wifi = MockWifiManager()          # direct construction
+    wifi = MockWifiManager()  # direct construction
     cache = PhotoCache(screen_size=(1280, 800))
     player = SlideshowPlayer(config, cache, (1280, 800))
     # ... assertions ...

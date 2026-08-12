@@ -1,52 +1,72 @@
 #!/usr/bin/env python3
+"""OneDrive sync script using the Badger token API."""
+
 import base64
 import tomllib
-import requests
 from pathlib import Path
 
-API_V2  = "https://my.microsoftpersonalcontent.com/_api/v2.0"
+import requests
+
+API_V2 = "https://my.microsoftpersonalcontent.com/_api/v2.0"
 API_V21 = "https://my.microsoftpersonalcontent.com/_api/v2.1"
-APP_ID  = "00000000-0000-0000-0000-0000481710a4"
+APP_ID = "00000000-0000-0000-0000-0000481710a4"
+
 
 def get_badger_token() -> str:
-    resp = requests.post("https://api-badgerp.svc.ms/v1.0/token",
+    """Obtain a Badger authentication token from Microsoft."""
+    resp = requests.post(
+        "https://api-badgerp.svc.ms/v1.0/token",
         headers={"Content-Type": "application/json"},
-        json={"appId": APP_ID})
+        json={"appId": APP_ID},
+    )
     resp.raise_for_status()
     return resp.json()["token"]
 
+
 def encode_url(url: str) -> str:
+    """Base64-encode a share URL for the Badger API."""
     return base64.b64encode(url.encode()).rstrip(b"=").decode().replace("/", "_").replace("+", "-")
 
-def validate_password(encoded_url: str, share_url: str, password: str, token: str):
+
+def validate_password(encoded_url: str, share_url: str, password: str, token: str) -> None:
+    """Validate the share password with the Badger API."""
     url = f"{API_V21}/shares/u!{encoded_url}/root/oneDrive.validatePermission"
     challenge = base64.b64encode(share_url.encode()).decode()
-    resp = requests.post(url,
+    resp = requests.post(
+        url,
         headers={
             "Authorization": f"Badger {token}",
             "Content-Type": "application/json",
         },
-        json={"challengeToken": challenge, "password": password})
+        json={"challengeToken": challenge, "password": password},
+    )
     if not resp.ok:
         print(f"Password validation failed {resp.status_code}: {resp.text}")
         resp.raise_for_status()
     print("Password validated.")
 
+
 def redeem_share(encoded_url: str, token: str) -> dict:
+    """Redeem a share URL to get the drive item details."""
     url = f"{API_V2}/shares/u!{encoded_url}/driveitem"
-    params = {"$select": "id,parentReference,folder,bundle,remoteItem,name,file,@content.downloadUrl"}
-    resp = requests.post(url,
+    params = {
+        "$select": "id,parentReference,folder,bundle,remoteItem,name,file,@content.downloadUrl"
+    }
+    resp = requests.post(
+        url,
         headers={
             "Authorization": f"Badger {token}",
             "Prefer": "autoredeem",
             "Content-Type": "text/plain;charset=UTF-8",
         },
         params=params,
-        data="")
+        data="",
+    )
     if not resp.ok:
         print(f"Redeem failed {resp.status_code}: {resp.text}")
         resp.raise_for_status()
     return resp.json()
+
 
 def sync_folder(drive_id: str, folder_id: str, token: str, dest: Path) -> list[Path]:
     """Sync a remote OneDrive folder into dest. Returns list of newly downloaded files."""
@@ -70,8 +90,10 @@ def sync_folder(drive_id: str, folder_id: str, token: str, dest: Path) -> list[P
                 print(f"  Downloading: {name}")
                 dl_url = item.get("@content.downloadUrl")
                 if not dl_url:
-                    ir = requests.get(f"{API_V2}/drives/{drive_id}/items/{item['id']}",
-                                      headers={"Authorization": f"Badger {token}"})
+                    ir = requests.get(
+                        f"{API_V2}/drives/{drive_id}/items/{item['id']}",
+                        headers={"Authorization": f"Badger {token}"},
+                    )
                     ir.raise_for_status()
                     dl_url = ir.json().get("@content.downloadUrl")
                 r = requests.get(dl_url, stream=True)
@@ -93,13 +115,14 @@ def sync_folder(drive_id: str, folder_id: str, token: str, dest: Path) -> list[P
                 local.unlink()
             elif local.is_dir():
                 import shutil
+
                 print(f"  Deleting dir: {local.name}")
                 shutil.rmtree(local)
 
     return new_files
 
 
-def sync(share_url: str, password: str, output_dir) -> None:
+def sync(share_url: str, password: str, output_dir: str | Path) -> None:
     """High-level entry point for SyncService. Runs the full sync flow."""
     dest = Path(output_dir)
     token = get_badger_token()
@@ -119,12 +142,14 @@ def sync(share_url: str, password: str, output_dir) -> None:
         folder_id = root["id"]
         sync_folder(drive_id, folder_id, token, dest)
 
-def main():
+
+def main() -> None:
+    """Run the full sync flow from config."""
     with open(Path(__file__).parent / "config.toml", "rb") as f:
         config = tomllib.load(f)
 
     share_url = config["share_url"]
-    password  = config["password"]
+    password = config["password"]
     dest_dir = Path(config["output_dir"])
 
     print("Getting Badger token...")
@@ -139,7 +164,7 @@ def main():
     root = redeem_share(encoded, token)
     print(f"Root: {root.get('name')}")
 
-    drive_id  = root["parentReference"]["driveId"]
+    drive_id = root["parentReference"]["driveId"]
     folder_id = root["id"]
 
     new_files: list[Path] = []
@@ -161,6 +186,7 @@ def main():
 
     if new_files:
         print(f"Synced {len(new_files)} new file(s) — slideshow will pick them up on next cycle.")
+
 
 if __name__ == "__main__":
     main()

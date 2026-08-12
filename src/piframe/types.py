@@ -1,6 +1,7 @@
+"""Application types, constants, and colour palette."""
+
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
@@ -10,11 +11,26 @@ from typing import Protocol
 class WifiManagerProtocol(Protocol):
     """Structural type for wifi manager implementations."""
 
-    def scan(self) -> None: ...
-    def connect(self, ssid: str, password: str | None) -> None: ...
-    def forget(self, ssid: str) -> None: ...
-    def disconnect(self) -> None: ...
-    def get_status(self) -> None: ...
+    def scan(self) -> None:
+        """Scan for available Wi-Fi networks."""
+        ...
+
+    def connect(self, ssid: str, password: str | None) -> None:
+        """Connect to a Wi-Fi network."""
+        ...
+
+    def forget(self, ssid: str) -> None:
+        """Forget a saved Wi-Fi network."""
+        ...
+
+    def disconnect(self) -> None:
+        """Disconnect from the current Wi-Fi network."""
+        ...
+
+    def get_status(self) -> None:
+        """Get the current Wi-Fi connection status."""
+        ...
+
 
 # Screen constants
 SCREEN_W = 1280
@@ -31,6 +47,8 @@ WAKE_GRACE = 30.0
 
 
 class AppState(Enum):
+    """Application state machine states."""
+
     SLIDESHOW = auto()
     OVERLAY = auto()
     SETTINGS = auto()
@@ -39,6 +57,8 @@ class AppState(Enum):
 
 
 class AppEvent(Enum):
+    """Application state events."""
+
     SLEEP = auto()
     WAKE = auto()
     SYNC_COMPLETE = auto()
@@ -53,6 +73,7 @@ EVT_WIFI_RESULT: int | None = None
 
 
 def init_events() -> None:
+    """Register custom pygame event IDs for app-wide events."""
     import pygame
 
     global EVT_SYNC_COMPLETE, EVT_SLEEP, EVT_WAKE, EVT_UPDATE_RESULT, EVT_WIFI_RESULT
@@ -65,6 +86,8 @@ def init_events() -> None:
 
 @dataclass
 class SyncStatus:
+    """Status of the last photo sync operation."""
+
     last_sync_time: datetime | None = None
     photo_count: int = 0
     in_progress: bool = False
@@ -73,12 +96,15 @@ class SyncStatus:
 
 @dataclass
 class WifiNetwork:
+    """Representation of a discovered Wi-Fi network."""
+
     ssid: str
     security: str
     signal: int
 
     @property
     def signal_level(self) -> int:
+        """Return the signal strength as 0, 1, or 2."""
         if self.signal >= 67:
             return 2
         if self.signal >= 34:
@@ -88,6 +114,8 @@ class WifiNetwork:
 
 @dataclass
 class WifiStatus:
+    """Current Wi-Fi connection status."""
+
     connected: bool
     ssid: str
     ip_address: str
@@ -95,6 +123,8 @@ class WifiStatus:
 
 @dataclass
 class WifiResult:
+    """Result of a Wi-Fi operation (scan, connect, forget, status)."""
+
     operation: str
     success: bool
     data: object | None = None
@@ -103,6 +133,8 @@ class WifiResult:
 
 @dataclass
 class UpdateResult:
+    """Result of an update check or install operation."""
+
     available: bool
     tag_name: str = ""
     tarball_url: str = ""

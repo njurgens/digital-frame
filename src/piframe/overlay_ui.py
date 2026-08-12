@@ -1,3 +1,5 @@
+"""Bottom overlay UI with playback controls and brightness slider."""
+
 from __future__ import annotations
 
 import time
@@ -42,7 +44,17 @@ DISMISS_BAR = pygame.Rect(0, 0, 1280, 3)
 
 
 class OverlayUI:
+    """Bottom overlay with playback controls, brightness slider, and auto-dismiss."""
+
     def __init__(self, assets: Assets, config: ConfigStore):
+        """
+        Create an overlay UI.
+
+        Args:
+            assets: Asset manager for fonts and icons.
+            config: Configuration store for brightness and other settings.
+
+        """
         self._assets = assets
         self._config = config
         self._visible: bool = False
@@ -64,16 +76,19 @@ class OverlayUI:
             self.on_brightness_change(value)
 
     def show(self) -> None:
+        """Show the overlay and start the auto-dismiss timer."""
         self._visible = True
         self.dismissed = False
         self._dismiss_at = time.monotonic() + OVERLAY_DISMISS if not self._paused else None
 
     def hide(self) -> None:
+        """Hide the overlay."""
         self._visible = False
         self.dismissed = True
         self._dragging_slider = False
 
     def update(self, dt: float) -> None:
+        """Update the overlay state, auto-dismissing when the timer expires."""
         _ = dt
         if self._dismiss_at is not None and time.monotonic() >= self._dismiss_at:
             self.hide()
@@ -85,12 +100,15 @@ class OverlayUI:
         pygame.draw.rect(button, COLOUR_OVERLAY_BTN_BD, button_rect, width=1, border_radius=12)
         screen.blit(button, rect.topleft)
 
-    def _draw_icon_centered(self, screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]) -> None:
+    def _draw_icon_centered(
+        self, screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]
+    ) -> None:
         surf, r = self._assets.icon(size).render(icon, (255, 255, 255))
         r.center = center
         screen.blit(surf, r)
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the overlay with scrim, controls, and brightness slider."""
         if not self._visible:
             return
 
@@ -114,7 +132,9 @@ class OverlayUI:
         self._slider.draw(screen)
 
         pct_text = f"{self._brightness}%"
-        pct_surf, pct_rect = self._assets.font(FONT_SIZE_SECONDARY).render(pct_text, (255, 255, 255))
+        pct_surf, pct_rect = self._assets.font(FONT_SIZE_SECONDARY).render(
+            pct_text, (255, 255, 255)
+        )
         pct_rect.center = BRIGHTNESS_LABEL_CENTER
         screen.blit(pct_surf, pct_rect)
 
@@ -127,6 +147,7 @@ class OverlayUI:
             self._draw_icon_centered(screen, icon, size, rect.center)
 
     def on_tap(self, pos: tuple[int, int]) -> str | None:
+        """Handle a tap on the overlay and return the action."""
         if not self._visible:
             return None
         if DISMISS_BAR.collidepoint(pos):
@@ -146,6 +167,7 @@ class OverlayUI:
         return None
 
     def on_drag(self, pos: tuple[int, int]) -> None:
+        """Handle a drag event on the overlay."""
         if not self._visible:
             return
         if self._dragging_slider or self._slider.rect.inflate(20, 0).collidepoint(pos):
@@ -161,16 +183,20 @@ class OverlayUI:
             self._extend_dismiss()
 
     def stop_drag(self) -> None:
+        """Stop dragging the brightness slider."""
         self._dragging_slider = False
 
     def is_dragging_slider(self) -> bool:
+        """Whether the brightness slider is currently being dragged."""
         return self._dragging_slider
 
     def _extend_dismiss(self):
+        """Extend the auto-dismiss timer."""
         if not self._paused:
             self._dismiss_at = time.monotonic() + OVERLAY_DISMISS
 
     def set_paused(self, paused: bool) -> None:
+        """Set the paused state and adjust the dismiss timer."""
         self._paused = paused
         if paused:
             self._dismiss_at = None
@@ -178,6 +204,7 @@ class OverlayUI:
             self._extend_dismiss()
 
     def set_brightness(self, pct: int) -> None:
+        """Set the brightness value and update the slider."""
         self._brightness = max(0, min(100, int(pct)))
         self._slider.value = self._brightness
         self._slider.dirty = True

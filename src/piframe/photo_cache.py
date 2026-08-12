@@ -1,3 +1,5 @@
+"""LRU photo surface cache with disk persistence and EXIF handling."""
+
 from __future__ import annotations
 
 from collections import OrderedDict
@@ -19,13 +21,25 @@ except AttributeError:
 
 
 class PhotoCache:
+    """LRU cache for composited photo surfaces with disk persistence."""
+
     def __init__(
         self,
         screen_size: tuple[int, int] = (SCREEN_W, SCREEN_H),
         cache_dir: Path | None = None,
-    ):
+    ) -> None:
+        """
+        Create a photo surface cache.
+
+        Args:
+            screen_size: Target screen dimensions.
+            cache_dir: Directory for disk cache, or default to ~/.cache/framesync.
+
+        """
         self._w, self._h = screen_size
-        self._cache_dir = Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "framesync"
+        self._cache_dir = (
+            Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "framesync"
+        )
         self._fit_mode = "fit"
         self._cache: OrderedDict[str, pygame.Surface] = OrderedDict()
         self._last_path: Path | None = None
@@ -37,6 +51,7 @@ class PhotoCache:
         screen_w: int | None = None,
         screen_h: int | None = None,
     ) -> pygame.Surface:
+        """Get or create a composited surface for the given image path."""
         if screen_w is not None and screen_h is not None:
             self._w, self._h = screen_w, screen_h
         self._fit_mode = fit_mode
@@ -129,19 +144,23 @@ class PhotoCache:
         return pygame.image.frombuffer(final_img.tobytes(), final_img.size, "RGB")
 
     def invalidate(self) -> None:
+        """Clear the in-memory cache."""
         self._cache.clear()
 
     def invalidate_disk(self) -> None:
+        """Delete all cached surfaces from disk."""
         if self._cache_dir.exists():
             for f in self._cache_dir.glob("*.png"):
                 f.unlink(missing_ok=True)
 
     def set_fit_mode(self, mode: str) -> None:
+        """Change the fit mode and invalidate all caches."""
         self._fit_mode = mode
         self.invalidate_disk()
         self.invalidate()
 
     def prefetch(self, path: Path, fit_mode: str, screen_w: int, screen_h: int) -> None:
+        """Prefetch an image into the cache."""
         key = self._key(path, fit_mode)
         if key not in self._cache:
             self.get(path, fit_mode, screen_w, screen_h)

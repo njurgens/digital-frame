@@ -19,7 +19,7 @@ from pathlib import Path
 from threading import Thread
 
 import pygame
-from PIL import Image, ExifTags
+from PIL import ExifTags, Image
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -47,12 +47,15 @@ _DEFAULTS: dict = {
     "preload_delay": 3,
 }
 
+
 def load_config() -> dict:
+    """Load the slideshow configuration from disk."""
     cfg = dict(_DEFAULTS)
     if _CONFIG_PATH.exists():
         with open(_CONFIG_PATH, "rb") as f:
             cfg.update(tomllib.load(f))
     return cfg
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -67,6 +70,7 @@ _quit_requested = False
 # Event pump
 # ---------------------------------------------------------------------------
 
+
 def check_events() -> bool:
     """Drain the pygame event queue. Returns False if the app should quit."""
     global _quit_requested
@@ -77,9 +81,11 @@ def check_events() -> bool:
             _quit_requested = True
     return not _quit_requested
 
+
 # ---------------------------------------------------------------------------
 # Image surface preparation
 # ---------------------------------------------------------------------------
+
 
 def _load_image_corrected(path: Path) -> pygame.Surface:
     """Load image via PIL to honour EXIF orientation, return a pygame Surface."""
@@ -87,9 +93,7 @@ def _load_image_corrected(path: Path) -> pygame.Surface:
     # Apply EXIF rotation if present
     try:
         exif = pil_img.getexif()
-        orientation_tag = next(
-            tag for tag, name in ExifTags.TAGS.items() if name == "Orientation"
-        )
+        orientation_tag = next(tag for tag, name in ExifTags.TAGS.items() if name == "Orientation")
         orientation = exif.get(orientation_tag)
         _EXIF_ROTATE = {3: 180, 6: 270, 8: 90}
         if orientation in _EXIF_ROTATE:
@@ -105,7 +109,9 @@ def blur_surface(surface: pygame.Surface, strength: int = 8, passes: int = 3) ->
     result = surface
     for _ in range(passes):
         w, h = result.get_size()
-        small = pygame.transform.smoothscale(result, (max(1, w // strength), max(1, h // strength)))
+        small = pygame.transform.smoothscale(
+            result, (max(1, w // strength), max(1, h // strength))
+        )
         result = pygame.transform.smoothscale(small, (w, h))
     return result
 
@@ -120,6 +126,7 @@ def prepare_surface(
 ) -> pygame.Surface:
     """
     Build a composite surface: blurred-fill background + aspect-correct foreground.
+
     Reads from / writes to a disk cache keyed by filename, mtime, screen size, and
     cache version (so EXIF-fix and other changes auto-invalidate old entries).
     """
@@ -168,9 +175,11 @@ def prepare_surface(
 
     return composite
 
+
 # ---------------------------------------------------------------------------
 # Crossfade transition
 # ---------------------------------------------------------------------------
+
 
 def crossfade(
     screen: pygame.Surface,
@@ -178,12 +187,15 @@ def crossfade(
     surface_b: pygame.Surface,
     duration: float,
 ) -> None:
-    """Blend from surface_a to surface_b over `duration` seconds.
+    """
+    Blend from surface_a to surface_b over `duration` seconds.
 
     Uses wall-clock progress so slow frames self-correct rather than
     causing the transition to run long on Pi 3A+.
     """
-    steps = max(1, int(duration * 24))  # target 24fps; wall-clock progress self-corrects if Pi can't keep up
+    steps = max(
+        1, int(duration * 24)
+    )  # target 24fps; wall-clock progress self-corrects if Pi can't keep up
     step_budget = duration / steps
     overlay = surface_b.copy()
     start = time.monotonic()
@@ -201,9 +213,11 @@ def crossfade(
         if remaining > 0:
             time.sleep(remaining)
 
+
 # ---------------------------------------------------------------------------
 # Show one image with background preloading of the next
 # ---------------------------------------------------------------------------
+
 
 def show_image(
     screen: pygame.Surface,
@@ -214,8 +228,7 @@ def show_image(
     cache_dir: Path | None,
 ) -> pygame.Surface | None:
     """
-    Blit current_surface, wait display_duration (starting preload after
-    preload_delay), then crossfade to the preloaded next surface.
+    Blit current surface, wait display duration, then crossfade to the next surface.
 
     Returns the next surface on success, or None if quit was requested or
     the next image failed to load.
@@ -263,20 +276,22 @@ def show_image(
     crossfade(screen, current_surface, next_surface[0], transition_duration)
     return next_surface[0]
 
+
 # ---------------------------------------------------------------------------
 # Directory scanning
 # ---------------------------------------------------------------------------
+
 
 def scan_images(directory: Path) -> list[Path]:
     """Return a shuffled list of supported image files in directory."""
     if not directory.is_dir():
         return []
     images = [
-        p for p in directory.iterdir()
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+        p for p in directory.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
     ]
     random.shuffle(images)
     return images
+
 
 # ---------------------------------------------------------------------------
 # Main loop
@@ -286,6 +301,7 @@ _PID_FILE = Path("/tmp/slideshow.pid")
 
 
 def main() -> None:
+    """Entry point for the legacy slideshow script."""
     _PID_FILE.write_text(str(os.getpid()))
     try:
         _run()

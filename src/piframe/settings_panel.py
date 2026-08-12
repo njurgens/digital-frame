@@ -1,12 +1,14 @@
+"""Settings panel with slideshow, display, Wi-Fi, and system sections."""
+
 from __future__ import annotations
 
 import shutil
 import socket
 import threading
+import zoneinfo
 from collections.abc import Callable
 from enum import Enum
 from typing import TYPE_CHECKING
-import zoneinfo
 
 import pygame
 
@@ -14,7 +16,6 @@ if TYPE_CHECKING:
     from piframe.app import App
     from piframe.sync_service import SyncService
     from piframe.types import WifiManagerProtocol, WifiNetwork, WifiResult
-    from piframe.wifi_manager import WifiManager
 
 from piframe.assets import (
     FONT_SIZE_BODY,
@@ -23,23 +24,23 @@ from piframe.assets import (
     Assets,
 )
 from piframe.config_store import ConfigStore
-from piframe.updater import apply_update, check_update
 from piframe.types import (
     COLOUR_BTN_PRIMARY,
     COLOUR_CONTENT_BG,
-    COLOUR_DIVIDER,
     COLOUR_DESTRUCTIVE,
+    COLOUR_DIVIDER,
     COLOUR_SIDEBAR_BG,
     COLOUR_TEXT_PRIMARY,
     COLOUR_TEXT_SECONDARY,
     EVT_UPDATE_RESULT,
-    UpdateResult,
-    WifiStatus,
     SCREEN_H,
     SCREEN_W,
     SETTINGS_CONTENT_X,
     SIDEBAR_W,
+    UpdateResult,
+    WifiStatus,
 )
+from piframe.updater import apply_update, check_update
 from piframe.widgets.confirm_dialog import ConfirmDialog
 from piframe.widgets.horizontal_slider import HorizontalSlider
 from piframe.widgets.nav_item import NavItem
@@ -52,6 +53,8 @@ from piframe.widgets.wifi_list_item import WifiListItem
 
 
 class Section(Enum):
+    """Settings panel sections."""
+
     SLIDESHOW = "Slideshow"
     DISPLAY = "Display"
     WIFI = "Wi-Fi"
@@ -66,16 +69,31 @@ WIFI_MAX_ITEMS = 8
 
 
 class SettingsPanel:
+    """Settings panel with sidebar navigation and four sections."""
+
     def __init__(
         self,
         assets: Assets,
         config: ConfigStore,
         on_brightness_change: Callable[[int], None] | None = None,
-        on_focus_text: Callable[["TextInput"], None] | None = None,
+        on_focus_text: Callable[[TextInput], None] | None = None,
         wifi_manager: WifiManagerProtocol | None = None,
         sync_service: SyncService | None = None,
         app_ref: App | None = None,
-    ):
+    ) -> None:
+        """
+        Create a settings panel.
+
+        Args:
+            assets: Asset manager for fonts and icons.
+            config: Configuration store for reading and writing settings.
+            on_brightness_change: Callback when brightness is adjusted.
+            on_focus_text: Callback when a text input gains focus.
+            wifi_manager: Wi-Fi manager for network operations.
+            sync_service: Sync service for photo sync operations.
+            app_ref: Reference to the main app for state management.
+
+        """
         self._assets = assets
         self._config = config
         self._on_brightness_change = on_brightness_change
@@ -138,7 +156,9 @@ class SettingsPanel:
             segments=interval_labels,
             selected=interval_selected,
             assets=self._assets,
-            on_change=lambda i, _: self._config.set("slideshow", "interval", float(self._interval_values[i])),
+            on_change=lambda i, _: self._config.set(
+                "slideshow", "interval", float(self._interval_values[i])
+            ),
         )
 
         fit_options = ["Fit", "Fill"]
@@ -149,7 +169,9 @@ class SettingsPanel:
             segments=fit_options,
             selected=fit_selected,
             assets=self._assets,
-            on_change=lambda i, _: self._config.set("slideshow", "fit_mode", "fill" if i == 1 else "fit"),
+            on_change=lambda i, _: self._config.set(
+                "slideshow", "fit_mode", "fill" if i == 1 else "fit"
+            ),
         )
 
         shuffle_rect = pygame.Rect(SCREEN_W - 68, 228, 50, 28)
@@ -249,7 +271,9 @@ class SettingsPanel:
             placeholder="Password",
             password_mode=True,
             assets=self._assets,
-            on_focus=lambda: self._on_focus_text(self._wifi_password_input) if self._on_focus_text else None,
+            on_focus=lambda: (
+                self._on_focus_text(self._wifi_password_input) if self._on_focus_text else None
+            ),
         )
         self._wifi_scan_rect = pygame.Rect(CONTENT_X, 136, 200, 44)
         self._wifi_forget_rect = pygame.Rect(CONTENT_X + 212, 136, 200, 44)
@@ -274,15 +298,20 @@ class SettingsPanel:
             self._wifi_manager.scan()
 
     def open(self) -> None:
+        """Open the settings panel."""
         self.sync_from_config()
         self._visible = True
 
     def close(self) -> None:
+        """Close the settings panel."""
         self._visible = False
 
     def sync_from_config(self) -> None:
-        """Re-sync all widget visual states from current config values.
-        Call this after any programmatic config change so widgets stay in sync."""
+        """
+        Re-sync all widget visual states from current config values.
+
+        Call this after any programmatic config change so widgets stay in sync.
+        """
         cfg = self._config.slideshow
         disp = self._config.display
         sleep = self._config.sleep
@@ -302,10 +331,12 @@ class SettingsPanel:
         self._sleep_enabled_toggle.set_value(sleep.enabled)
 
     def update(self, dt: float) -> None:
+        """Update all active widgets by the given time delta."""
         for w in self._active_widgets():
             w.update(dt)
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the settings panel onto the screen."""
         if not self._visible:
             return
         pygame.draw.rect(screen, COLOUR_SIDEBAR_BG[:3], (0, 0, SIDEBAR_W, SCREEN_H))
@@ -320,7 +351,9 @@ class SettingsPanel:
         for item in self._nav_items:
             item.draw(screen)
 
-        pygame.draw.rect(screen, COLOUR_CONTENT_BG[:3], (SIDEBAR_W, 0, SCREEN_W - SIDEBAR_W, SCREEN_H))
+        pygame.draw.rect(
+            screen, COLOUR_CONTENT_BG[:3], (SIDEBAR_W, 0, SCREEN_W - SIDEBAR_W, SCREEN_H)
+        )
         title_font = self._assets.font_bold(FONT_SIZE_HEADING)
         title_surf, _ = title_font.render(self._active_section.value, COLOUR_TEXT_PRIMARY[:3])
         screen.blit(title_surf, (SETTINGS_CONTENT_X + 18, 18))
@@ -379,7 +412,9 @@ class SettingsPanel:
             screen.blit(surf, (content_x, y_offset))
             widget.draw(screen)
 
-        pct_surf, pct_rect = body_font.render(f"{self._brightness_slider.value}%", COLOUR_TEXT_PRIMARY[:3])
+        pct_surf, pct_rect = body_font.render(
+            f"{self._brightness_slider.value}%", COLOUR_TEXT_PRIMARY[:3]
+        )
         pct_rect.midright = (content_x + content_w - 18, self._brightness_slider.rect.centery)
         screen.blit(pct_surf, pct_rect)
 
@@ -418,7 +453,9 @@ class SettingsPanel:
         )
 
         if self._wifi_status and self._wifi_status.connected:
-            pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_forget_rect, border_radius=6)
+            pygame.draw.rect(
+                screen, COLOUR_BTN_PRIMARY[:3], self._wifi_forget_rect, border_radius=6
+            )
             forget_surf, _ = body_font.render("Forget current", COLOUR_TEXT_PRIMARY[:3])
             screen.blit(
                 forget_surf,
@@ -438,7 +475,9 @@ class SettingsPanel:
             )
             screen.blit(prompt_surf, (content_x, 276))
             self._wifi_password_input.draw(screen)
-            pygame.draw.rect(screen, COLOUR_BTN_PRIMARY[:3], self._wifi_connect_rect, border_radius=6)
+            pygame.draw.rect(
+                screen, COLOUR_BTN_PRIMARY[:3], self._wifi_connect_rect, border_radius=6
+            )
             connect_surf, _ = body_font.render("Connect", COLOUR_TEXT_PRIMARY[:3])
             screen.blit(
                 connect_surf,
@@ -448,7 +487,9 @@ class SettingsPanel:
                 ),
             )
 
-    def _draw_button(self, screen: pygame.Surface, rect: pygame.Rect, label: str, destructive: bool = False) -> None:
+    def _draw_button(
+        self, screen: pygame.Surface, rect: pygame.Rect, label: str, destructive: bool = False
+    ) -> None:
         body_font = self._assets.font(FONT_SIZE_BODY)
         bg = COLOUR_DESTRUCTIVE[:3] if destructive else COLOUR_BTN_PRIMARY[:3]
         pygame.draw.rect(screen, bg, rect, border_radius=6)
@@ -526,11 +567,16 @@ class SettingsPanel:
         # App version from git tag; falls back to a hardcoded constant
         try:
             import subprocess
-            tag = subprocess.check_output(
-                ["git", "-C", "/home/frame/digital-frame", "describe", "--tags", "--abbrev=0"],
-                stderr=subprocess.DEVNULL,
-                timeout=2,
-            ).decode().strip()
+
+            tag = (
+                subprocess.check_output(
+                    ["git", "-C", "/home/frame/digital-frame", "describe", "--tags", "--abbrev=0"],
+                    stderr=subprocess.DEVNULL,
+                    timeout=2,
+                )
+                .decode()
+                .strip()
+            )
         except Exception:
             tag = getattr(self, "_APP_VERSION", "dev")
         rows.append(("Version", tag))
@@ -562,10 +608,12 @@ class SettingsPanel:
 
         # Storage usage for the photos directory
         try:
-            photos_dir = self._config.sync.output_dir if self._config else "/home/frame/Pictures/slideshow"
+            photos_dir = (
+                self._config.sync.output_dir if self._config else "/home/frame/Pictures/slideshow"
+            )
             usage = shutil.disk_usage(photos_dir)
-            used_gb = usage.used / (1024 ** 3)
-            total_gb = usage.total / (1024 ** 3)
+            used_gb = usage.used / (1024**3)
+            total_gb = usage.total / (1024**3)
             storage = f"{used_gb:.1f} / {total_gb:.0f} GB"
         except Exception:
             storage = "unknown"
@@ -596,6 +644,7 @@ class SettingsPanel:
         return []
 
     def on_tap(self, event_or_pos: pygame.event.Event | tuple[int, int]) -> bool:
+        """Handle a tap event in the settings panel."""
         if isinstance(event_or_pos, tuple):
             event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=event_or_pos, button=1)
         else:
@@ -649,7 +698,11 @@ class SettingsPanel:
             if hasattr(self, "_check_update_rect") and self._check_update_rect.collidepoint(pos):
                 self._check_update_async()
                 return True
-            if self._install_update_rect and self._install_update_rect.collidepoint(pos) and self._update_result is not None:
+            if (
+                self._install_update_rect
+                and self._install_update_rect.collidepoint(pos)
+                and self._update_result is not None
+            ):
                 self._apply_update_async(self._update_result.tarball_url)
                 return True
             if hasattr(self, "_restart_rect") and self._restart_rect.collidepoint(pos):
@@ -669,6 +722,7 @@ class SettingsPanel:
         return False
 
     def on_wifi_result(self, result: WifiResult) -> None:
+        """Process a Wi-Fi operation result."""
         if result.operation == "scan":
             if result.success:
                 self._wifi_networks = result.data or []  # type: ignore[assignment]
@@ -689,7 +743,9 @@ class SettingsPanel:
                 self._wifi_manager.get_status()
 
     def _rebuild_wifi_items(self) -> None:
-        current_ssid = self._wifi_status.ssid if self._wifi_status and self._wifi_status.connected else ""
+        current_ssid = (
+            self._wifi_status.ssid if self._wifi_status and self._wifi_status.connected else ""
+        )
         self._wifi_items = []
         max_items = WIFI_MAX_ITEMS
         if self._wifi_password_ssid:
@@ -746,6 +802,7 @@ class SettingsPanel:
             self._app_ref._dialog = self._pending_dialog
 
     def on_update_result(self, result: UpdateResult) -> None:
+        """Process an update check result."""
         self._update_result = result
         if result.error:
             self._system_message = f"Update check failed: {result.error}"
@@ -755,6 +812,7 @@ class SettingsPanel:
             self._system_message = "No updates available"
 
     def refresh_sync_status(self) -> None:
+        """Refresh the sync status display string."""
         if self._sync_service is None:
             self._sync_status = "Never synced"
             return
@@ -779,7 +837,9 @@ class SettingsPanel:
         def _worker() -> None:
             try:
                 tag_name, tarball_url = check_update(repo)
-                result = UpdateResult(available=bool(tarball_url), tag_name=tag_name, tarball_url=tarball_url)
+                result = UpdateResult(
+                    available=bool(tarball_url), tag_name=tag_name, tarball_url=tarball_url
+                )
             except Exception as exc:
                 result = UpdateResult(available=False, error=str(exc))
             if EVT_UPDATE_RESULT is not None:

@@ -1,3 +1,5 @@
+"""nmcli-based Wi-Fi manager for Raspberry Pi."""
+
 from __future__ import annotations
 
 import logging
@@ -36,6 +38,8 @@ class WifiManager:
             return False, str(e)
 
     def scan(self) -> None:
+        """Scan for available Wi-Fi networks."""
+
         def _thread() -> None:
             ok, output = self._run_cmd(
                 "sudo nmcli -t -f SSID,SECURITY,SIGNAL dev wifi list --rescan yes",
@@ -69,6 +73,8 @@ class WifiManager:
         threading.Thread(target=_thread, daemon=True).start()
 
     def connect(self, ssid: str, password: str | None) -> None:
+        """Connect to a Wi-Fi network."""
+
         def _thread() -> None:
             if password:
                 cmd = f"sudo nmcli dev wifi connect {ssid!r} password {password!r}"
@@ -80,6 +86,8 @@ class WifiManager:
         threading.Thread(target=_thread, daemon=True).start()
 
     def forget(self, ssid: str) -> None:
+        """Forget a saved Wi-Fi network."""
+
         def _thread() -> None:
             ok, output = self._run_cmd(f"sudo nmcli connection delete {ssid!r}", timeout=5)
             self._post(WifiResult("forget", ok, error=None if ok else output))
@@ -87,6 +95,8 @@ class WifiManager:
         threading.Thread(target=_thread, daemon=True).start()
 
     def disconnect(self) -> None:
+        """Disconnect from the current Wi-Fi network."""
+
         def _thread() -> None:
             ok, output = self._run_cmd("sudo nmcli dev disconnect wlan0", timeout=5)
             self._post(WifiResult("disconnect", ok, error=None if ok else output))
@@ -94,6 +104,8 @@ class WifiManager:
         threading.Thread(target=_thread, daemon=True).start()
 
     def get_status(self) -> None:
+        """Get the current Wi-Fi connection status."""
+
         def _thread() -> None:
             ok, output = self._run_cmd(
                 "sudo nmcli -t -f GENERAL.CONNECTION,IP4.ADDRESS device show wlan0",
@@ -126,6 +138,7 @@ class MockWifiManager:
     """Mock implementation of WifiManagerProtocol for development/testing."""
 
     def scan(self) -> None:
+        """Scan for available Wi-Fi networks."""
         import threading as _threading
 
         from piframe import types as _types
@@ -149,15 +162,19 @@ class MockWifiManager:
         _threading.Thread(target=_post, daemon=True).start()
 
     def connect(self, ssid: str, password: str | None = None) -> None:
+        """Connect to a Wi-Fi network."""
         _ = ssid, password
         return None
 
     def forget(self, ssid: str) -> None:
+        """Forget a saved Wi-Fi network."""
         _ = ssid
         return None
 
     def disconnect(self) -> None:
+        """Disconnect from the current Wi-Fi network."""
         return None
 
     def get_status(self) -> None:
+        """Get the current Wi-Fi connection status."""
         return None

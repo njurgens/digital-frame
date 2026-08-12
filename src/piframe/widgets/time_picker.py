@@ -1,3 +1,5 @@
+"""Hour/minute time picker with popup scroll pickers."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -22,6 +24,8 @@ from piframe.widgets.scroll_picker import ScrollPicker
 
 
 class TimePicker(Widget):
+    """Hour/minute time picker with popup scroll pickers."""
+
     def __init__(
         self,
         rect: pygame.Rect,
@@ -30,6 +34,17 @@ class TimePicker(Widget):
         assets: Assets | None = None,
         on_change: Callable[[int, int], None] | None = None,
     ) -> None:
+        """
+        Create a time picker.
+
+        Args:
+        rect: Position and size of the pill button.
+        initial_hour: Starting hour (0-23).
+        initial_minute: Starting minute (0-59).
+        assets: Asset provider for fonts.
+        on_change: Callback invoked when the time is confirmed.
+
+        """
         super().__init__(rect)
         self._assets = assets
         self._hour: int = max(0, min(23, initial_hour))
@@ -71,6 +86,7 @@ class TimePicker(Widget):
         screen.blit(surf, surf.get_rect(center=rect.center).topleft)
 
     def draw(self, screen: pygame.Surface) -> None:
+        """Render the time pill and popup with scroll pickers."""
         hour_rect = pygame.Rect(self.rect.x, self.rect.y, 80, 44)
         min_rect = pygame.Rect(self.rect.x + 88, self.rect.y, 80, 44)
         self._draw_pill(screen, hour_rect, f"{self._hour:02d}")
@@ -79,7 +95,9 @@ class TimePicker(Widget):
         if not self._popup_open:
             return
         pygame.draw.rect(screen, COLOUR_DIALOG_BG[:3], self._popup_rect, border_radius=8)
-        pygame.draw.rect(screen, COLOUR_DIALOG_BORDER[:3], self._popup_rect, width=1, border_radius=8)
+        pygame.draw.rect(
+            screen, COLOUR_DIALOG_BORDER[:3], self._popup_rect, width=1, border_radius=8
+        )
         self._hour_picker.draw(screen)
         self._min_picker.draw(screen)
         done_rect = pygame.Rect(self._popup_rect.right - 40, self._popup_rect.y + 8, 32, 32)
@@ -90,6 +108,7 @@ class TimePicker(Widget):
             screen.blit(surf, surf.get_rect(center=done_rect.center).topleft)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
+        """Handle tap events to open the popup or confirm the time."""
         hour_rect = pygame.Rect(self.rect.x, self.rect.y, 80, 44)
         min_rect = pygame.Rect(self.rect.x + 88, self.rect.y, 80, 44)
         done_rect = pygame.Rect(self._popup_rect.right - 40, self._popup_rect.y + 8, 32, 32)

@@ -1,3 +1,5 @@
+"""Background photo sync service that polls framesync on an interval."""
+
 from __future__ import annotations
 
 import copy
@@ -15,7 +17,16 @@ from piframe.types import SyncStatus
 
 
 class SyncService:
-    def __init__(self, config: ConfigStore):
+    """Background sync service that runs framesync on a configurable interval."""
+
+    def __init__(self, config: ConfigStore) -> None:
+        """
+        Create a sync service.
+
+        Args:
+            config: Configuration store for sync interval.
+
+        """
         self._config = config
         self._stop_event = threading.Event()
         self._trigger_event = threading.Event()
@@ -93,13 +104,16 @@ class SyncService:
                 logging.warning("EVT_SYNC_COMPLETE post failed: %s", post_exc)
 
     def trigger(self) -> None:
+        """Trigger an immediate sync."""
         self._trigger_event.set()
 
     def stop(self) -> None:
+        """Stop the sync service background thread."""
         self._stop_event.set()
         self._trigger_event.set()
 
     @property
     def status(self) -> SyncStatus:
+        """Current sync status as an immutable copy."""
         with self._status_lock:
             return copy.copy(self._status)

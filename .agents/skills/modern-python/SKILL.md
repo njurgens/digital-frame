@@ -47,6 +47,7 @@ Treat that version as the syntax ceiling. Favor **clarity and explicitness over 
   ```python
   from dataclasses import dataclass
 
+
   @dataclass(slots=True, frozen=True)
   class Point:
       x: float

@@ -1,3 +1,5 @@
+"""Tests for ClockWidget rendering and timezone updates."""
+
 from __future__ import annotations
 
 import time
@@ -22,6 +24,7 @@ def _mock_assets():
 
 
 def test_time_and_date_format_strings() -> None:
+    """Time and date format strings."""
     assets, bold_font, body_font = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -38,6 +41,7 @@ def test_time_and_date_format_strings() -> None:
 
 
 def test_update_timezone_changes_timezone() -> None:
+    """Update timezone changes timezone."""
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -48,6 +52,7 @@ def test_update_timezone_changes_timezone() -> None:
 
 
 def test_update_timezone_changes_formatted_output() -> None:
+    """Update timezone changes formatted output."""
     assets, bold_font, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -69,6 +74,7 @@ def test_update_timezone_changes_formatted_output() -> None:
 
 
 def test_ticker_marks_clock_dirty() -> None:
+    """Ticker marks clock dirty."""
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:
@@ -91,6 +97,7 @@ def test_ticker_marks_clock_dirty() -> None:
 
 
 def test_surfaces_rendered_after_construction() -> None:
+    """Surfaces rendered after construction."""
     assets, _, _ = _mock_assets()
     clock = ClockWidget(assets)
     try:

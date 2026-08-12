@@ -1,3 +1,5 @@
+"""Tests for TextInput widget rendering and interaction."""
+
 import os
 from collections.abc import Generator
 from unittest.mock import MagicMock
@@ -13,7 +15,8 @@ from piframe.widgets.text_input import TextInput
 
 
 @pytest.fixture(scope="module", autouse=True)
-def pygame_init_module() -> Generator[None, None, None]:
+def pygame_init_module() -> Generator[None]:
+    """Pygame init module."""
     pygame.init()
     pygame.display.set_mode((1280, 800))
     yield
@@ -29,7 +32,10 @@ def _make_assets():
 
 
 def test_draw_without_assets_still_draws_border() -> None:
-    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), placeholder="pw", password_mode=True, assets=None)
+    """Draw without assets still draws border."""
+    ti = TextInput(
+        rect=pygame.Rect(0, 0, 200, 44), placeholder="pw", password_mode=True, assets=None
+    )
     ti.append("abc")
     screen = pygame.Surface((220, 60), pygame.SRCALPHA)
     screen.fill((0, 0, 0, 0))
@@ -40,6 +46,7 @@ def test_draw_without_assets_still_draws_border() -> None:
 
 
 def test_draw_placeholder_uses_caption_colour() -> None:
+    """Draw placeholder uses caption colour."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), placeholder="pw", assets=assets)
     screen = pygame.Surface((220, 60), pygame.SRCALPHA)
@@ -50,6 +57,7 @@ def test_draw_placeholder_uses_caption_colour() -> None:
 
 
 def test_draw_password_mask_uses_supported_bullet() -> None:
+    """Draw password mask uses supported bullet."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=assets)
     ti.append("abc")
@@ -64,6 +72,7 @@ def test_draw_password_mask_uses_supported_bullet() -> None:
 
 
 def test_draw_password_show_text_renders_plaintext() -> None:
+    """Draw password show text renders plaintext."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=assets)
     ti.append("abc")
@@ -77,6 +86,7 @@ def test_draw_password_show_text_renders_plaintext() -> None:
 
 
 def test_draw_password_icon_uses_visibility_off_when_masked() -> None:
+    """Draw password icon uses visibility off when masked."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=assets)
     screen = pygame.Surface((220, 60), pygame.SRCALPHA)
@@ -88,6 +98,7 @@ def test_draw_password_icon_uses_visibility_off_when_masked() -> None:
 
 
 def test_draw_password_icon_uses_visibility_when_shown() -> None:
+    """Draw password icon uses visibility when shown."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=assets)
     ti._show_text = True
@@ -99,6 +110,7 @@ def test_draw_password_icon_uses_visibility_when_shown() -> None:
 
 
 def test_handle_event_eye_toggle_consumes_and_toggles() -> None:
+    """Handle event eye toggle consumes and toggles."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=_make_assets())
     eye = ti._eye_rect().center
     evt = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=eye, button=1)
@@ -110,6 +122,7 @@ def test_handle_event_eye_toggle_consumes_and_toggles() -> None:
 
 
 def test_handle_event_eye_toggle_consumes_expanded_hit_target() -> None:
+    """Handle event eye toggle consumes expanded hit target."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), password_mode=True, assets=_make_assets())
     eye = ti._eye_rect()
     assert eye.size == (44, 44)
@@ -120,6 +133,7 @@ def test_handle_event_eye_toggle_consumes_expanded_hit_target() -> None:
 
 
 def test_handle_event_eye_toggle_does_not_consume_outside_input_for_narrow_field() -> None:
+    """Handle event eye toggle does not consume outside input for narrow field."""
     ti = TextInput(rect=pygame.Rect(0, 0, 40, 44), password_mode=True, assets=_make_assets())
     eye = ti._eye_rect()
     assert eye.left < ti.rect.left
@@ -130,6 +144,7 @@ def test_handle_event_eye_toggle_does_not_consume_outside_input_for_narrow_field
 
 
 def test_draw_password_narrow_field_uses_clamped_clip_width() -> None:
+    """Draw password narrow field uses clamped clip width."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 40, 44), password_mode=True, assets=assets)
     ti.append("abc")
@@ -142,8 +157,13 @@ def test_draw_password_narrow_field_uses_clamped_clip_width() -> None:
 
 
 def test_handle_event_focus_inside_and_outside() -> None:
+    """Handle event focus inside and outside."""
     focused = []
-    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets(), on_focus=lambda: focused.append(True))
+    ti = TextInput(
+        rect=pygame.Rect(0, 0, 200, 44),
+        assets=_make_assets(),
+        on_focus=lambda: focused.append(True),
+    )
 
     inside = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(50, 20), button=1)
     outside = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(250, 20), button=1)
@@ -156,8 +176,11 @@ def test_handle_event_focus_inside_and_outside() -> None:
 
 
 def test_on_change_paths_and_text_property() -> None:
+    """On change paths and text property."""
     changes = []
-    ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets(), on_change=changes.append)
+    ti = TextInput(
+        rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets(), on_change=changes.append
+    )
     ti.append("a")
     ti.append("b")
     ti.backspace()
@@ -167,6 +190,7 @@ def test_on_change_paths_and_text_property() -> None:
 
 
 def test_set_focused_affects_cursor_draw_path() -> None:
+    """Set focused affects cursor draw path."""
     assets = _make_assets()
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), assets=assets)
     ti.append("abc")
@@ -180,6 +204,7 @@ def test_set_focused_affects_cursor_draw_path() -> None:
 
 
 def test_handle_event_without_pos_is_not_consumed() -> None:
+    """Handle event without pos is not consumed."""
     ti = TextInput(rect=pygame.Rect(0, 0, 200, 44), assets=_make_assets())
     evt = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1)
     assert ti.handle_event(evt) is False

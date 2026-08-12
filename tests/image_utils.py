@@ -1,4 +1,5 @@
 """Screenshot comparison utilities for Tier 3 integration tests."""
+
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +14,8 @@ def assert_screenshot_matches(
     threshold: float = 0.02,
     ignore_rects: list[tuple[int, int, int, int]] | None = None,
 ) -> None:
-    """Fail if more than `threshold` fraction of pixels differ by >10 per channel.
+    """
+    Fail if more than `threshold` fraction of pixels differ by >10 per channel.
 
     Parameters
     ----------
@@ -25,6 +27,7 @@ def assert_screenshot_matches(
         Maximum fraction of differing pixels allowed (default 2%).
     ignore_rects:
         List of (x, y, w, h) regions blacked out before comparison (e.g. clock area).
+
     """
     actual_img = Image.open(actual_path).convert("RGB")
     actual = np.array(actual_img, dtype=int)
@@ -40,8 +43,7 @@ def assert_screenshot_matches(
 
     if actual.shape != golden.shape:
         raise AssertionError(
-            f"{golden_name}: size mismatch — actual {actual.shape[:2]}, "
-            f"golden {golden.shape[:2]}"
+            f"{golden_name}: size mismatch — actual {actual.shape[:2]}, golden {golden.shape[:2]}"
         )
 
     # Black out ignored regions in both images before comparison

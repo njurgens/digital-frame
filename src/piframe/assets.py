@@ -1,3 +1,5 @@
+"""Font and icon asset management with cached pygame.freetype fonts."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -35,7 +37,7 @@ IC_BRIGHTNESS = "\ue896"
 IC_SCHEDULE = "\ue8b5"
 IC_PERSON = "\ue7ef"
 IC_DELETE = "\ue872"
-IC_VISIBILITY = "\ue8f4"      # visibility (show password)
+IC_VISIBILITY = "\ue8f4"  # visibility (show password)
 IC_VISIBILITY_OFF = "\ue8f5"  # visibility_off (hide password)
 
 _FONT_DIR = Path(__file__).parent / "assets" / "fonts"
@@ -45,29 +47,33 @@ _ICONS = str(_FONT_DIR / "MaterialIcons-Regular.ttf")
 
 
 class Assets:
+    """Font and icon asset manager with cached pygame.freetype font instances."""
+
     def __init__(self) -> None:
+        """Initialise empty font caches."""
         self._regular: dict[int, pygame.freetype.Font] = {}
         self._bold: dict[int, pygame.freetype.Font] = {}
         self._icons: dict[int, pygame.freetype.Font] = {}
 
     @classmethod
-    def load(cls) -> "Assets":
+    def load(cls) -> Assets:
+        """Load all fonts and return an Assets instance."""
         inst = cls()
         inst._regular = {
-            size: pygame.freetype.Font(_REGULAR, size)
-            for size in [14, 16, 18, 20, 24, 48]
+            size: pygame.freetype.Font(_REGULAR, size) for size in [14, 16, 18, 20, 24, 48]
         }
-        inst._bold = {
-            size: pygame.freetype.Font(_BOLD, size) for size in [14, 16, 18, 20, 24, 48]
-        }
+        inst._bold = {size: pygame.freetype.Font(_BOLD, size) for size in [14, 16, 18, 20, 24, 48]}
         inst._icons = {size: pygame.freetype.Font(_ICONS, size) for size in [20, 24, 32]}
         return inst
 
     def font(self, size: int) -> pygame.freetype.Font:
+        """Return the regular Noto Sans font at the given size."""
         return self._regular[size]
 
     def font_bold(self, size: int) -> pygame.freetype.Font:
+        """Return the bold Noto Sans font at the given size."""
         return self._bold[size]
 
     def icon(self, size: int) -> pygame.freetype.Font:
+        """Return the Material Icons font at the given size."""
         return self._icons[size]
