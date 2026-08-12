@@ -277,3 +277,17 @@ def test_pointer_up_rejects_swipe_at_elapsed_boundary(
 
     app._player.go_back.assert_not_called()  # type: ignore[union-attr]
     app._dispatch_tap.assert_not_called()
+
+
+def test_restart_calls_execve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """restart() calls os.execve to re-execute the process."""
+    import sys
+
+    captured: list[tuple] = []
+    monkeypatch.setattr(os, "execve", lambda *a, **k: captured.append((a, k)))
+
+    app = make_app(tmp_path)
+    app.restart()
+
+    assert len(captured) == 1
+    assert captured[0][0][0] == sys.executable

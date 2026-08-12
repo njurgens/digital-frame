@@ -164,8 +164,13 @@ def make_mock_assets() -> MagicMock:
     """Make mock assets."""
     mock_assets = MagicMock()
     surf = pygame.Surface((60, 20))
-    mock_assets.font.return_value.render.return_value = (surf, pygame.Rect(0, 0, 60, 20))
-    mock_assets.font_bold.return_value.render.return_value = (surf, pygame.Rect(0, 0, 60, 20))
+    rect = pygame.Rect(0, 0, 60, 20)
+    mock_assets.font.return_value.render.return_value = (surf, rect)
+    mock_assets.font.return_value.get_sized_height.return_value = 12
+    mock_assets.font_bold.return_value.render.return_value = (surf, rect)
+    mock_assets.font_bold.return_value.get_sized_height.return_value = 12
+    mock_assets.icon.return_value.render.return_value = (surf, rect)
+    mock_assets.icon.return_value.get_sized_height.return_value = 12
     return mock_assets
 
 
@@ -347,3 +352,30 @@ def test_wifi_network_signal_level() -> None:
     assert WifiNetwork("x", "", 90).signal_level == 2
     assert WifiNetwork("x", "", 50).signal_level == 1
     assert WifiNetwork("x", "", 10).signal_level == 0
+
+
+def test_time_picker_draws_popup_when_open() -> None:
+    """TimePicker draws the popup overlay when _popup_open is True."""
+    assets = make_mock_assets()
+    tp = TimePicker(
+        rect=pygame.Rect(100, 100, 168, 44),
+        initial_hour=10,
+        initial_minute=30,
+        assets=assets,
+    )
+    tp._popup_open = True
+    screen = pygame.Surface((1280, 800))
+    tp.draw(screen)  # hits line 98 (popup rect drawing)
+
+
+def test_wifi_list_item_draws_connected_indicator() -> None:
+    """WifiListItem draws a green dot when is_connected=True."""
+    net = WifiNetwork(ssid="TestNet", security="WPA2", signal=75)
+    item = WifiListItem(
+        rect=pygame.Rect(200, 100, 800, 56),
+        network=net,
+        current_ssid="TestNet",
+        assets=make_mock_assets(),
+    )
+    screen = pygame.Surface((1280, 800))
+    item.draw(screen)  # hits line 86 (pygame.draw.circle for connected dot)

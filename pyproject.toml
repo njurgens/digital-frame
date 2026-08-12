@@ -19,6 +19,8 @@ slideshow = "piframe.app:main"
 dev = [
     "ruff",
     "pytest",
+    "pytest-cov",
+    "diff-cover",
     "basedpyright>=1.39.9",
 ]
 
