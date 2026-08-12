@@ -22,6 +22,9 @@ USER vscode
 RUN curl -fsSL https://pi.dev/install.sh | sh
 ENV PATH="/home/vscode/.local/bin:${PATH}"
 
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install GitHub CLI                                                                                         
 USER vscode                                                                                                  
 RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
