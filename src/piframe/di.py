@@ -1,3 +1,4 @@
+"""Dependency-injection protocol for service construction."""
 from __future__ import annotations
 
 from typing import Any, Protocol
@@ -21,5 +22,6 @@ class DimModule[T](Protocol):
 
         Returns:
             A fully initialised service instance.
+
         """
         ...

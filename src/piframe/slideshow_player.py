@@ -36,8 +36,8 @@ class SlideshowPlayer:
             cache: Photo cache for pre-rendered surfaces.
             screen_size: ``(width, height)`` of the display.
             assets: Asset provider for icons (used by the pause PiP indicator).
-        """
 
+        """
         self._config = config
         self._cache = cache
         self._assets = assets
@@ -100,6 +100,7 @@ class SlideshowPlayer:
 
         Args:
             dt: Elapsed time in seconds since the last tick.
+
         """
         if self._paused or not self._playlist:
             return
@@ -121,6 +122,7 @@ class SlideshowPlayer:
 
         Args:
             direction: ``1`` for forward, ``-1`` for backward.
+
         """
         if not self._playlist:
             return
@@ -164,6 +166,7 @@ class SlideshowPlayer:
 
         Args:
             screen: Target pygame surface.
+
         """
         if self._current_surf is None:
             screen.fill((0, 0, 0))
@@ -192,6 +195,7 @@ class SlideshowPlayer:
 
         Args:
             screen: Target pygame surface.
+
         """
         if not self._paused:
             return

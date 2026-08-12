@@ -1,3 +1,4 @@
+"""Cache module: constructs a PhotoCache from config."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,6 +21,7 @@ class CacheModule(DimModule[PhotoCache]):
 
         Returns:
             A ``PhotoCache`` instance.
+
         """
         return PhotoCache(
             screen_size=(SCREEN_W, SCREEN_H),

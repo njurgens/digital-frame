@@ -1,3 +1,4 @@
+"""Wifi module: selects real or mock wifi manager based on config."""
 from __future__ import annotations
 
 from piframe.config_store import ConfigStore
@@ -18,6 +19,7 @@ class WifiModule(DimModule[WifiManagerProtocol]):
 
         Returns:
             A wifi manager implementing ``WifiManagerProtocol``.
+
         """
         if config.app.mock_wifi:
             return MockWifiManager()
