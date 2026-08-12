@@ -148,6 +148,7 @@ Python 3.13 (from python-build-standalone) and creates `.venv`.
 
 ```bash
 bash eng/sync.sh            # one-time: create .venv, install deps
+bash eng/format.sh          # auto-format code (ruff)
 bash eng/check.sh           # lint + format check
 bash eng/test.sh            # run tests
 bash eng/test.sh -k foo     # filter tests
