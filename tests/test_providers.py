@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 
@@ -39,3 +41,52 @@ def test_album_provider_protocol_importable() -> None:
     from piframe.providers import AlbumProvider
 
     assert AlbumProvider is not None
+
+
+def test_directory_reader_import() -> None:
+    """DirectoryReader is importable from piframe.album_provider."""
+    from piframe.album_provider import DirectoryReader
+
+    assert DirectoryReader is not None
+
+
+def test_directory_reader_nonexistent_dir(tmp_path: Path) -> None:
+    """get_album() returns [] for nonexistent directory."""
+    from piframe.album_provider import DirectoryReader
+
+    reader = DirectoryReader(tmp_path / "does-not-exist")
+    assert reader.get_album() == []
+
+
+def test_directory_reader_scans_files(tmp_path: Path) -> None:
+    """get_album() returns sorted list of image files."""
+    from piframe.album_provider import DirectoryReader
+
+    (tmp_path / "b.png").touch()
+    (tmp_path / "a.jpg").touch()
+    (tmp_path / "c.jpeg").touch()
+    (tmp_path / "d.gif").touch()
+
+    reader = DirectoryReader(tmp_path)
+    result = reader.get_album()
+
+    assert len(result) == 4
+    names = [p.name for p in result]
+    assert names == ["a.jpg", "b.png", "c.jpeg", "d.gif"]
+
+
+def test_directory_reader_ignores_non_image(tmp_path: Path) -> None:
+    """get_album() ignores files with non-image extensions."""
+    from piframe.album_provider import DirectoryReader
+
+    (tmp_path / "photo.jpg").touch()
+    (tmp_path / "notes.txt").touch()
+    (tmp_path / "report.pdf").touch()
+    (tmp_path / "image.png").touch()
+
+    reader = DirectoryReader(tmp_path)
+    result = reader.get_album()
+
+    assert len(result) == 2
+    names = [p.name for p in result]
+    assert names == ["image.png", "photo.jpg"]
