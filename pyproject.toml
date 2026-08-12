@@ -34,7 +34,7 @@ line-length = 99
 select = ["E", "F", "W", "I", "UP", "RUF", "ANN201", "ANN001", "D"]
 
 [tool.ruff.lint.pydocstyle]
-convention = "pep257"  # D211 (blank line before class) + D213 (summary on second line)
+convention = "numpy"
 
 [tool.basedpyright]
 pythonVersion = "3.13"

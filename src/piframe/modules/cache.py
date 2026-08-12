@@ -20,7 +20,8 @@ class CacheModule(DimModule[PhotoCache]):
             config: Application configuration.
             **deps: Unused.
 
-        Returns:
+        Returns
+        -------
             A ``PhotoCache`` instance.
 
         """

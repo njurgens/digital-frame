@@ -29,7 +29,8 @@ class PlayerModule(DimModule[SlideshowPlayer]):
             assets: Asset provider for icons.
             **deps: Unused.
 
-        Returns:
+        Returns
+        -------
             A ``SlideshowPlayer`` instance.
 
         """
