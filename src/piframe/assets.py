@@ -1,4 +1,5 @@
 """Font and icon asset management with cached pygame.freetype fonts."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -70,15 +71,12 @@ class Assets:
 
     def font(self, size: int) -> pygame.freetype.Font:
         """Return the regular Noto Sans font at the given size."""
-        """Return the regular Noto Sans font at the given size."""
         return self._regular[size]
 
     def font_bold(self, size: int) -> pygame.freetype.Font:
         """Return the bold Noto Sans font at the given size."""
-        """Return the bold Noto Sans font at the given size."""
         return self._bold[size]
 
     def icon(self, size: int) -> pygame.freetype.Font:
-        """Return the Material Icons font at the given size."""
         """Return the Material Icons font at the given size."""
         return self._icons[size]

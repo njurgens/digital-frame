@@ -1,10 +1,9 @@
-"""OneDrive sync script using the Badger token API."""
 #!/usr/bin/env python3
+"""OneDrive sync script using the Badger token API."""
 import base64
 import tomllib
-from pathlib import Path
-
 import requests
+from pathlib import Path
 
 API_V2  = "https://my.microsoftpersonalcontent.com/_api/v2.0"
 API_V21 = "https://my.microsoftpersonalcontent.com/_api/v2.1"
@@ -22,7 +21,7 @@ def encode_url(url: str) -> str:
     """Base64-encode a share URL for the Badger API."""
     return base64.b64encode(url.encode()).rstrip(b"=").decode().replace("/", "_").replace("+", "-")
 
-def validate_password(encoded_url: str, share_url: str, password: str, token: str) -> None:
+def validate_password(encoded_url: str, share_url: str, password: str, token: str):
     """Validate the share password with the Badger API."""
     url = f"{API_V21}/shares/u!{encoded_url}/root/oneDrive.validatePermission"
     challenge = base64.b64encode(share_url.encode()).decode()

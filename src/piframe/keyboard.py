@@ -23,19 +23,19 @@ from piframe.types import (
 ALPHA = [
     list("QWERTYUIOP"),
     list("ASDFGHJKL"),
-    ["SHIFT", *list("ZXCVBNM"), "BACKSPACE"],
+    ["SHIFT"] + list("ZXCVBNM") + ["BACKSPACE"],
     ["123", "SPACE", "DONE"],
 ]
 NUMERIC = [
     list("1234567890"),
     list("-/:;()$&@"),
-    ["#+=", *list(".,?!'"), "BACKSPACE"],
+    ["#+="] + list(".,?!'") + ["BACKSPACE"],
     ["ABC", "SPACE", "DONE"],
 ]
 EXTENDED = [
     list("[]{}#%^*+="),
     list(r"_\|~<>€£¥"),
-    ["123", *list(".,?!'"), "BACKSPACE"],
+    ["123"] + list(".,?!'") + ["BACKSPACE"],
     ["ABC", "SPACE", "DONE"],
 ]
 LAYERS = {"alpha": ALPHA, "numeric": NUMERIC, "extended": EXTENDED}
@@ -51,7 +51,7 @@ IC_BACKSPACE = "\ue14a"
 class Keyboard:
     """On-screen virtual keyboard with alpha, numeric, and extended layers."""
 
-    def __init__(self, assets: Assets, on_done: Callable[[], None] | None = None):
+    def __init__(self, assets: Assets, on_done: Callable[[], None] | None = None) -> None:
         """Create a virtual keyboard.
 
         Args:

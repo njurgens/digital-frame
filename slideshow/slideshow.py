@@ -18,7 +18,7 @@ from pathlib import Path
 from threading import Thread
 
 import pygame
-from PIL import ExifTags, Image
+from PIL import Image, ExifTags
 
 # ---------------------------------------------------------------------------
 # Logging
