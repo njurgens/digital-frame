@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from pygame import Surface
 
-from piframe.assets import Assets, FONT_SIZE_BODY, FONT_SIZE_CLOCK
+from piframe.assets import FONT_SIZE_BODY, FONT_SIZE_CLOCK, Assets
 from piframe.types import COLOUR_CLOCK_TEXT, COLOUR_TEXT_SECONDARY
 
 

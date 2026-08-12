@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from piframe.types import COLOUR_SCROLL_PICKER_HL
 from piframe.widgets.base import Widget
 
+
 class ScrollPicker(Widget):
     """Scrollable list picker with drag-to-scroll and surface caching."""
 
@@ -125,7 +126,7 @@ class ScrollPicker(Widget):
         if not self._items:
             return 0
         center_row = self.VISIBLE_ROWS // 2
-        return max(0, min(len(self._items) - 1, int(round(self._scroll_offset + center_row))))
+        return max(0, min(len(self._items) - 1, round(self._scroll_offset + center_row)))
 
     def set_selected(self, i: int) -> None:
         """Set the selected item index."""

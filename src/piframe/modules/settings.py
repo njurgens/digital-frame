@@ -43,7 +43,7 @@ class SettingsModule(DimModule[SettingsPanel]):
             app_ref: Reference to the owning ``App`` instance.
             **deps: Unused.
 
-        Returns
+        Returns:
         -------
             A ``SettingsPanel`` instance.
 

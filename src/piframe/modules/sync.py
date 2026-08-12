@@ -17,7 +17,7 @@ class SyncModule(DimModule[SyncService]):
             config: Application configuration.
             **deps: Unused.
 
-        Returns
+        Returns:
         -------
             A ``SyncService`` instance.
 

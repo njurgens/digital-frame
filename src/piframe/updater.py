@@ -17,7 +17,7 @@ def check_update(repo: str) -> tuple[str, str]:
     Args:
     repo: GitHub repository in the format *owner/repo*.
 
-    Returns
+    Returns:
     -------
     A tuple of (tag_name, tarball_url) for the latest release.
 

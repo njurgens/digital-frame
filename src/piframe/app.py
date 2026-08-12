@@ -348,7 +348,7 @@ class App:
         env = os.environ.copy()
         env["XDG_RUNTIME_DIR"] = "/run/user/1000"
         env["WAYLAND_DISPLAY"] = "wayland-0"
-        os.execve(sys.executable, [sys.executable] + sys.argv, env)
+        os.execve(sys.executable, [sys.executable, *sys.argv], env)
 
     def _shutdown(self) -> None:
         self._cleanup()
