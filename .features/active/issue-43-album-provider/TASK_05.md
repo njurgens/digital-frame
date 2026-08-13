@@ -48,7 +48,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_local_"` — tests should fail (modu
 **New file:** `src/piframe/providers/local.py`
 - `LocalConfig` — wraps `ConfigStore`, reads `source_dir` from `[sync.local]` via `_read_nested()`
 - `LocalProvider` — scan/copy from `source_dir` to `output_dir` with destructive cleanup
-- When `source_dir` is empty or missing, scan `output_dir` directly (no copy)
+- When `source_dir` is empty or missing, scan `output_dir` directly (no copy). The `output_dir` is passed as the argument to `sync(output_dir: Path)` by `SyncService`.
 
 **Modified:** `src/piframe/providers/__init__.py` — add `LocalConfig`, `LocalProvider` to `__all__`
 

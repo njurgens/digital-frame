@@ -60,8 +60,8 @@ Run: `bash eng/test.sh --skip-diff -k "test_onedrive"` — tests should fail (mo
 **New file:** `src/piframe/providers/onedrive.py`
 - `OneDriveConfig` — wraps `ConfigStore`, reads `share_url` / `password` from `[sync.onedrive]` via `_read_nested()`
 - `OneDriveProvider` — extract all functions from `framesync/framesync.py` as private instance methods
-- **Important:** The existing `framesync.sync()` returns `None`. The `AlbumProvider` protocol requires `sync(output_dir: Path) -> list[Path]`. Modify the extracted logic to collect and return the list of newly created files.
-- **Important:** the existing `framesync.sync()` returns `None`; `AlbumProvider.sync()` must return `list[Path]`. Track newly created files and return them.
+- **Return type:** The existing `framesync.sync()` returns `None`. The `AlbumProvider` protocol requires `sync(output_dir: Path) -> list[Path]`. Modify the extracted logic to collect and return the list of newly created files.
+- **Logging:** Replace all `print()` statements from the original `framesync/framesync.py` with `logging.info()` / `logging.error()` calls. The rest of the codebase uses `logging`, not `print()`.
 - Sync flow: `_get_badger_token()` → `_encode_url()` → `_validate_password()` → `_redeem_share()` → `_sync_folder()` or single file download
 - `status()` returns `SyncStatus` with `photo_count` from scanning `output_dir`
 - `stop()` sets `threading.Event` checked between page fetches

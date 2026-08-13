@@ -42,6 +42,8 @@ def test_sync_module_defaults_to_local(tmp_path):
     """No provider field defaults to LocalProvider."""
 ```
 
+**Update existing test:** `test_sync_module_creates_service` in `tests/test_modules.py` currently constructs `SyncService(config)` with one arg. Rewrite it to verify `SyncModule().create(config)` returns a `SyncService` with the correct provider instance (based on `config.sync.provider`).
+
 Run: `bash eng/test.sh --skip-diff -k "test_sync_service_ or test_sync_module_"` — tests should fail (constructor/resolution not yet updated).
 
 ## Implement
@@ -59,6 +61,14 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_service_ or test_sync_module_"`
 - Add `_resolve_provider(name: ProviderName, config: ConfigStore)` helper that matches on enum
 - `create()` reads `config.sync.provider`, resolves provider, passes to `SyncService`
 - Update docstrings: replace "framesync" with "provider" references
+
+**Modified:** `src/piframe/config_store.py`
+- Remove deprecated `share_url` and `password` properties from `_SyncCfg` (added in T03, no longer needed)
+- Remove `share_url` and `password` from `_DEFAULTS["sync"]` (retain nested `sync.onedrive.share_url`/`password`)
+- Remove `("sync", "share_url")` and `("sync", "password")` from `_PROTECTED` (retain `("sync", "provider")`)
+
+**Updated:** `tests/test_modules.py`
+- **Update existing test:** `test_sync_module_creates_service` currently calls `SyncModule().create(config)` which constructs `SyncService(config)`. After this task, the constructor is `SyncService(provider, config)`. Rewrite the test to verify that `SyncModule().create(config)` returns a `SyncService` with the correct provider instance (e.g., `assert isinstance(svc._provider, LocalProvider)`).
 
 ## Validate
 

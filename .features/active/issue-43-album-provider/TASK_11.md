@@ -15,7 +15,7 @@ No new tests needed. This is a config file creation task.
 
 ## Implement
 
-**New file:** `./config.devcontainer.toml` (repo root, alongside `config.toml.example`) (repo root, alongside `config.toml.example`)
+**New file:** `./config.devcontainer.toml` (repo root, alongside `config.toml.example`)
 - `provider = "local"`
 - `output_dir` / `cache_dir` set to reasonable local paths (e.g., `/tmp/piframe-output`, `/tmp/piframe-cache`)
 - `mock_wifi = true` (for devcontainer)

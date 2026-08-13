@@ -30,6 +30,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_write_toml"` — tests should fail (
 **Modified:** `src/piframe/config_store.py`
 - In `_write_toml()`, when a value is a `dict`, recurse and write a `[section.subsection]` header instead of a flat key-value line
 - Keep existing handling for `bool`, `float`, `int`, `str` leaf values
+- **Note on `flush_now()`:** After this change, `flush_now()` reads the disk TOML and restores protected keys. Verify that nested protected keys (e.g., `sync.onedrive.share_url`) survive a flush cycle correctly. If not, update `flush_now()` to handle nested paths.
 
 ## Validate
 
