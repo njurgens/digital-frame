@@ -18,7 +18,8 @@ Ordered task list for the Album Provider Abstraction feature. Each task is self-
 
 ## Phase 3: Wiring
 
-- [ ] [T07: Refactor `SyncService` and `SyncModule` for `AlbumProvider`](TASK_07.md)
+- [ ] [T07a: Refactor `SyncService` and `SyncModule` for `AlbumProvider`](TASK_07.md)
+- [ ] [T07b: Remove deprecated `share_url`/`password` from `ConfigStore`](TASK_07b.md)
 - [ ] [T08: Add `_apply_env_overrides()` to `ConfigStore`](TASK_08.md)
 - [ ] [T09: Update `_write_toml()` to handle nested dicts](TASK_09.md)
 - [ ] [T10: Remove `framesync/` directory and update `eng/install.sh`](TASK_10.md)
