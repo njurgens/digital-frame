@@ -117,6 +117,17 @@ Add `verbose: true` to see the duck's full reasoning instead of just the report:
 get_subagent_result({ agent_id: "<id>", wait: true, verbose: true })
 ```
 
+### 3. Correct a running duck
+ 
+Only when it drifts — rewriting the artifact, reviewing the wrong file, failing tool calls, stalling, or failing to produce a report. Not for disputing findings.
+ 
+```js
+steer_subagent({
+  agent_id: "<id>",
+  message: "Do not propose fixes. Report the defect and the condition that closes it.",
+})
+```
+
 ### 3. Re-review after fixes
 
 New spawn, not `resume`. Say which round it is and what changed, so the duck spends its turns on the changed parts.
