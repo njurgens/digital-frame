@@ -2,7 +2,7 @@
 
 ## Description
 
-`src/piframe/album_provider.py` imports `AlbumProvider` from `piframe.types`, but that class doesn't exist. The class `DirectoryAlbumProvider` also collides with the new `AlbumProvider` protocol name.
+Verify `src/piframe/album_provider.py` uses `DirectoryReader` (not `DirectoryAlbumProvider`) with no broken import. (Already implemented — verify and add tests.)
 
 ## References
 
@@ -11,6 +11,8 @@
 ## Write tests
 
 **File:** `tests/test_providers.py` (add to existing file from T01)
+
+Tests should pass immediately (code already exists).
 
 ```python
 def test_directory_reader_import():
@@ -33,16 +35,11 @@ def test_directory_reader_ignores_non_image(tmp_path):
     # Verify only image files appear in result
 ```
 
-Run: `bash eng/test.sh --skip-diff -k "test_directory_reader"` — tests should fail (broken import).
+Run: `bash eng/test.sh --skip-diff -k "test_directory_reader"` — tests should pass (code already exists).
 
 ## Implement
 
-**Modified:** `src/piframe/album_provider.py`
-- Remove `from piframe.types import AlbumProvider` (broken import)
-- Rename `DirectoryAlbumProvider` → `DirectoryReader`
-- Remove `AlbumProvider` base class (standalone class, no inheritance)
-
-Note: `DirectoryAlbumProvider` is not imported anywhere in the codebase (slideshow_player.py does inline scanning), so no downstream references need updating.
+No code changes needed. Verify existing implementation matches DESIGN.md §3.9.
 
 ## Validate
 

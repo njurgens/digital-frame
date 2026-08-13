@@ -1,31 +1,40 @@
-# T09: Update `SettingsPanel` / `SettingsModule` for new `SyncService` constructor
+# T09: Update `_write_toml()` to handle nested dicts
 
 ## Description
 
-`SettingsPanel` imports `SyncService` as a type hint. `SettingsModule` may construct `SyncService` directly. Verify no code constructs `SyncService(config)` outside of `SyncModule`.
+The existing `_write_toml()` writes flat key-value pairs per section. It needs to detect nested dicts and emit `[section.subsection]` headers for provider-specific sub-sections.
 
 ## References
 
-- [DESIGN.md §3.6](DESIGN.md#36-srcpiframesync_servicepy-modified) — constructor signature change
+- [DESIGN.md §3.8](DESIGN.md#38-srcpiframeconfig_storepy-modified) — `_write_toml()` modification
 
 ## Write tests
 
-No new tests needed. This is an audit task — verify existing tests still pass after the constructor change.
+**File:** `tests/test_config_store.py` (add to existing file)
+
+```python
+def test_write_toml_nested_section(tmp_path):
+    """_write_toml() emits [sync.onedrive] header for nested dict values."""
+    # Set cfg._data['sync']['onedrive'] = {'share_url': '...', 'password': '...'}
+    # Flush and verify [sync.onedrive] appears in output
+
+
+def test_write_toml_flat_values(tmp_path):
+    """_write_toml() still writes flat key-value pairs for non-dict values."""
+```
+
+Run: `bash eng/test.sh --skip-diff -k "test_write_toml"` — tests should fail (nested handling not implemented yet).
 
 ## Implement
 
-**Audit:** Search for direct `SyncService(` construction:
-```bash
-grep -rn "SyncService(" src/piframe/ --include="*.py" | grep -v "class SyncService\|DimModule\|sync_service: SyncService\|modules/sync.py"
-```
-
-If any direct construction is found outside `SyncModule`, update it to use `SyncModule` instead or the new two-arg constructor.
+**Modified:** `src/piframe/config_store.py`
+- In `_write_toml()`, when a value is a `dict`, recurse and write a `[section.subsection]` header instead of a flat key-value line
+- Keep existing handling for `bool`, `float`, `int`, `str` leaf values
 
 ## Validate
 
 ```bash
-# Should return empty or only SyncModule reference
-grep -rn "SyncService(" src/piframe/ --include="*.py" | grep -v "class SyncService\|DimModule\|sync_service: SyncService\|modules/sync.py"
+bash eng/test.sh --skip-diff -k "test_write_toml"
 bash eng/test.sh --skip-diff
 bash eng/check.sh
 ```
@@ -35,5 +44,5 @@ bash eng/check.sh
 bash eng/format.sh
 bash eng/check.sh
 git add -A
-git commit -m "T09: Update `SettingsPanel` / `SettingsModule` for new `SyncService` constructor"
+git commit -m "T09: Update `_write_toml()` to handle nested dicts"
 ```

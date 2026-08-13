@@ -1,42 +1,39 @@
-# T11: Update `_write_toml()` to handle nested dicts
+# T11: Create `config.devcontainer.toml`
 
 ## Description
 
-The existing `_write_toml()` writes flat key-value pairs per section. It needs to detect nested dicts and emit `[section.subsection]` headers for provider-specific sub-sections.
+Create a devcontainer-appropriate config file with local defaults.
 
 ## References
 
-- [DESIGN.md §3.8](DESIGN.md#38-srcpiframeconfig_storepy-modified) — `_write_toml()` modification
+- [FEATURE.md §FR-9](FEATURE.md#fr-9-environment-variable-overrides) — `config.devcontainer.toml`
+- [DESIGN.md §3.10](DESIGN.md#310-configtomlexample-updated) — config structure
 
 ## Write tests
 
-**File:** `tests/test_config_store.py` (add to existing file)
-
-```python
-def test_write_toml_nested_section(tmp_path):
-    """_write_toml() emits [sync.onedrive] header for nested dict values."""
-    # Set cfg._data['sync']['onedrive'] = {'share_url': '...', 'password': '...'}
-    # Flush and verify [sync.onedrive] appears in output
-
-
-def test_write_toml_flat_values(tmp_path):
-    """_write_toml() still writes flat key-value pairs for non-dict values."""
-```
-
-Run: `bash eng/test.sh --skip-diff -k "test_write_toml"` — tests should fail (nested handling not implemented yet).
+No new tests needed. This is a config file creation task.
 
 ## Implement
 
-**Modified:** `src/piframe/config_store.py`
-- In `_write_toml()`, when a value is a `dict`, recurse and write a `[section.subsection]` header instead of a flat key-value line
-- Keep existing handling for `bool`, `float`, `int`, `str` leaf values
+**New file:** `./config.devcontainer.toml` (repo root, alongside `config.toml.example`) (repo root, alongside `config.toml.example`)
+- `provider = "local"`
+- `output_dir` / `cache_dir` set to reasonable local paths (e.g., `/tmp/piframe-output`, `/tmp/piframe-cache`)
+- `mock_wifi = true` (for devcontainer)
+- All other sections with sensible defaults matching `config.toml.example`
+- Include provider-specific sub-sections: `[sync.local]`, `[sync.onedrive]`
 
 ## Validate
 
 ```bash
-bash eng/test.sh --skip-diff -k "test_write_toml"
+python -c "
+import tomllib
+with open('config.devcontainer.toml', 'rb') as f:
+    data = tomllib.load(f)
+assert data['sync']['provider'] == 'local'
+assert data['app']['mock_wifi'] is True
+print('OK')
+"
 bash eng/test.sh --skip-diff
-bash eng/check.sh
 ```
 ## Commit
 
@@ -44,5 +41,5 @@ bash eng/check.sh
 bash eng/format.sh
 bash eng/check.sh
 git add -A
-git commit -m "T11: Update `_write_toml()` to handle nested dicts"
+git commit -m "T11: Create `config.devcontainer.toml`"
 ```

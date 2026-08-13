@@ -2,7 +2,7 @@
 
 ## Description
 
-Create `src/piframe/providers/` as a new package with `__init__.py` and `album_provider.py`.
+Verify `src/piframe/providers/` package exists with `AlbumProvider` Protocol and `ProviderName` enum. (Already implemented — verify and add tests.)
 
 ## References
 
@@ -12,6 +12,8 @@ Create `src/piframe/providers/` as a new package with `__init__.py` and `album_p
 ## Write tests
 
 **File:** `tests/test_providers.py` (new file)
+
+Tests should pass immediately (code already exists).
 
 ```python
 def test_provider_name_from_string_local():
@@ -34,12 +36,11 @@ def test_album_provider_protocol_importable():
     """AlbumProvider is importable from piframe.providers."""
 ```
 
-Run: `bash eng/test.sh --skip-diff -k "test_provider_name or test_album_provider"` — tests should fail (module doesn't exist yet).
+Run: `bash eng/test.sh --skip-diff -k "test_provider_name or test_album_provider"` — tests should pass (code already exists).
 
 ## Implement
 
-- **New file:** `src/piframe/providers/__init__.py` — `ProviderName` enum + `from_string()` + re-export `AlbumProvider`
-- **New file:** `src/piframe/providers/album_provider.py` — `AlbumProvider` Protocol (`sync`, `status`, `stop`)
+No code changes needed. Verify existing implementation matches DESIGN.md §3.1 and §3.9.
 
 ## Validate
 

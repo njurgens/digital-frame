@@ -50,6 +50,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_provider or test_read_nested or
 4. `_DEFAULTS["sync"]`: add `provider = "local"`, remove `share_url` and `password`
 5. `_PROTECTED`: add `("sync", "provider")`, remove `("sync", "share_url")` and `("sync", "password")`
 6. `ConfigStore`: add `_read_nested(*keys, default=...)` protected method
+7. **Update existing test:** `test_protected_keys_never_overwritten` in `tests/test_config_store.py` currently tests `share_url`/`password` protection. Rewrite it to test `provider` protection instead (or add a new test and remove the old one).
 
 ## Validate
 

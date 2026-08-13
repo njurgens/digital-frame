@@ -1,36 +1,40 @@
-# T12: Remove `framesync/` directory and update `eng/install.sh`
+# T12: Update `config.toml.example` with new structure
 
 ## Description
 
-Remove the `framesync/` directory (all files) since the sync logic is now in `OneDriveProvider`. Update `eng/install.sh` to remove references to framesync deployment.
+Update `config.toml.example` to reflect the new provider-based config structure with sub-sections.
 
 ## References
 
-- [DESIGN.md §3.2](DESIGN.md#32-srcpiframeprovidersonedrivepy) — framesync/ removal
-- [DESIGN.md §5.1](DESIGN.md#51-existing-onedrive-users) — config migration
+- [DESIGN.md §3.10](DESIGN.md#310-configtomlexample-updated)
 
 ## Write tests
 
-No new tests needed. This is a cleanup task — existing tests should still pass after removal.
+No new tests needed. This is a config file update task.
 
 ## Implement
 
-**Deleted:** `framesync/` directory (all files: `framesync.py`, `config.toml.example`, `framesync.service`, `framesync.timer`, `framesync-wifi.sudoers`)
-
-**Modified:** `eng/install.sh`
-- Remove `framesync-wifi.sudoers` installation step
-- Remove `framesync.service` / `framesync.timer` deployment if referenced
-- The rsync of the repo root already covers everything, so no special handling needed
+**Modified:** `config.toml.example`
+- `[sync]` with `provider = "local"`, `output_dir`, `cache_dir`, `interval_minutes`
+- `[sync.onedrive]` with `share_url`, `password`
+- `[sync.local]` with `source_dir`
+- `[sync.google]` placeholder comment
+- Remove flat `share_url` and `password` from `[sync]` section
 
 ## Validate
 
 ```bash
-# framesync/ should not exist
-test ! -d framesync && echo "OK" || echo "FAIL: framesync/ still exists"
-
-# All existing tests still pass
+python -c "
+import tomllib
+with open('config.toml.example', 'rb') as f:
+    data = tomllib.load(f)
+assert data['sync']['provider'] == 'local'
+assert 'onedrive' in data['sync']
+assert 'local' in data['sync']
+assert 'share_url' not in data['sync']  # no longer flat
+print('OK')
+"
 bash eng/test.sh --skip-diff
-bash eng/check.sh
 ```
 ## Commit
 
@@ -38,5 +42,5 @@ bash eng/check.sh
 bash eng/format.sh
 bash eng/check.sh
 git add -A
-git commit -m "T12: Remove `framesync/` directory and update `eng/install.sh`"
+git commit -m "T12: Update `config.toml.example` with new structure"
 ```

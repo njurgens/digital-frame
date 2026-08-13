@@ -1,53 +1,38 @@
-# T10: Add `_apply_env_overrides()` to `ConfigStore`
+# T10: Remove `framesync/` directory and update `eng/install.sh`
 
 ## Description
 
-Add environment variable overlay support to `ConfigStore`. `PIFRAME__` prefixed env vars override TOML values after load.
+Remove the `framesync/` directory (all files) since the sync logic is now in `OneDriveProvider`. Update `eng/install.sh` to remove references to framesync deployment.
 
 ## References
 
-- [DESIGN.md §3.8](DESIGN.md#38-srcpiframeconfig_storepy-modified) — `_apply_env_overrides()`, `_set_nested()`
-- [FEATURE.md §FR-9](FEATURE.md#fr-9-environment-variable-overrides)
+- [DESIGN.md §3.2](DESIGN.md#32-srcpiframeprovidersonedrivepy) — framesync/ removal
+- [DESIGN.md §5.1](DESIGN.md#51-existing-onedrive-users) — config migration
 
 ## Write tests
 
-**File:** `tests/test_config_store.py` (add to existing file)
-
-```python
-def test_env_override_simple(tmp_path):
-    """PIFRAME__DISPLAY__BRIGHTNESS=50 overrides display.brightness."""
-
-
-def test_env_override_nested(tmp_path):
-    """PIFRAME__SYNC__ONEDRIVE__SHARE_URL overrides nested sync.onedrive.share_url."""
-
-
-def test_env_override_unknown_ignored(tmp_path):
-    """PIFRAME__FAKE__KEY=x is silently ignored (key doesn't exist in config)."""
-
-
-def test_env_override_type_coercion(tmp_path):
-    """Env var values are coerced to match existing Python type (bool, int, float, str)."""
-
-
-def test_env_override_protected_keys(tmp_path):
-    """Protected keys can still be overridden by env vars."""
-```
-
-Run: `bash eng/test.sh --skip-diff -k "test_env_override"` — tests should fail (method doesn't exist yet).
+No new tests needed. This is a cleanup task — existing tests should still pass after removal.
 
 ## Implement
 
-**Modified:** `src/piframe/config_store.py`
-- Add `_ENV_PREFIX = "PIFRAME__"` class attribute
-- Add `_apply_env_overrides()` method — iterates `os.environ`, strips prefix, splits on `__`, calls `_set_nested()`
-- Add `_set_nested(section_path, key, value)` helper — walks `_data` along path, sets value only if key exists, coerces to existing Python type
-- Call `_apply_env_overrides()` from `_load()` after TOML is loaded and merged with defaults
+**Deleted:** `framesync/` directory (all files: `framesync.py`, `config.toml.example`, `framesync.service`, `framesync.timer`, `framesync-wifi.sudoers`)
+
+**Modified:** `eng/install.sh`
+- Remove `framesync-wifi.sudoers` installation step
+- Remove `framesync.service` / `framesync.timer` deployment if referenced
+- The rsync of the repo root already covers everything, so no special handling needed
+
+**Updated docstrings:** Any remaining references to "framesync" in `sync_service.py`, `modules/sync.py`, or other source files should be updated to reference "provider" instead.
+
+**Modified:** Any remaining files with stale "framesync" docstrings/comments (e.g., `sync_service.py`, `modules/sync.py`) — update to reference "provider" instead.
 
 ## Validate
 
 ```bash
-bash eng/test.sh --skip-diff -k "test_env_override"
+# framesync/ should not exist
+test ! -d framesync && echo "OK" || echo "FAIL: framesync/ still exists"
+
+# All existing tests still pass
 bash eng/test.sh --skip-diff
 bash eng/check.sh
 ```
@@ -57,5 +42,5 @@ bash eng/check.sh
 bash eng/format.sh
 bash eng/check.sh
 git add -A
-git commit -m "T10: Add `_apply_env_overrides()` to `ConfigStore`"
+git commit -m "T10: Remove `framesync/` directory and update `eng/install.sh`"
 ```

@@ -6,8 +6,8 @@ Ordered task list for the Album Provider Abstraction feature. Each task is self-
 
 ## Phase 1: Foundation
 
-- [ ] [T01: Create `providers/` package with `AlbumProvider` Protocol and `ProviderName` enum](TASK_01.md)
-- [ ] [T02: Fix `album_provider.py` — rename to `DirectoryReader`, drop broken import](TASK_02.md)
+- [ ] [T01: Verify `providers/` package with `AlbumProvider` Protocol and `ProviderName` enum](TASK_01.md) *(already implemented)*
+- [ ] [T02: Verify `album_provider.py` uses `DirectoryReader`](TASK_02.md) *(already implemented)*
 - [ ] [T03: Add `provider` property and `_read_nested()` to `ConfigStore`](TASK_03.md)
 
 ## Phase 2: Provider Implementations
@@ -18,19 +18,16 @@ Ordered task list for the Album Provider Abstraction feature. Each task is self-
 
 ## Phase 3: Wiring
 
-- [ ] [T07: Refactor `SyncService` to accept `AlbumProvider`](TASK_07.md)
-- [ ] [T08: Refactor `SyncModule.create()` to resolve provider by name](TASK_08.md)
-- [ ] [T09: Update `SettingsPanel` / `SettingsModule` for new `SyncService` constructor](TASK_09.md)
-- [ ] [T10: Add `_apply_env_overrides()` to `ConfigStore`](TASK_10.md)
-- [ ] [T11: Update `_write_toml()` to handle nested dicts](TASK_11.md)
-- [ ] [T12: Remove `framesync/` directory and update `eng/install.sh`](TASK_12.md)
+- [ ] [T07: Refactor `SyncService` and `SyncModule` for `AlbumProvider`](TASK_07.md)
+- [ ] [T08: Add `_apply_env_overrides()` to `ConfigStore`](TASK_08.md)
+- [ ] [T09: Update `_write_toml()` to handle nested dicts](TASK_09.md)
+- [ ] [T10: Remove `framesync/` directory and update `eng/install.sh`](TASK_10.md)
 
 ## Phase 4: Config & Docs
 
-- [ ] [T13: Create `config.devcontainer.toml`](TASK_13.md)
-- [ ] [T14: Update `config.toml.example` with new structure](TASK_14.md)
-- [ ] [T15: Update `.env.example` with env var override placeholders](TASK_15.md)
+- [ ] [T11: Create `config.devcontainer.toml`](TASK_11.md)
+- [ ] [T12: Update `config.toml.example` with new structure](TASK_12.md)
 
 ## Phase 5: Regression
 
-- [ ] [T16: Ensure all existing tests pass and `eng/check.sh` is clean](TASK_16.md)
+- [ ] [T13: Ensure all existing tests pass and `eng/check.sh` is clean](TASK_13.md)
