@@ -51,6 +51,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_service_ or test_sync_module_"`
 **Modified:** `src/piframe/sync_service.py`
 - Constructor takes `provider: AlbumProvider, config: ConfigStore` (two args instead of one)
 - `_do_sync()` calls `self._provider.sync(output_dir)` and `self._provider.status()`
+- **Thread safety:** Wrap `self._status = self._provider.status()` in `with self._status_lock:` to avoid TOCTOU race with the `status` property reader.
 - `stop()` calls `self._provider.stop()`
 - Remove all `framesync` imports and `sys.path` manipulation
 - Remove `share_url`/`password` checks (provider handles that)
@@ -58,7 +59,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_service_ or test_sync_module_"`
 
 **Modified:** `src/piframe/modules/sync.py`
 - Import provider classes and `ProviderName` from `piframe.providers`
-- Add `_resolve_provider(name: ProviderName, config: ConfigStore)` helper that matches on enum
+- Add `_resolve_provider(name: ProviderName, config: ConfigStore)` helper that matches on enum. Include a default case (`case _:` or `case str():`) that raises `ValueError` for unhandled provider names, to catch future enum additions.
 - `create()` reads `config.sync.provider`, resolves provider, passes to `SyncService`
 - Update docstrings: replace "framesync" with "provider" references
 

@@ -41,7 +41,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_env_override"` — tests should fail
 **Modified:** `src/piframe/config_store.py`
 - Add `_ENV_PREFIX = "PIFRAME__"` class attribute
 - Add `_apply_env_overrides()` method — iterates `os.environ`, strips prefix, splits on `__`, calls `_set_nested()`
-- Add `_set_nested(section_path, key, value)` helper — walks `_data` along path, sets value only if key exists, coerces to existing Python type
+- Add `_set_nested(section_path, key, value)` helper — walks `_data` along path, sets value only if key exists, coerces to existing Python type. **Returns `False` (skip) if any intermediate dict in the path is missing**, matching the "unknown env vars are silently ignored" requirement. **Does NOT check `_PROTECTED`** — protected keys can be overridden by env vars (the protection applies only to UI-driven `set()` calls).
 - Call `_apply_env_overrides()` from `_load()` after TOML is loaded and merged with defaults
 
 ## Validate

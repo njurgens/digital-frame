@@ -55,7 +55,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_provider or test_read_nested or
 ## Implement
 
 **Modified:** `src/piframe/config_store.py`
-1. Add `from piframe.providers import ProviderName` import
+1. Add lazy import of `ProviderName` inside the `provider` property body (not at module level) to avoid circular import with `providers/__init__.py`. Use string annotation `"ProviderName"` on the return type.
 2. `_SyncCfg`: add `provider` property (returns `ProviderName`, validated via `from_string()`)
 3. `_SyncCfg`: **retain** `share_url` and `password` properties as deprecated (they're still used by `SyncService` until T07). Mark with `@deprecated` comment or `warnings.warn()`.
 4. `_DEFAULTS["sync"]`: add `provider = "local"`, add nested dicts: `onedrive = {"share_url": "", "password": ""}`, `local = {"source_dir": ""}`, `google = {}`
@@ -67,7 +67,8 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_provider or test_read_nested or
    - Call `cfg.set("sync", "provider", "google")`
    - Call `cfg.flush_now()`
    - Assert `cfg.sync.provider` is still `ProviderName.ONEDRIVE`
-9. **Update `_clamp()` return type annotation** from `float | str | bool` to `float | str | bool | dict` (or `object`) to handle nested dict values from TOML sections like `[sync.onedrive]`.
+9. **Update `_clamp()` return type annotation** from `float | str | bool` to `float | str | bool | dict` (or `object`) to handle nested dict values from TOML sections like `[sync.onedrive]`. Dicts pass through `_clamp()` unchanged (the `isinstance(value, (int, float))` check returns `False` for dicts, so they are returned as-is).
+10. **Add `pytest-mock` to dev dependencies** in `pyproject.toml` (`[project.dependency-groups].dev`). The new tests in T04/T07 use the `mocker` fixture, which requires `pytest-mock`.
 
 ## Validate
 

@@ -15,10 +15,12 @@ No new tests needed. This is a cleanup task — existing tests should still pass
 
 ## Implement
 
-**Deleted:** `framesync/` directory (all files: `framesync.py`, `config.toml.example`, `framesync.service`, `framesync.timer`, `framesync-wifi.sudoers`)
+**Relocated:** `framesync/framesync-wifi.sudoers` → `etc/sudoers.d/framesync-wifi` (new `etc/` directory at repo root). The sudoers file is still needed by `WifiManager` for `sudo nmcli` commands.
+
+**Deleted:** `framesync/` directory (all files: `framesync.py`, `config.toml.example`, `framesync.service`, `framesync.timer`). The `framesync-wifi.sudoers` was moved to `etc/sudoers.d/` above.
 
 **Modified:** `eng/install.sh`
-- Remove `framesync-wifi.sudoers` installation step
+- Update sudoers installation path from `${REMOTE_DIR}/framesync/framesync-wifi.sudoers` to `${REMOTE_DIR}/etc/sudoers.d/framesync-wifi`
 - Remove `framesync.service` / `framesync.timer` deployment if referenced
 - The rsync of the repo root already covers everything, so no special handling needed
 
@@ -31,6 +33,9 @@ No new tests needed. This is a cleanup task — existing tests should still pass
 ```bash
 # framesync/ should not exist
 test ! -d framesync && echo "OK" || echo "FAIL: framesync/ still exists"
+
+# sudoers file should exist at new location
+test -f etc/sudoers.d/framesync-wifi && echo "OK" || echo "FAIL: sudoers file missing"
 
 # All existing tests still pass
 bash eng/test.sh --skip-diff
