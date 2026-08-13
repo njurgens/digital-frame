@@ -42,6 +42,9 @@ Run: `bash eng/test.sh --skip-diff -k "test_env_override"` — tests should fail
 - Add `_ENV_PREFIX = "PIFRAME__"` class attribute
 - Add `_apply_env_overrides()` method — iterates `os.environ`, strips prefix, splits on `__`, calls `_set_nested()`
 - Add `_set_nested(section_path, key, value)` helper — walks `_data` along path, sets value only if key exists, coerces to existing Python type. **Returns `False` (skip) if any intermediate dict in the path is missing**, matching the "unknown env vars are silently ignored" requirement. **Does NOT check `_PROTECTED`** — protected keys can be overridden by env vars (the protection applies only to UI-driven `set()` calls).
+- **Coercion rules:** If the existing value is `int`, coerce via `int(value)`. If `float`, coerce via `float(value)`. If `bool`, coerce via `value.lower() in ("true", "1", "yes")`. If `str`, use as-is. If coercion fails (e.g., `int("abc")`), skip silently.
+- **Debug logging:** Log `logging.debug(f"Skipped env override: {key} (path not found)")` for skipped env vars, so typos like `PIFRAME__sync__onedreive__share_url` are visible in debug logs.
+- **Note on `flush_now()`:** After env var overrides are applied, `flush_now()` writes in-memory config to disk. Env-var-driven values ARE persisted to disk. This is intentional — the user's env var values become the new "source of truth" on disk. If the env var is not set on the next restart, the persisted value is used.
 - Call `_apply_env_overrides()` from `_load()` after TOML is loaded and merged with defaults
 
 ## Validate

@@ -30,7 +30,7 @@ Run: `bash eng/test.sh --skip-diff -k "test_write_toml"` — tests should fail (
 **Modified:** `src/piframe/config_store.py`
 - In `_write_toml()`, when a value is a `dict`, recurse and write a `[section.subsection]` header instead of a flat key-value line
 - Keep existing handling for `bool`, `float`, `int`, `str` leaf values
-- **Note on `flush_now()`:** After this change, `flush_now()` reads the disk TOML and restores protected keys. Verify that nested protected keys (e.g., `sync.onedrive.share_url`) survive a flush cycle correctly. If not, update `flush_now()` to handle nested paths.
+- **Note:** `_PROTECTED` only supports 2-tuples `(section, key)`. Nested paths like `sync.onedrive.share_url` are NOT protected by `flush_now()`. This is intentional — provider credentials are managed by the provider Config classes, not by the flat protected key mechanism.
 
 ## Validate
 

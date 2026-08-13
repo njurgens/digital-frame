@@ -1,4 +1,4 @@
-# T07: Refactor `SyncService` and `SyncModule` for `AlbumProvider`
+# T07a: Refactor `SyncService` and `SyncModule` for `AlbumProvider`
 
 ## Description
 
@@ -44,8 +44,6 @@ def test_sync_module_defaults_to_local(tmp_path):
 
 **Update existing test:** `test_sync_module_creates_service` in `tests/test_modules.py` currently constructs `SyncService(config)` with one arg. Rewrite it to verify `SyncModule().create(config)` returns a `SyncService` with the correct provider instance (based on `config.sync.provider`).
 
-Run: `bash eng/test.sh --skip-diff -k "test_sync_service_ or test_sync_module_"` — tests should fail (constructor/resolution not yet updated).
-
 ## Implement
 
 **Modified:** `src/piframe/sync_service.py`
@@ -59,17 +57,11 @@ Run: `bash eng/test.sh --skip-diff -k "test_sync_service_ or test_sync_module_"`
 
 **Modified:** `src/piframe/modules/sync.py`
 - Import provider classes and `ProviderName` from `piframe.providers`
-- Add `_resolve_provider(name: ProviderName, config: ConfigStore)` helper that matches on enum. Include a default case (`case _:` or `case str():`) that raises `ValueError` for unhandled provider names, to catch future enum additions.
+- Add `_resolve_provider(name: ProviderName, config: ConfigStore)` helper that matches on enum. Include a default case (`case _:`) that raises `ValueError` for unhandled provider names, to catch future enum additions.
 - `create()` reads `config.sync.provider`, resolves provider, passes to `SyncService`
 - Update docstrings: replace "framesync" with "provider" references
 
-**Modified:** `src/piframe/config_store.py`
-- Remove deprecated `share_url` and `password` properties from `_SyncCfg` (added in T03, no longer needed)
-- Remove `share_url` and `password` from `_DEFAULTS["sync"]` (retain nested `sync.onedrive.share_url`/`password`)
-- Remove `("sync", "share_url")` and `("sync", "password")` from `_PROTECTED` (retain `("sync", "provider")`)
-
-**Updated:** `tests/test_modules.py`
-- **Update existing test:** `test_sync_module_creates_service` currently calls `SyncModule().create(config)` which constructs `SyncService(config)`. After this task, the constructor is `SyncService(provider, config)`. Rewrite the test to verify that `SyncModule().create(config)` returns a `SyncService` with the correct provider instance (e.g., `assert isinstance(svc._provider, LocalProvider)`).
+**Note:** Do NOT remove deprecated `share_url`/`password` from `ConfigStore` in this task. That cleanup is in T07b.
 
 ## Validate
 
@@ -85,5 +77,5 @@ bash eng/check.sh
 bash eng/format.sh
 bash eng/check.sh
 git add -A
-git commit -m "T07: refactor SyncService and SyncModule for AlbumProvider"
+git commit -m "T07a: refactor SyncService and SyncModule for AlbumProvider"
 ```

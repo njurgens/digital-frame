@@ -21,6 +21,7 @@ No new tests needed. This is a cleanup task — existing tests should still pass
 
 **Modified:** `eng/install.sh`
 - Update sudoers installation path from `${REMOTE_DIR}/framesync/framesync-wifi.sudoers` to `${REMOTE_DIR}/etc/sudoers.d/framesync-wifi`
+- Add `systemctl disable --now framesync.service framesync.timer` before removing files (retired units)
 - Remove `framesync.service` / `framesync.timer` deployment if referenced
 - The rsync of the repo root already covers everything, so no special handling needed
 

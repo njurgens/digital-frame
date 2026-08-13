@@ -36,21 +36,29 @@ def test_onedrive_stop_sets_event():
 
 
 def test_onedrive_sync_happy_path(mocker):
-    """Full sync flow: token → validate → redeem → sync folder."""
+    """Full sync flow: token → validate → redeem → sync folder.
+    Mock: all HTTP calls (requests.post/get). Exercise: file I/O."""
     # Mock all requests.post/get calls
     # Verify files downloaded to output_dir
 
 
 def test_onedrive_sync_destructive_cleanup(mocker, tmp_path):
-    """Local file not in remote listing is deleted."""
+    """Local file not in remote listing is deleted.
+    Mock: HTTP listing call. Exercise: file deletion."""
+    # Mock the remote file listing
+    # Create local file not in listing
+    # Verify it is deleted
 
 
 def test_onedrive_sync_single_file(mocker, tmp_path):
-    """Share points to a single file (not folder)."""
+    """Share points to a single file (not folder).
+    Mock: HTTP calls. Exercise: file download."""
+    # Mock the share redemption for a single file
 
 
 def test_onedrive_status_after_sync(mocker):
-    """status() returns correct photo_count and last_sync_time after sync."""
+    """status() returns correct photo_count and last_sync_time after sync.
+    Mock: HTTP calls. Exercise: status() method."""
 ```
 
 Run: `bash eng/test.sh --skip-diff -k "test_onedrive"` — tests should fail (module doesn't exist yet).
@@ -58,15 +66,18 @@ Run: `bash eng/test.sh --skip-diff -k "test_onedrive"` — tests should fail (mo
 ## Implement
 
 **New file:** `src/piframe/providers/onedrive.py`
-- `OneDriveConfig` — wraps `ConfigStore`, reads `share_url` / `password` from `[sync.onedrive]` via `_read_nested()`
+- `OneDriveConfig` — wraps `ConfigStore`, reads `share_url` / `password` from `[sync.onedrive]` via `read_nested()`
 - `OneDriveProvider` — extract all functions from `framesync/framesync.py` as private instance methods
 - **Return type:** The existing `framesync.sync()` returns `None`. The `AlbumProvider` protocol requires `sync(output_dir: Path) -> list[Path]`. Modify the extracted logic to collect and return the list of newly created files.
 - **Logging:** Replace all `print()` statements from the original `framesync/framesync.py` with `logging.info()` / `logging.error()` calls. The rest of the codebase uses `logging`, not `print()`.
+- **Pure utilities:** Keep pure utility functions (URL encoding, token parsing) as module-level functions and test them directly. I/O-bound methods (HTTP calls, file operations) are instance methods.
 - Sync flow: `_get_badger_token()` → `_encode_url()` → `_validate_password()` → `_redeem_share()` → `_sync_folder()` or single file download
 - `status()` returns `SyncStatus` with `photo_count` from scanning `output_dir`
 - `stop()` sets `threading.Event` checked between page fetches
 
 **Modified:** `src/piframe/providers/__init__.py` — add `OneDriveConfig`, `OneDriveProvider` to `__all__`
+
+**Modified:** `pyproject.toml` — add `pytest-mock` to `[project.dependency-groups].dev`. The tests use the `mocker` fixture.
 
 ## Validate
 
