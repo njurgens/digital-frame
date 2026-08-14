@@ -52,22 +52,18 @@ The config store is restructured to support provider selection and provider-spec
 - A provider selection field with a sensible default.
 - Provider-specific settings (credentials, source paths) live in sub-sections scoped to each provider.
 - Truly shared sync settings (polling interval) are retained. Provider-specific storage settings (cache location, output directory) are scoped to each provider.
-- Provider-specific keys are read-only in the UI but overridable via environment variables.
+- Provider-specific keys are overridable via environment variables.
 - The config writer handles nested sub-sections without corrupting the file.
 
 ### FR-10: Environment Variable Overrides
 
-`ConfigStore` reads `PIFRAME_`-prefixed environment variables and overlays them onto the loaded TOML config after defaults are merged. Unknown env vars are silently ignored. Environment variables can override keys that are read-only in the UI. Enables secrets injection via `.env` files or CI/CD.
+`ConfigStore` reads `PIFRAME_`-prefixed environment variables and overlays them onto the loaded TOML config after defaults are merged. Unknown env vars are silently ignored. Environment variables can override any config key. Enables secrets injection via `.env` files or CI/CD.
 
 ### FR-11: Devcontainer Configuration
 
 A `config.devcontainer.toml` file provides devcontainer-appropriate defaults, with secrets supplied via `.env`. An updated `.env.example` lists placeholder entries for secrets that should be supplied via environment variables.
 
-### FR-12: Provider Initialization Failure
-
-Initialization covers config loading and credential validation before the first sync. When the selected provider cannot be initialized (missing credentials, bad config), the error is logged and the system continues with an empty album.
-
-### FR-13: Runtime Sync Failure
+### FR-12: Runtime Sync Failure
 
 When a sync operation fails during normal operation (network unreachable, remote folder inaccessible, I/O error), the error is logged and reported via the provider's status. The slideshow continues displaying the last known image collection. Subsequent sync retries attempt recovery automatically.
 
@@ -112,7 +108,7 @@ EXIF metadata is loaded lazily on first access to avoid blocking sync or playlis
 - Refactor `SlideshowPlayer.rescan()` to consume provider collection.
 - Restructure config store to support provider selection and provider-specific sub-sections.
 - Config writer handles nested sub-sections without corrupting the file.
-- Nested provider config keys are read-only in the UI but overridable via environment variables.
+- Nested provider config keys are overridable via environment variables.
 - Environment variable overlay for secrets injection.
 - Create `config.devcontainer.toml` and update `.env.example`.
 - Update `config.toml.example` with the new structure.
