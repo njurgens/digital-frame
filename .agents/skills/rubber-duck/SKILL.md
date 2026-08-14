@@ -48,7 +48,7 @@ File: <path>
 
 ## Usage
 
-### 1. Review one artifact (blocking)
+### 1. Review one artifact
 
 The default. Use it when you cannot proceed until the review is back.
 
@@ -56,6 +56,7 @@ The default. Use it when you cannot proceed until the review is back.
 Agent({
   subagent_type: "rubber-duck",
   description: "Review auth design spec",
+  run_in_background: true,
   prompt: `ARTIFACT_TYPE: design spec
 DOWNSTREAM_CONSUMER: implementation agent
 
@@ -66,42 +67,6 @@ Related: docs/decisions/0012-session-store.md
 
 ARTIFACT
 File: docs/design/auth-sso.md`,
-})
-```
-
-### 2. Review several artifacts in parallel
-
-One duck reviews one artifact. Splitting them keeps each review focused and lets you act on whichever comes back first.
-
-```js
-Agent({
-  subagent_type: "rubber-duck",
-  description: "Review API schema",
-  prompt: `ARTIFACT_TYPE: openapi schema
-DOWNSTREAM_CONSUMER: client codegen
-
-CONTEXT
-Original request: Expose tenant admin endpoints.
-Constraints: Must match docs/design/auth-sso.md.
-
-ARTIFACT
-File: api/openapi.yaml`,
-  run_in_background: true,
-})
-
-Agent({
-  subagent_type: "rubber-duck",
-  description: "Review migration plan",
-  prompt: `ARTIFACT_TYPE: migration plan
-DOWNSTREAM_CONSUMER: ops engineer
-
-CONTEXT
-Original request: Move sessions to the new store.
-Constraints: Zero downtime. Rollback required.
-
-ARTIFACT
-File: docs/plans/session-migration.md`,
-  run_in_background: true,
 })
 ```
 
@@ -117,20 +82,31 @@ Add `verbose: true` to see the duck's full reasoning instead of just the report:
 get_subagent_result({ agent_id: "<id>", wait: true, verbose: true })
 ```
 
-### 3. Correct a running duck
- 
-Only when it drifts — rewriting the artifact, reviewing the wrong file, failing tool calls, stalling, or failing to produce a report. Not for disputing findings.
- 
+### 2. Resume agents with 0 tool calls
+
+The agent may fail with the following:
+- Makes 0 tool calls because some fresh agents do not understand how to use tools. This is a bug in the agent, not your prompt. Resuming usually fixes it.
+- error: run hit the output token limit before producing any text
+
+You must nudge the agent to resume by running the `Agent` tool call with `resume` set to the `agent_id` of the previous run. The duck will pick up where it left off.
+
 ```js
-steer_subagent({
-  agent_id: "<id>",
-  message: "Do not propose fixes. Report the defect and the condition that closes it.",
-})
+  Agent(
+      subagent_type="rubber-duck",
+      description="Resume ducky review 5e9266bd",
+      prompt="Resume your review of the the artifact file. Read it first, then produce the structured review with VERDICT, FINDINGS, QUESTIONS FOR THE AUTHOR, and COULD NOT
+ ASESS.",
+      resume="5e9266bd-42c0-41f",
+  )
 ```
+
+NEVER resort to performing the review yourself.  If after multiple attempts, the duck cannot complete the review, escalate to the user.
+
+NEVER give up assuming it's an environment issue. 100% of the time its because the rubber-duck agent is not making tool calls correctly.
 
 ### 3. Re-review after fixes
 
-New spawn, not `resume`. Say which round it is and what changed, so the duck spends its turns on the changed parts.
+Each review round must be a new spawn, not `resume`. Say which round it is and what changed, so the duck spends its turns on the changed parts.
 
 ```js
 Agent({
