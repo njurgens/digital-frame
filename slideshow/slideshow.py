@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-slideshow.py — pygame-based picture frame slideshow.
+"""slideshow.py — pygame-based picture frame slideshow.
 
 Displays JPEG/PNG images with blurred background fill and crossfade transitions.
 Rescans the image directory at the start of each cycle so new synced images
@@ -124,8 +123,7 @@ def prepare_surface(
     size: tuple[int, int],
     cache_dir: Path | None,
 ) -> pygame.Surface:
-    """
-    Build a composite surface: blurred-fill background + aspect-correct foreground.
+    """Build a composite surface: blurred-fill background + aspect-correct foreground.
 
     Reads from / writes to a disk cache keyed by filename, mtime, screen size, and
     cache version (so EXIF-fix and other changes auto-invalidate old entries).
@@ -187,8 +185,7 @@ def crossfade(
     surface_b: pygame.Surface,
     duration: float,
 ) -> None:
-    """
-    Blend from surface_a to surface_b over `duration` seconds.
+    """Blend from surface_a to surface_b over `duration` seconds.
 
     Uses wall-clock progress so slow frames self-correct rather than
     causing the transition to run long on Pi 3A+.
@@ -227,8 +224,7 @@ def show_image(
     config: dict,
     cache_dir: Path | None,
 ) -> pygame.Surface | None:
-    """
-    Blit current surface, wait display duration, then crossfade to the next surface.
+    """Blit current surface, wait display duration, then crossfade to the next surface.
 
     Returns the next surface on success, or None if quit was requested or
     the next image failed to load.

@@ -14,8 +14,7 @@ def assert_screenshot_matches(
     threshold: float = 0.02,
     ignore_rects: list[tuple[int, int, int, int]] | None = None,
 ) -> None:
-    """
-    Fail if more than `threshold` fraction of pixels differ by >10 per channel.
+    """Fail if more than `threshold` fraction of pixels differ by >10 per channel.
 
     Parameters
     ----------

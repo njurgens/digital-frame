@@ -34,9 +34,10 @@ src/piframe/
 ├── config_store.py               # MODIFIED — _SyncCfg gains provider + _apply_env_overrides
 ├── slideshow_player.py           # MODIFIED — rescan() consumes provider album
 ├── modules/
-│   └── sync.py                   # MODIFIED — resolves provider by name from config
+│   ├── sync.py                   # MODIFIED — returns (SyncService, AlbumProvider)
+│   └── player.py                 # MODIFIED — accepts AlbumProvider from sync module
 ├── types.py                      # UNCHANGED — SyncStatus stays here
-└── app.py                        # UNCHANGED — no new wiring needed
+└── app.py                        # MODIFIED — wires provider from SyncModule into PlayerModule
 ```
 
 ### 2.2 Data Flow
@@ -133,11 +134,16 @@ classDiagram
         +GOOGLE str
         +from_string(value) ProviderName
     }
-    AlbumProvider <|.. OneDriveProvider
-    AlbumProvider <|.. LocalProvider
-    AlbumProvider <|.. GooglePhotosProvider
+    class ProviderModule {
+        +create(config) AlbumProvider
+    }
+    AlbumProvider <|.. OneDriveProvider : implements
+    AlbumProvider <|.. LocalProvider : implements
+    AlbumProvider <|.. GooglePhotosProvider : implements
     Album "1" -- "*" Image
     Image "1" o-- "0..1" Exif
+    SyncModule "1" -- "1" ProviderModule : depends on
+    PlayerModule "1" -- "1" AlbumProvider : depends on
 ```
 
 ---
@@ -152,7 +158,7 @@ classDiagram
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import cache
+from functools import cached_property
 from pathlib import Path
 
 from piframe.images.exif import Exif
@@ -168,19 +174,17 @@ class Image:
 
     path: Path
 
-    @property
-    @cache
+    @cached_property
     def exif(self) -> Exif | None:
         return Exif.load(self.path)
 ```
 
 Notes:
-- `frozen=True` makes the instance immutable (hashable, so `@cache` works).
-- `@property` stacked on `@cache` is the idiomatic approach for lazy caching
-  on frozen dataclasses (which use `__slots__` and are incompatible with
-  `@cached_property`). The `@cache` decorator keys by the bound method
-  (instance identity), so each `Image` gets its own cached `Exif` value.
-  See [bpo-42127](https://bugs.python.org/issue42127).
+- `frozen=True` makes the instance immutable.
+- `@cached_property` (stdlib, Python 3.8+) caches the result in the instance's
+  `__dict__` on first access. When the `Image` instance is garbage-collected,
+  the cached value is released with it. No unbounded memory retention.
+- `@cached_property` works correctly with `frozen=True` on Python 3.13.
 
 ---
 
@@ -191,6 +195,7 @@ Notes:
 ```python
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -217,14 +222,29 @@ class Exif:
                 instance = cls()
                 instance._populate(exif)
                 return instance
-        except Exception:
+        except Exception as exc:
+            # Log but don't crash — EXIF is optional metadata.
+            # MemoryError is a subclass of Exception (and therefore of
+            # BaseException), so it is caught here. On the Pi (512 MB), OOM
+            # during PIL image open is rare but possible. We treat OOM as
+            # "EXIF unavailable" because EXIF is optional metadata and a
+            # partial read is not meaningfully better than no read. A genuine
+            # OOM will typically kill the process anyway before reaching this
+            # point. We log at warning to surface EXIF failures.
+            logging.warning("Exif.load failed for %s: %s", path, exc)
             return None
 
-    def _populate(self, exif) -> None:
+    def _populate(self, exif: PILImage.Exif) -> None:
         # Orientation from base IFD
         self.orientation = exif.get(Base.Orientation, 1)
 
         # DateTime from ExifIFD.DateTimeOriginal or base IFD.DateTime
+        # Note: get_ifd() behavior varies across Pillow versions: some raise
+        # KeyError on missing IFD, others return None. The outer try/except in
+        # load() catches any exception and returns None, so the overall behavior
+        # is all-or-nothing (any failure discards all EXIF data). This is
+        # acceptable: EXIF is optional metadata and a partial read is not
+        # meaningfully better than no read.
         exif_ifd = exif.get_ifd(IFD.Exif)
         raw = exif_ifd.get(Base.DateTimeOriginal) if exif_ifd else None
         if not raw:
@@ -263,7 +283,7 @@ class Album:
     """
 
     def __init__(self, images: list["Image"]) -> None:
-        self._images = images
+        self._images = list(images)  # defensive copy to isolate from caller mutation
 
     def __iter__(self) -> Iterator["Image"]:
         return iter(self._images)
@@ -271,8 +291,11 @@ class Album:
     def __len__(self) -> int:
         return len(self._images)
 
-    def __getitem__(self, index: int) -> "Image":
-        return self._images[index]
+    def __getitem__(self, index: int | slice) -> "Image | list[Image]":
+        # Note: type: ignore used here because basedpyright cannot narrow the
+        # return type based on whether index is int vs slice. Using @overload
+        # would be more precise but adds boilerplate for a simple pass-through.
+        return self._images[index]  # type: ignore[return-value]
 ```
 
 Notes:
@@ -293,9 +316,12 @@ __all__ = ["Album", "Exif", "Image"]
 
 ---
 
-### 3.5 `src/piframe/providers/album_provider.py`
+### 3.5 `src/piframe/providers/album_provider.py` (Rewritten)
 
-**AlbumProvider — Protocol**
+The existing `AlbumProvider` Protocol is **replaced** (not modified). The old
+signature `sync(output_dir: Path) -> list[Path]` is replaced by `sync() -> Album`.
+The `stop()` method is removed (providers don't need cleanup). A new `album()`
+method is added to return the current album without re-syncing.
 
 ```python
 from __future__ import annotations
@@ -344,6 +370,21 @@ Notes:
 **OneDriveConfig — ConfigStore wrapper**
 
 ```python
+from __future__ import annotations
+
+import copy
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from piframe.config_store import ConfigStore
+from piframe.images import Album, Image
+from piframe.types import SyncStatus
+
+if TYPE_CHECKING:
+    from piframe.providers.album_provider import AlbumProvider
+
+
 class OneDriveConfig:
     """Typed view over ConfigStore for OneDrive-specific keys."""
 
@@ -352,23 +393,44 @@ class OneDriveConfig:
 
     @property
     def share_url(self) -> str:
-        return str(self._config._read_nested("sync", "onedrive", "share_url"))
+        val = self._config._read_nested("sync", "onedrive", "share_url")
+        return str(val) if val else ""
 
     @property
     def password(self) -> str:
-        return str(self._config._read_nested("sync", "onedrive", "password"))
+        val = self._config._read_nested("sync", "onedrive", "password")
+        return str(val) if val else ""
 
     @property
     def cache_dir(self) -> Path:
         raw = self._config._read_nested("sync", "onedrive", "cache_dir")
-        return Path(raw) if raw else Path.home() / ".cache" / "piframe" / "onedrive"
+        if raw and str(raw).strip():
+            return Path(raw).expanduser().resolve()
+        return Path.home() / ".cache" / "piframe" / "onedrive"
 ```
 
 **OneDriveProvider — class**
 
 ```python
+from __future__ import annotations
+
+import copy
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from piframe.config_store import ConfigStore
+from piframe.images import Album, Image
+from piframe.types import SyncStatus
+
+if TYPE_CHECKING:
+    from piframe.providers.album_provider import AlbumProvider
+
+
 class OneDriveProvider:
     """OneDrive album provider using the Badger token API."""
+
+    _EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".gif"})
 
     def __init__(self, config: OneDriveConfig) -> None:
         self._config = config
@@ -377,6 +439,9 @@ class OneDriveProvider:
 
     def sync(self) -> Album:
         self._album = self._do_sync()
+        self._status.photo_count = len(self._album)
+        self._status.last_sync_time = datetime.now()
+        self._status.last_error = None
         return self._album
 
     def album(self) -> Album:
@@ -388,6 +453,8 @@ class OneDriveProvider:
     def _do_sync(self) -> Album:
         cache = self._config.cache_dir
         cache.mkdir(parents=True, exist_ok=True)
+        if not cache.is_dir():
+            raise RuntimeError(f"Cache path is not a directory: {cache}")
         token = self._get_badger_token()
         encoded = self._encode_url(self._config.share_url)
         self._validate_password(encoded, token)
@@ -404,17 +471,22 @@ class OneDriveProvider:
                 local.unlink()
         # Build album from cache
         images = [Image(path=p) for p in sorted(cache.iterdir())
-                   if p.is_file() and p.suffix.lower() in _EXTENSIONS]
+                   if p.is_file() and p.suffix.lower() in self._EXTENSIONS]]
         return Album(images)
 ```
 
 Implementation details:
 - Cache directory is `~/.cache/piframe/onedrive/` — provider-internal.
-- `sync()` downloads new files, deletes stale files, returns `Album`.
+- `sync()` downloads new files, deletes stale files, returns `Album`, and
+  updates `self._status` with `photo_count`, `last_sync_time`, and clears
+  `last_error`. On HTTP errors inside `_do_sync()`, exceptions propagate to
+  `SyncService._do_sync()` which catches them and sets `last_error`.
 - `album()` returns the last sync result without re-syncing.
+- `status()` returns `copy.copy(self._status)` to prevent external mutation.
 - Private helpers (`_get_badger_token`, `_encode_url`, etc.) extracted from
   `framesync/framesync.py`.
 - The `framesync/` directory is **removed** after extraction.
+- Each provider module needs `import copy` for `copy.copy()` in `status()`.
 
 ---
 
@@ -423,6 +495,17 @@ Implementation details:
 **LocalConfig — ConfigStore wrapper**
 
 ```python
+from __future__ import annotations
+
+import copy
+from datetime import datetime
+from pathlib import Path
+
+from piframe.config_store import ConfigStore
+from piframe.images import Album, Image
+from piframe.types import SyncStatus
+
+
 class LocalConfig:
     """Typed view over ConfigStore for local-provider-specific keys."""
 
@@ -432,12 +515,25 @@ class LocalConfig:
     @property
     def source_dir(self) -> Path:
         raw = self._config._read_nested("sync", "local", "source_dir")
-        return Path(raw) if raw else Path.home() / "Pictures" / "slideshow"
+        if raw and str(raw).strip():
+            return Path(raw).expanduser().resolve()
+        return Path.home() / "Pictures" / "slideshow"
 ```
 
 **LocalProvider — class**
 
 ```python
+from __future__ import annotations
+
+import copy
+from datetime import datetime
+from pathlib import Path
+
+from piframe.config_store import ConfigStore
+from piframe.images import Album, Image
+from piframe.types import SyncStatus
+
+
 class LocalProvider:
     """Local directory album provider.
 
@@ -449,22 +545,24 @@ class LocalProvider:
     def __init__(self, config: LocalConfig) -> None:
         self._config = config
         self._status = SyncStatus()
+        self._album: Album = Album([])
 
     def sync(self) -> Album:
-        return self._scan()
+        self._album = self._scan()
+        self._status.photo_count = len(self._album)
+        self._status.last_sync_time = datetime.now()
+        self._status.last_error = None
+        return self._album
 
     def album(self) -> Album:
-        return self._scan()
+        return self._album
 
     def status(self) -> SyncStatus:
-        album = self._scan()
-        self._status.photo_count = len(album)
-        self._status.last_sync_time = datetime.now()
         return copy.copy(self._status)
 
     def _scan(self) -> Album:
         source = self._config.source_dir
-        if not source.exists():
+        if not source.exists() or not source.is_dir():
             return Album([])
         images = [
             Image(path=p)
@@ -476,11 +574,11 @@ class LocalProvider:
 
 Implementation details:
 - No file copying, no caching, no cleanup.
-- `sync()` and `album()` both scan the directory (rescans on each call).
+- `sync()` scans the directory via `_scan()`, stores result in `self._album`,
+  and updates `self._status`. `album()` returns `self._album` (cached from last
+  `sync()`) for consistency with the AlbumProvider contract.
+- `status()` returns `copy.copy(self._status)` to prevent external mutation.
 - `source_dir` defaults to `~/Pictures/slideshow` if not set in config.
-- The returned `Album` is a **snapshot**, not a live view. Each call produces a
-  fresh `list[Image]` from whatever is on disk at that moment. Consumers that
-  hold a reference (e.g. `SlideshowPlayer._playlist`) see a point-in-time view;
 
 ---
 
@@ -489,6 +587,15 @@ Implementation details:
 **GooglePhotosConfig — ConfigStore wrapper**
 
 ```python
+from __future__ import annotations
+
+import copy
+
+from piframe.config_store import ConfigStore
+from piframe.images import Album
+from piframe.types import SyncStatus
+
+
 class GooglePhotosConfig:
     """Typed view over ConfigStore for Google Photos keys (stub)."""
 
@@ -499,6 +606,15 @@ class GooglePhotosConfig:
 **GooglePhotosProvider — class**
 
 ```python
+from __future__ import annotations
+
+import copy
+
+from piframe.config_store import ConfigStore
+from piframe.images import Album
+from piframe.types import SyncStatus
+
+
 class GooglePhotosProvider:
     """Google Photos album provider (stub)."""
 
@@ -506,14 +622,20 @@ class GooglePhotosProvider:
 
     def __init__(self, config: GooglePhotosConfig) -> None:
         self._config = config
-        self._status = SyncStatus(last_error=self._NOT_IMPLEMENTED)
+        self._status = SyncStatus()
+        self._album: Album = Album([])
 
     def sync(self) -> Album:
+        self._album = Album([])
+        self._status.photo_count = 0
+        self._status.last_sync_time = datetime.now()
         self._status.last_error = self._NOT_IMPLEMENTED
-        return Album([])
+        return self._album
 
     def album(self) -> Album:
-        return Album([])
+        # Stub: returns cached album (initialized in __init__).
+        # When implemented, sync() populates self._album and album() returns it.
+        return self._album
 
     def status(self) -> SyncStatus:
         return copy.copy(self._status)
@@ -521,9 +643,15 @@ class GooglePhotosProvider:
 
 ---
 
-### 3.9 `src/piframe/providers/__init__.py`
+### 3.9 `src/piframe/providers/__init__.py` (Modified)
+
+The existing `ProviderName.from_string()` is changed from case-sensitive to
+case-insensitive by adding `.lower()` to the input. This ensures config values
+like `"Onedrive"` or `"LOCAL"` are accepted.
 
 ```python
+from __future__ import annotations
+
 from enum import StrEnum
 
 
@@ -536,9 +664,12 @@ class ProviderName(StrEnum):
 
     @classmethod
     def from_string(cls, value: str) -> "ProviderName":
-        """Parse a provider name string, raising on unknown values."""
+        """Parse a provider name string, raising on unknown values.
+
+        Input is lowercased for case-insensitive matching.
+        """
         try:
-            return cls(value)
+            return cls(value.lower())
         except ValueError:
             valid = ", ".join(repr(m.value) for m in cls)
             raise ValueError(f"Unknown sync provider '{value}'. Valid: {valid}") from None
@@ -618,14 +749,23 @@ Notes:
 
 ---
 
-### 3.11 `src/piframe/modules/sync.py` (Modified)
+### 3.11 `src/piframe/modules/provider.py` (New)
 
 ```python
-class SyncModule(DimModule[SyncService]):
-    def create(self, config: ConfigStore, **deps: object) -> SyncService:
+from __future__ import annotations
+
+from piframe.config_store import ConfigStore
+from piframe.di import DimModule
+from piframe.providers import AlbumProvider, ProviderName
+from piframe.providers.google import GooglePhotosConfig, GooglePhotosProvider
+from piframe.providers.local import LocalConfig, LocalProvider
+from piframe.providers.onedrive import OneDriveConfig, OneDriveProvider
+
+
+class ProviderModule(DimModule[AlbumProvider]):
+    def create(self, config: ConfigStore, **deps: object) -> AlbumProvider:
         provider_name = config.sync.provider  # ProviderName enum, validated
-        provider_instance = _resolve_provider(provider_name, config)
-        return SyncService(provider_instance, config)
+        return _resolve_provider(provider_name, config)
 
 
 def _resolve_provider(name: ProviderName, config: ConfigStore) -> AlbumProvider:
@@ -639,9 +779,96 @@ def _resolve_provider(name: ProviderName, config: ConfigStore) -> AlbumProvider:
             return GooglePhotosProvider(GooglePhotosConfig(config))
 ```
 
+Notes:
+**`modules/__init__.py` change:**
+
+Add `ProviderModule` to the exports:
+
+```python
+from piframe.modules.cache import CacheModule
+from piframe.modules.player import PlayerModule
+from piframe.modules.provider import ProviderModule
+from piframe.modules.settings import SettingsModule
+from piframe.modules.sync import SyncModule
+from piframe.modules.wifi import WifiModule
+
+__all__ = [
+    "CacheModule",
+    "PlayerModule",
+    "ProviderModule",
+    "SettingsModule",
+    "SyncModule",
+    "WifiModule",
+]
+```
+- `ProviderModule` owns the provider instantiation logic. Both `SyncModule`
+  and `PlayerModule` receive the `AlbumProvider` as a dependency via `deps["provider"]`.
+- `_resolve_provider()` is the single point for provider construction.
+- `DimModule[AlbumProvider]` works correctly: `DimModule` is a Protocol whose
+  generic `T` is a type hint, not a runtime type check. The DI container passes
+  dependencies via `**deps` dict, so structural typing of `AlbumProvider` is
+  sufficient — no inheritance needed.
+- **Error handling:** If provider construction fails (missing config, invalid
+  URL, etc.), the exception propagates through `ProviderModule.create()` and
+  the app aborts startup with a clear error. Provider-specific config validation
+  is deferred to issue #51 (startup validation).
+
 ---
 
-### 3.12 `src/piframe/slideshow_player.py` (Modified)
+### 3.12 `src/piframe/modules/sync.py` (Modified)
+
+```python
+class SyncModule(DimModule[SyncService]):
+    def create(self, config: ConfigStore, **deps: object) -> SyncService:
+        provider = deps["provider"]  # AlbumProvider from ProviderModule
+        return SyncService(provider, config)
+```
+
+Notes:
+- `SyncModule` no longer constructs the provider. It receives it as a
+  dependency from `ProviderModule`.
+- `App.__init__` registers `ProviderModule` before `SyncModule`.
+
+---
+
+### 3.13 `src/piframe/modules/player.py` (Modified)
+
+```python
+from __future__ import annotations
+
+from piframe.assets import Assets
+from piframe.config_store import ConfigStore
+from piframe.di import DimModule
+from piframe.photo_cache import PhotoCache
+from piframe.providers import AlbumProvider
+from piframe.slideshow_player import SlideshowPlayer
+from piframe.types import SCREEN_H, SCREEN_W
+
+
+class PlayerModule(DimModule[SlideshowPlayer]):
+    def create(self, config: ConfigStore, **deps: object) -> SlideshowPlayer:
+        provider = deps["provider"]  # AlbumProvider from ProviderModule
+        cache = deps["cache"]  # PhotoCache from CacheModule
+        assets = deps.get("assets")  # Assets | None
+        return SlideshowPlayer(
+            config=config,
+            cache=cache,
+            provider=provider,
+            screen_size=(SCREEN_W, SCREEN_H),
+            assets=assets,
+        )
+```
+
+Notes:
+- `PlayerModule.create()` receives the `AlbumProvider` as a dependency from
+  `ProviderModule`. The DI container wires `ProviderModule` first and passes
+  its output to all downstream modules that request it.
+- `App.__init__` registers `ProviderModule` before both `SyncModule` and
+  `PlayerModule`. Both modules receive the same provider instance via `deps["provider"]`.
+
+---
+
+### 3.14 `src/piframe/slideshow_player.py` (Modified)
 
 **Constructor change:**
 
@@ -655,12 +882,25 @@ class SlideshowPlayer:
         screen_size: tuple[int, int],
         assets: Assets | None = None,
     ):
+        # Existing attributes (unchanged):
         self._config = config
         self._cache = cache
-        self._provider = provider
         self._assets = assets
         self._w, self._h = screen_size
-        # ... existing fields
+        self._playlist: list[Path] = []
+        self._index = 0
+        self._current_surf: Surface | None = None
+        self._next_surf: Surface | None = None
+        self._elapsed = 0.0
+        self._trans_t = 0.0
+        self._in_transition = False
+        self._trans_start = 0.0
+        self._direction = 1
+        self._paused = False
+        self._slide_rect = Rect(0, 0, self._w, self._h)
+        # New attribute:
+        self._provider = provider
+        # Build initial playlist from provider:
         self.rescan()
 ```
 
@@ -690,11 +930,27 @@ def rescan(self) -> None:
 Notes:
 - Accepts `AlbumProvider` as a dependency.
 - Iterates `album` to extract `image.path`, applies extension filter.
+- The extension filter is **defense-in-depth**: providers already filter by
+  extension, but `rescan()` verifies independently. This masks provider bugs
+  (e.g. returning non-image files) and keeps the slideshow resilient.
 - No directory scanning.
+- **Startup sequence:** `SlideshowPlayer.__init__()` calls `self.rescan()`
+  immediately, which reads `provider.album()`. For `OneDriveProvider`, the
+  initial album is empty until the first sync completes. `SyncService` posts
+  `EVT_SYNC_COMPLETE` after each sync (including the first). `SlideshowPlayer`
+  listens for `EVT_SYNC_COMPLETE` and calls `rescan()` to rebuild the playlist.
+  The slideshow shows a blank/loading screen until the first sync populates
+  the playlist — this is the expected behavior for a device that syncs on boot.
 
 ---
 
-### 3.13 `src/piframe/config_store.py` (Modified)
+### 3.15 `src/piframe/config_store.py` (Modified)
+
+The circular import (`config_store.py` → `providers/__init__.py` →
+`providers/local.py` → `config_store.py`) is broken by a lazy import
+of `ProviderName` inside the `_SyncCfg.provider` property body. The
+import occurs at runtime (when the property is accessed), not at module
+load time, so the cycle is never triggered during import.
 
 **`_SyncCfg` changes:**
 
@@ -705,68 +961,173 @@ class _SyncCfg:
 
     @property
     def provider(self) -> ProviderName:
-        raw = str(self._d.get("provider", "local"))
-        return ProviderName.from_string(raw)
+        # Lazy import to break circular dependency:
+        # config_store -> providers/__init__ -> providers/local -> config_store
+        from piframe.providers import ProviderName as PN
 
-    @property
-    def cache_dir(self) -> str:
-        return str(self._d.get("cache_dir", "/home/frame/.cache/framesync"))
+        raw = str(self._d.get("provider", "local"))
+        return PN.from_string(raw)
 
     @property
     def interval_minutes(self) -> int:
         return int(self._d.get("interval_minutes", 60))
+
+    @property
+    def cache_dir(self) -> str:
+        return self._d.get("cache_dir", "")
 ```
 
-`output_dir`, `share_url`, `password` removed from `_SyncCfg`.
+`cache_dir` is retained in `_SyncCfg` for `PhotoCache` (surface cache). It is
+independent of any provider's raw file cache. `PhotoCache` uses this for its
+disk-backed surface cache, while providers manage their own raw file storage
+(e.g. `OneDriveConfig.cache_dir` for downloaded images).
+
+`output_dir`, `share_url`, `password` removed from `_SyncCfg`. Provider-specific
+config (URL, password, cache dir) moves to provider sub-sections.
+
+**Downstream impact:** `CacheModule.create()` continues to read `config.sync.cache_dir`
+for the surface cache (unchanged). `settings_panel.py` currently reads
+`config.sync.output_dir` for disk-usage display; after removal, it must be
+updated to query the active provider's storage directory instead. This is a
+required change to `settings_panel.py`.
 
 **`_DEFAULTS` changes:**
 
 ```python
 "sync": {
     "provider": "local",
-    "cache_dir": "/home/frame/.cache/framesync",
     "interval_minutes": 60,
+    "onedrive": {
+        "share_url": "",
+        "password": "",
+    },
+    "local": {
+        "source_dir": "",
+    },
+    "google": {
+        "credentials_file": "",
+    },
 },
 ```
+
+Placeholder keys ensure env var overrides work without requiring the user to
+pre-populate the TOML file. `_set_nested()` only overrides existing keys;
+with placeholders present, `PIFRAME_SYNC__ONEDRIVE__SHARE_URL` can override
+the empty string.
 
 **`_PROTECTED` changes:**
 
 ```python
 _PROTECTED = {
-    ("sync", "cache_dir"),
-    ("sync", "provider"),
+    ("sync", "onedrive", "share_url"),
+    ("sync", "onedrive", "password"),
 }
 ```
 
-`output_dir` and `share_url`/`password` removed. Nested provider keys are
-protected via `_PROTECTED` extension to support 3-tuples
-(`("sync", "onedrive", "share_url")`).
+`("sync", "provider")` is **not** protected — the provider selection is not
+a secret and should be overridable via environment variables (e.g.
+`PIFRAME_SYNC__PROVIDER=onedrive`). Only actual credentials are protected
+so that `flush_now()` restores them from disk and doesn't persist env-var
+overrides to the config file.
 
-**`_read_nested()` helper:**
+`output_dir` and `share_url`/`password` removed from flat keys. Nested provider
+secrets protected via 3-tuple entries so `flush_now()` restores them from disk
+before writing.
+
+**`flush_now()` adaptation:** The existing `flush_now()` iterates `_PROTECTED`
+to restore secrets before writing. It must handle variable-length tuples
+(both 2-tuples like `("sync", "provider")` and 3-tuples like
+`("sync", "onedrive", "share_url")`).
+
+```python
+def flush_now(self) -> None:
+    """Restore protected keys from disk, then write config.
+
+    Walks variable-length tuples in _PROTECTED, restoring secrets from the
+    on-disk TOML before persisting the in-memory tree (which may have
+    env-var overrides that should not be persisted).
+    """
+    try:
+        with open(self._path, "rb") as f:
+            disk = tomllib.load(f)
+    except (FileNotFoundError, ValueError):
+        disk = {}
+
+    # Store protected entries as (entry_tuple, disk_value) to avoid
+    # reusing the `path` variable from the read loop in the restore loop.
+    protected: list[tuple[tuple[str, ...], object]] = []
+    for entry in _PROTECTED:
+        entry_path, key = entry[:-1], entry[-1]
+
+        # Walk path through on-disk dict to get the secret value
+        node: object = disk
+        for segment in entry_path:
+            if isinstance(node, dict):
+                node = node.get(segment)
+            else:
+                node = None
+            if node is None:
+                break
+        if not isinstance(node, dict):
+            continue  # intermediate segment missing or not a dict
+        disk_value = node.get(key)
+        if disk_value is None:
+            continue  # key not present on disk
+        protected.append((entry, disk_value))
+
+    # Restore each protected key into in-memory config
+    for entry, disk_value in protected:
+        entry_path, key = entry[:-1], entry[-1]
+        # Walk path through in-memory dict, creating intermediates as needed
+        mem_node: dict = self._data
+        for segment in entry_path:
+            if segment not in mem_node:
+                mem_node[segment] = {}
+            mem_node = mem_node[segment]
+        mem_node[key] = disk_value
+
+    # Write via canonical write path
+    self._write_toml(self._data)
+
+This ensures that provider credentials injected via environment variables are
+never persisted to disk, while still being available in the running config.
+
+**`_read_nested()` helper (added as a `ConfigStore` method):**
 
 ```python
 def _read_nested(
-    self, *keys: str, default: str | int | float | bool = ""
-) -> str | int | float | bool:
-    """Read a nested value from the config data."""
+    self, *keys: str, default: object = None
+) -> object:
+    """Read a nested value from the config data.
+
+    Returns *default* when any key in the path is missing.
+    When default is None (the default), a missing key and a key with value None
+    both return None. This is acceptable because TOML has no null type, so None
+    values in config data are extremely rare in practice.
+    Callers are responsible for type coercion.
+    """
     node: object = self._data
     for key in keys:
-        if isinstance(node, dict):
-            node = node.get(key, default)
+        if isinstance(node, dict) and key in node:
+            node = node[key]
         else:
             return default
-    return node if node is not None else default
+    return node
 ```
 
 **`_apply_env_overrides()` method:**
 
 ```python
+import os
+
 _ENV_PREFIX = "PIFRAME_"
 
 def _apply_env_overrides(self) -> None:
     """Overlay PIFRAME_* env vars onto the config data.
 
-    Convention: strip prefix, split remainder on __.
+    Convention: strip prefix, split remainder on __, and lowercase all segments.
+    Env var names are uppercase by convention (e.g. PIFRAME_SYNC__ONEDRIVE__SHARE_URL)
+    but config keys are lowercase from TOML parsing. The `.lower()` ensures they match.
     All segments except the last form the section path; the last is the key.
     E.g. PIFRAME_SYNC__ONEDRIVE__SHARE_URL -> sync.onedrive.share_url.
 
@@ -774,50 +1135,202 @@ def _apply_env_overrides(self) -> None:
     Unknown env vars silently ignored.
     """
     for name, value in os.environ.items():
-        if not name.startswith(self._ENV_PREFIX):
+        if not name.startswith(_ENV_PREFIX):
             continue
-        parts = name[len(self._ENV_PREFIX):].split("__")
+        parts = name[len(_ENV_PREFIX):].lower().split("__")
         if len(parts) < 2:
             continue
         section_path, key = parts[:-1], parts[-1]
         self._set_nested(section_path, key, value)
 ```
 
-**`_write_toml()` modification:**
-
-Detects nested dicts and emits `[section.sub]` TOML headers:
+**`_set_nested()` method (sibling of `_apply_env_overrides()`):**
 
 ```python
-def _write_toml(self, data: dict) -> None:
-    lines = []
-    for section, values in data.items():
-        self._write_section(lines, section, values, prefix=section)
-    self._path.write_text("\n".join(lines))
+    def _set_nested(self, path: list[str], key: str, value: str) -> None:
+        """Set a value at a nested path in the config data.
 
-def _write_section(self, lines: list[str], section: str, values: dict, prefix: str) -> None:
-    for k, v in values.items():
-        if isinstance(v, dict):
-            sub_prefix = f"{prefix}.{k}"
-            self._write_section(lines, k, v, prefix=sub_prefix)
-        else:
-            # ... existing scalar write logic
+        Only sets the key if every segment in *path* already exists
+        as a dict AND the final *key* already exists in the target dict.
+        Missing segments or unknown keys are silently skipped.
+
+        Performs type coercion: if the existing value is int/float/bool,
+        the string from the environment is coerced to match. For booleans,
+        any non-false/non-zero/non-empty string coerces to True (e.g. 'yes',
+        'no', 'on', 'off' all become True). This is a known limitation;
+        users should use 'true'/'false' or '1'/'0' for boolean config keys.
+        Coercion failures are logged and the key is skipped (no crash).
+        """
+        node: object = self._data
+        for segment in path:
+            if isinstance(node, dict) and isinstance(node.get(segment), dict):
+                node = node[segment]
+            else:
+                return  # path does not exist — skip
+        if not isinstance(node, dict):
+            return
+        if key not in node:
+            return  # key does not exist — skip (only override existing keys)
+        # Type coercion: match the existing value's type.
+        # For booleans, any non-false/non-zero/non-empty string coerces to True.
+        # This means 'yes', 'no', 'on', 'off' all become True. This is a known
+        # limitation of the env-var overlay; users should use 'true'/'false' or
+        # '1'/'0' for boolean config keys.
+        existing = node[key]
+        try:
+            if isinstance(existing, bool):
+                node[key] = value.lower() not in ("false", "0", "")
+            elif isinstance(existing, int):
+                node[key] = int(value)
+            elif isinstance(existing, float):
+                node[key] = float(value)
+            else:
+                node[key] = value
+        except (ValueError, AttributeError):
+            logging.warning(
+                "Config env override: cannot coerce '%s' to type %s, skipping",
+                value, type(existing).__name__,
+            )
 ```
+
+**Call site:** `_apply_env_overrides()` is called at the end of `_load()`, after
+`self._data` has been populated (whether from file or defaults). This ensures
+env vars overlay onto the fully-merged config tree in all cases.
+
+The `_load()` method retains its existing merge-with-defaults semantics:
+defaults are applied first (deep copy), then file data is merged on top via
+`_merge()` (shallow merge at the section level, preserving keys within
+sections that are not overridden by the file). Value clamping is applied
+after merge via `_apply_clamping()`.
+
+The existing `_merge()` method is retained — `dict.update()` is not sufficient
+because it replaces nested dicts entirely, losing default sub-keys.
+
+```python
+def _load(self) -> None:
+    try:
+        self._data = deepcopy(_DEFAULTS)
+        with open(self._path, "rb") as f:
+            file_data = tomllib.load(f)
+        self._merge(file_data)
+        self._apply_clamping()
+    except FileNotFoundError:
+        self._data = deepcopy(_DEFAULTS)
+    except Exception as exc:
+        # Back up corrupted config before falling back to defaults
+        try:
+            self._path.rename(self._path.with_suffix(".bak"))
+        except OSError:
+            pass
+        logging.error("Config load failed, backed up to .bak: %s", exc)
+        self._data = deepcopy(_DEFAULTS)
+    # Always apply env overrides, regardless of load path
+    self._apply_env_overrides()
+```
+
+**`_apply_clamping()` method:**
+
+Iterates the `_CLAMP` dict and applies min/max bounds to config values.
+This is extracted from the existing `_merge()` method for clarity.
+
+```python
+_CLAMP = {
+    ("display", "brightness"): (0, 100),
+    ("slideshow", "interval"): (1.0, 3600.0),
+    ("sync", "interval_minutes"): (1, 1440),
+}
+```
+
+**`_write_toml()` replacement:**
+
+`_write_toml()` is the canonical write path. `flush_now()` calls
+`_write_toml()` after restoring protected keys. Both use `tomli_w.dump()`
+with binary mode for consistency.
+
+```python
+import tomli_w
+
+def _write_toml(self, data: dict) -> None:
+    with open(self._path, "wb") as f:
+        tomli_w.dump(data, f)
+```
+
+Notes:
+- `tomli_w` is a new runtime dependency (single-file, zero transitive deps).
+  It is the official write companion to stdlib `tomllib`.
+- Add `tomli-w` to `pyproject.toml` dependencies.
+- NFR-4 (Minimal Footprint) is relaxed by one lightweight dependency;
+  hand-rolling a TOML writer is error-prone and not worth the risk.
 
 ---
 
-### 3.14 `src/piframe/album_provider.py` (Fixed)
+### 3.16 `src/piframe/app.py` (Modified)
+
+`App.__init__` constructs `ProviderModule` first, then passes its output
+to both `SyncModule` and `PlayerModule`:
+
+```python
+provider = ProviderModule().create(self._config)
+self._sync_service = SyncModule().create(self._config, provider=provider)
+self._player = PlayerModule().create(
+    self._config, provider=provider, cache=self._cache, assets=self._assets
+)
+```
+
+The provider instance is shared between `SyncService` (for sync) and
+`SlideshowPlayer` (for playlist building).
+
+**`settings_panel.py` note:** The settings panel reads `config.sync.output_dir`
+for disk-usage display. After `output_dir` is removed from `_SyncCfg`,
+`settings_panel.py` must be updated to query the active provider's
+storage directory instead (e.g. `OneDriveConfig.cache_dir` or
+`LocalConfig.source_dir`). This is a required change.
+
+---
+
+### 3.17 `src/piframe/album_provider.py` (Fixed)
 
 Drop the broken `AlbumProvider` import. Rename `DirectoryAlbumProvider` to
 `DirectoryReader` as a standalone class.
 
+`DirectoryReader` is a utility for scanning a directory for image files and
+returning them as an `Album`. It is **not** an `AlbumProvider` — it has no
+`sync()` or `status()` methods. `LocalProvider._scan()` implements the same
+logic inline (no need to delegate to `DirectoryReader`).
+
+**Migration note:** The existing `DirectoryReader` is only used internally
+by `SyncService` (now replaced by `SyncModule` + `ProviderModule`). No
+external consumers exist. The API change from instance-based to static is
+safe with no backward-compatibility shim needed.
+
+```python
+class DirectoryReader:
+    """Scan a directory for image files and return an Album.
+
+    Not an AlbumProvider — no sync, no status, no caching.
+    """
+
+    _EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".gif"})
+
+    @staticmethod
+    def read(directory: Path) -> Album:
+        if not directory.exists():
+            return Album([])
+        images = [
+            Image(path=p)
+            for p in sorted(directory.iterdir())
+            if p.is_file() and p.suffix.lower() in DirectoryReader._EXTENSIONS
+        ]
+        return Album(images)
+```
+
 ---
 
-### 3.15 `config.toml.example` (Updated)
+### 3.18 `config.toml.example` (Updated)
 
 ```toml
 [sync]
 provider         = "local"
-cache_dir        = "/home/frame/.cache/framesync"
 interval_minutes = 60
 
 [sync.onedrive]
@@ -832,14 +1345,15 @@ source_dir = "/home/frame/Pictures/slideshow"
 # Not yet implemented
 ```
 
+**`pyproject.toml` change:** Add `tomli-w` to `[project.dependencies]`.
+
 ---
 
-### 3.16 `config.devcontainer.toml` (New)
+### 3.19 `config.devcontainer.toml` (New)
 
 ```toml
 [sync]
 provider         = "local"
-cache_dir        = "/tmp/piframe-cache"
 interval_minutes = 60
 
 [sync.onedrive]
@@ -856,13 +1370,13 @@ source_dir = "./test-images"
 
 Devcontainer-appropriate defaults:
 - `provider = "local"` — no network needed.
-- `cache_dir = "/tmp/piframe-cache"` — writable temp path inside container.
-- `source_dir = "./test-images"` — relative path for local test fixtures.
+- `source_dir = "./test-images"` — relative path; `LocalConfig.source_dir`
+  applies `.expanduser().resolve()` to convert to absolute path.
 - Secrets (`share_url`, `password`) left empty; supplied via `.env` overrides.
 
 ---
 
-### 3.17 `.env.example` (Updated)
+### 3.20 `.env.example` (Updated)
 
 ```bash
 # OneDrive credentials (override config.toml values)
@@ -909,7 +1423,7 @@ reads these at startup and overlays them onto the loaded TOML config.
 - `test_local_sync_scans_directory` — returns Album with Image(path=source_file).
 - `test_local_sync_no_copy` — no files copied to output directory.
 - `test_local_sync_empty_source` — missing source dir returns empty Album.
-- `test_local_album_rescans` — `album()` rescans on each call.
+- `test_local_album_cached` — `album()` returns `self._album` from last `sync()`.
 
 ### 4.5 GooglePhotosProvider Tests (`test_providers.py`)
 
@@ -941,7 +1455,9 @@ reads these at startup and overlays them onto the loaded TOML config.
 - `test_env_override_nested` — `PIFRAME_SYNC__ONEDRIVE__SHARE_URL=...` overrides nested key.
 - `test_env_override_unknown_ignored` — unknown env vars silently ignored.
 - `test_env_override_type_coercion` — values coerced to existing Python type.
-- `test_write_toml_nested` — nested dicts written as `[section.sub]` headers.
+- `test_write_toml_nested` — `tomli_w.dump()` writes nested dicts as
+  `[section.sub]` headers. Round-trip: write then `tomllib.load()` reads
+  back equivalent structure.
 
 ---
 
@@ -953,7 +1469,7 @@ reads these at startup and overlays them onto the loaded TOML config.
 | **NFR-1b: No Backward Compatibility** | No migration logic. Users update config on next deploy. |
 | **NFR-2: Type Safety** | `AlbumProvider` is a `Protocol`. `Image`, `Exif`, `Album` are typed. basedpyright verifies structural conformance. |
 | **NFR-3: Testability** | Each provider independently testable. `SyncService` accepts mock `AlbumProvider`. EXIF testable with temp files. |
-| **NFR-4: Minimal Footprint** | No new dependencies. `requests` (OneDrive), `PIL` (EXIF), `pathlib`/`threading` (stdlib). |
+| **NFR-4: Minimal Footprint** | One new dependency: `tomli-w` (single-file, zero transitive deps). Official write companion to stdlib `tomllib`. All other deps existing: `requests` (OneDrive), `PIL` (EXIF), `pathlib`/`threading` (stdlib). |
 | **NFR-5: Thread Safety** | `SyncService` retains `_status_lock`. Provider sync is synchronous — no background I/O during sync. |
 | **NFR-6: Lazy EXIF Performance** | `Image.exif` loads on first access. Provider sync and playlist construction never trigger EXIF reads. |
 
@@ -964,7 +1480,7 @@ reads these at startup and overlays them onto the loaded TOML config.
 | Risk | Mitigation |
 |------|-----------|
 | `framesync/` removal | Sync logic extracted into `OneDriveProvider` before removal. Systemd timer updated. |
-| Config writer nested sections | `_write_toml()` handles dict recursion. Covered by tests. |
+| Config writer TOML serialization | `tomli_w.dump()` handles nested dicts natively. No hand-rolled formatter. Covered by round-trip test. |
 | `DirectoryReader` rename + import fix | Drop broken `AlbumProvider` import. Update all references to `DirectoryReader`. |
 | SlideshowPlayer DI change | `SlideshowPlayer` gains `provider` parameter. `App.__init__` wires it through. |
 | EXIF read on slow storage | Lazy loading defers I/O to first access. Sync and playlist build are unaffected. |

@@ -1,5 +1,4 @@
-"""
-Integration tests (Tier 3) — require Pi SSH access.
+"""Integration tests (Tier 3) — require Pi SSH access.
 
 Run with:
     pytest tests/test_integration.py -v -m integration

@@ -28,8 +28,7 @@ class PhotoCache:
         screen_size: tuple[int, int] = (SCREEN_W, SCREEN_H),
         cache_dir: Path | None = None,
     ) -> None:
-        """
-        Create a photo surface cache.
+        """Create a photo surface cache.
 
         Args:
             screen_size: Target screen dimensions.

@@ -34,8 +34,7 @@ class TimePicker(Widget):
         assets: Assets | None = None,
         on_change: Callable[[int, int], None] | None = None,
     ) -> None:
-        """
-        Create a time picker.
+        """Create a time picker.
 
         Args:
         rect: Position and size of the pill button.

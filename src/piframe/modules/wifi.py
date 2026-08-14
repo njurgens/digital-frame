@@ -12,14 +12,13 @@ class WifiModule(DimModule[WifiManagerProtocol]):
     """Construct a wifi manager, choosing real or mock based on config."""
 
     def create(self, config: ConfigStore, **deps: object) -> WifiManagerProtocol:
-        """
-        Return a ``WifiManager`` or ``MockWifiManager``.
+        """Return a ``WifiManager`` or ``MockWifiManager``.
 
         Args:
             config: Application configuration.
             **deps: Unused.
 
-        Returns
+        Returns:
         -------
             A wifi manager implementing ``WifiManagerProtocol``.
 

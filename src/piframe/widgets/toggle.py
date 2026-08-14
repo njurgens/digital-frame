@@ -19,8 +19,7 @@ class Toggle(Widget):
         initial: bool = False,
         on_change: Callable[[bool], None] | None = None,
     ) -> None:
-        """
-        Create a toggle switch.
+        """Create a toggle switch.
 
         Args:
         rect: Position and size of the toggle.

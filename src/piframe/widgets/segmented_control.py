@@ -25,8 +25,7 @@ class SegmentedControl(Widget):
         assets: Assets | None = None,
         on_change: Callable[[int, str], None] | None = None,
     ) -> None:
-        """
-        Create a segmented control.
+        """Create a segmented control.
 
         Args:
         rect: Position and size of the control.

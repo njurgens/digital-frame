@@ -141,7 +141,7 @@ All of the following must be true before the issue is considered complete:
 9. **`eng/test.sh` passes** with zero failures (all existing tests plus new ones).
 10. **`eng/check.sh` passes** with zero lint/format/type errors.
 11. **New tests added** for: provider resolution, each provider class, lazy EXIF loading, SyncService with mock provider.
-12. **No new runtime dependencies** in `pyproject.toml`.
-12. **Env var overrides work**: provider selection and nested provider keys can be overridden via environment variables; unknown env vars silently ignored.
-13. **config.devcontainer.toml exists** with devcontainer-appropriate defaults.
-14. **.env.example updated** with placeholder entries for secrets.
+12. **No new runtime dependencies** except `tomli-w` (write companion to stdlib `tomllib`, which is read-only).
+13. **Env var overrides work**: provider selection and nested provider keys can be overridden via environment variables; unknown env vars silently ignored.
+14. **config.devcontainer.toml exists** with devcontainer-appropriate defaults.
+15. **.env.example updated** with placeholder entries for secrets.

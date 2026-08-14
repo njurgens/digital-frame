@@ -15,8 +15,7 @@ from piframe.types import TRANS_DURATION
 
 
 class SlideshowPlayer:
-    """
-    Full-screen slideshow player with timed transitions.
+    """Full-screen slideshow player with timed transitions.
 
     Manages a playlist of photo paths, advancing on an interval and rendering
     crossfade/slide/cut transitions between images.  The image directory is
@@ -30,8 +29,7 @@ class SlideshowPlayer:
         screen_size: tuple[int, int],
         assets: Assets | None = None,
     ):
-        """
-        Initialise the player and load the initial playlist.
+        """Initialise the player and load the initial playlist.
 
         Args:
             config: Application configuration (interval, fit mode, shuffle, etc.).
@@ -59,8 +57,7 @@ class SlideshowPlayer:
         self.rescan()
 
     def rescan(self) -> None:
-        """
-        Re-read the output directory and rebuild the playlist.
+        """Re-read the output directory and rebuild the playlist.
 
         Loads all supported image files, optionally shuffles them, and
         pre-loads the first slide into the cache.
@@ -96,8 +93,7 @@ class SlideshowPlayer:
         return lst
 
     def update(self, dt: float) -> None:
-        """
-        Tick the player by *dt* seconds.
+        """Tick the player by *dt* seconds.
 
         Advances to the next slide when the interval elapses and drives
         in-progress transitions toward completion.
@@ -122,8 +118,7 @@ class SlideshowPlayer:
                 self.advance()
 
     def advance(self, direction: int = 1) -> None:
-        """
-        Move to the next (or previous) slide and start a transition.
+        """Move to the next (or previous) slide and start a transition.
 
         Args:
             direction: ``1`` for forward, ``-1`` for backward.
@@ -167,8 +162,7 @@ class SlideshowPlayer:
         return self.skip()
 
     def draw(self, screen: Surface) -> None:
-        """
-        Render the current slide (and transition) onto *screen*.
+        """Render the current slide (and transition) onto *screen*.
 
         Args:
             screen: Target pygame surface.
@@ -197,8 +191,7 @@ class SlideshowPlayer:
             screen.blit(self._current_surf, (0, 0))
 
     def draw_pip(self, screen: Surface) -> None:
-        """
-        Draw a small pause indicator pill when the player is paused.
+        """Draw a small pause indicator pill when the player is paused.
 
         Args:
             screen: Target pygame surface.

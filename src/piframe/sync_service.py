@@ -20,8 +20,7 @@ class SyncService:
     """Background sync service that runs framesync on a configurable interval."""
 
     def __init__(self, config: ConfigStore) -> None:
-        """
-        Create a sync service.
+        """Create a sync service.
 
         Args:
             config: Configuration store for sync interval.

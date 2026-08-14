@@ -81,8 +81,7 @@ class SettingsPanel:
         sync_service: SyncService | None = None,
         app_ref: App | None = None,
     ) -> None:
-        """
-        Create a settings panel.
+        """Create a settings panel.
 
         Args:
             assets: Asset manager for fonts and icons.
@@ -307,8 +306,7 @@ class SettingsPanel:
         self._visible = False
 
     def sync_from_config(self) -> None:
-        """
-        Re-sync all widget visual states from current config values.
+        """Re-sync all widget visual states from current config values.
 
         Call this after any programmatic config change so widgets stay in sync.
         """
