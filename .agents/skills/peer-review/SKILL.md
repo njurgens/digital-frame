@@ -209,7 +209,7 @@ A result is **well-formed** when all of these hold:
 
 1. It is non-empty.
 2. It contains a line matching `VERDICT: X` where X is exactly one of
-   `APPROVE`, `APPROVE_WITH_NITS`, `REQUEST_CHANGES`, `BLOCK`.
+   `APPROVE`, `APPROVE_WITH_SUGGESTIONS`, `REQUEST_CHANGES`, `BLOCK`.
 3. That `VERDICT:` line is the last non-blank line.
 4. It contains a `## REVIEW` section and a `## FINDINGS` section.
 
@@ -291,7 +291,7 @@ the first match:
 | Any domain returned `BLOCK` | **FAIL — stop** | Do not proceed. Fix every `blocker` finding, then re-run peer review from domain 1. |
 | Any domain returned `REQUEST_CHANGES` | **FAIL — fix first** | Address every `blocker` and `major` finding, then re-run peer review from domain 1. |
 | Any domain is `INCOMPLETE` | **HOLD** | Report which domains went unreviewed and ask the user whether to proceed or retry those domains. Do not silently pass. |
-| All domains `APPROVE` or `APPROVE_WITH_NITS` | **PASS** | Proceed to the next devloop stage. Report the nits; the author may fix or decline them. |
+| All domains `APPROVE` or `APPROVE_WITH_SUGGESTIONS` | **PASS** | Proceed to the next devloop stage. Report the suggestions; the author may fix or decline them. |
 
 Re-running after fixes means re-running `make-review-diff.sh` to regenerate the
 diff, then running all eight domains again in order — not just the domains that

@@ -77,7 +77,7 @@ Apply this table mechanically. Do not override it with a feeling.
 | --- | --- |
 | any `blocker` | `BLOCK` |
 | any `major`, no `blocker` | `REQUEST_CHANGES` |
-| only `minor` and/or `nit` | `APPROVE_WITH_NITS` |
+| only `minor` and/or `nit` | `APPROVE_WITH_SUGGESTIONS` |
 | no findings at all | `APPROVE` |
 
 `BLOCK` versus `REQUEST_CHANGES`: use `BLOCK` when shipping the change would
@@ -118,7 +118,7 @@ FIX: ...
 REVIEWED: <files or areas you actually examined>
 NOT_REVIEWED: <what you could not check, and why — or "nothing">
 
-VERDICT: <APPROVE|APPROVE_WITH_NITS|REQUEST_CHANGES|BLOCK>
+VERDICT: <APPROVE|APPROVE_WITH_SUGGESTIONS|REQUEST_CHANGES|BLOCK>
 ```
 
 Rules for the format:
