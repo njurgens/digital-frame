@@ -11,5 +11,5 @@ if [[ "$*" == *"--skip-diff"* ]]; then
     uv run pytest "${@/--skip-diff/}"
 else
     uv run pytest --cov=. --cov-report=xml:"$COVERAGE_FILE" "$@"
-    diff-cover "$COVERAGE_FILE" --fail-under=90 --exclude "test_*.py" "conftest.py"
+    uv run diff-cover "$COVERAGE_FILE" --fail-under=90 --exclude "test_*.py" "conftest.py"
 fi

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import queue
@@ -51,6 +52,33 @@ _SWIPE_MAX_DT = 0.4
 _SWIPE_MAX_SLOPE = 0.5
 _TAP_MAX_DIST = 20.0
 
+#: Where the app records its PID. The file is flock-locked for the process
+#: lifetime, so its lock state is a liveness oracle for eng/run.sh.
+PID_FILE = "/tmp/slideshow.pid"
+
+#: The app's config file (gitignored; bootstrapped by eng/run.sh).
+CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
+
+
+def acquire_pid_file(path: str | Path = PID_FILE) -> int:
+    """Open *path*, take an exclusive flock, and write our PID to it.
+
+    The lock is held on the returned fd for the process lifetime (the kernel
+    releases it on death), so the lock state is a liveness oracle: eng/run.sh
+    probes it to tell a live instance from a stale file.
+
+    Returns the fd. Exits if another instance already holds the lock.
+    """
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(fd)
+        sys.exit("another slideshow is already running; refusing to start a second instance")
+    os.ftruncate(fd, 0)
+    os.write(fd, f"{os.getpid()}\n".encode())
+    return fd
+
 
 class App:
     """Main application class for the Pi Frame digital photo frame."""
@@ -68,10 +96,13 @@ class App:
         pygame.freetype.init()
         init_events()
 
-        Path("/tmp/slideshow.pid").write_text(str(os.getpid()))
+        self._pid_fd = acquire_pid_file(PID_FILE)
 
         if self._args.windowed:
-            self._screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.SCALED)
+            # Plain window: the SCALED (high-DPI) flag requires a hardware
+            # renderer, and with the devcontainer's software renderer the
+            # window is created but never presented.
+            self._screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
         else:
             self._screen = pygame.display.set_mode(
                 (SCREEN_W, SCREEN_H),
@@ -87,8 +118,7 @@ class App:
 
         self._assets = Assets.load()
 
-        config_path = Path(__file__).parent.parent / "config.toml"
-        self._config = ConfigStore(config_path)
+        self._config = ConfigStore(CONFIG_PATH)
 
         # Modules construct services — conditional logic is encapsulated.
         # The provider is created first and shared by the sync and player

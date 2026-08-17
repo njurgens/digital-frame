@@ -3,7 +3,7 @@
 # create-issue.sh — Create a GitHub issue from a markdown file.
 #
 # Usage:
-#   eng/create-issue.sh --title "TITLE" --body-file FILE [--label L1] [--label L2] ...
+#   create-issue.sh --title "TITLE" --body-file FILE [--label L1] [--label L2] ...
 #
 # Options:
 #   --title TITLE       Issue title (required)
@@ -14,7 +14,7 @@
 #   --help              Show this help text
 #
 # Example:
-#   eng/create-issue.sh \
+#   create-issue.sh \
 #     --title "feat: add dependency injection framework" \
 #     --body-file docs/proposed-issues.md \
 #     --label enhancement
@@ -27,7 +27,7 @@ BODY_FILE=""
 LABELS=()
 
 usage() {
-    sed -n '2,12p' "$0" | sed 's/^# \?//'
+    sed -n '2,14p' "$0" | sed 's/^# \?//'
     exit "${1:-0}"
 }
 
@@ -54,6 +54,16 @@ fi
 
 if [[ ! -f "$BODY_FILE" ]]; then
     echo "Error: body file not found: $BODY_FILE" >&2
+    exit 1
+fi
+
+# Pre-flight: the 'gh' CLI must be installed and logged in
+if ! command -v gh >/dev/null 2>&1; then
+    echo "Error: the 'gh' CLI is not installed (see https://cli.github.com/)." >&2
+    exit 1
+fi
+if ! gh auth status >/dev/null 2>&1; then
+    echo "Error: 'gh' is not logged in. Run 'gh auth login' first." >&2
     exit 1
 fi
 

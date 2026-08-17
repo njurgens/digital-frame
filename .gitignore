@@ -17,6 +17,7 @@ Thumbs.db
 
 *.pdf
 *.png
+!tests/fixtures/stock/*.png
 
 # uv
 .venv/
@@ -26,3 +27,7 @@ Thumbs.db
 # Test coverage artifacts
 .coverage
 .coverage.xml
+
+# Agent scratch working directory — keep the folder, ignore its contents
+.pi/tmp/*
+!.pi/tmp/.gitkeep

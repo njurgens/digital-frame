@@ -9,6 +9,17 @@ memory decisions in the design docs assume these constraints.
 - **RAM:** 512 MB
 - **GPU:** Broadcom VideoCore IV (vc4) — OpenGL ES 2.0 / GL 2.1 only
 
+## Display
+
+- **Panel:** Waveshare 10.1inch DSI LCD (C) — 10.1" IPS, 1280×800
+- **Interface:** 15-pin FPC DSI cable, plugged straight into the Pi 3A+ DSI port
+- **Touch:** 10-point capacitive
+- **Driver:** Bookworm `dtoverlay=vc4-kms-dsi-waveshare-panel,10_1_inch` (KMS via vc4)
+- **Power:** 5 V input ≥ 0.88 A — under-powered supplies cause boot failures or display glitches
+- **Reference:** <https://www.waveshare.com/wiki/10.1inch_DSI_LCD_(C)>
+
+The app renders fullscreen at 1280×800 (see `SCREEN_W`/`SCREEN_H` in the LLD).
+
 ## Operating system
 
 - **Raspberry Pi OS Bookworm** (Debian 12), aarch64

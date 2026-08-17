@@ -85,11 +85,13 @@ The last line of your final message must be:
 VERDICT: APPROVE
 ```
 
-or `APPROVE_WITH_NITS`, or `REQUEST_CHANGES`, or `BLOCK`. Nothing after it — no
-sign-off, no summary, no extra prose.
+or `APPROVE_WITH_SUGGESTIONS`, or `REQUEST_CHANGES`, or `BLOCK`. Nothing
+after it — no sign-off, no summary, no extra prose.
 
-Every review ends with exactly one of those four verdicts. Pick one. Do not
-hedge, do not write "mostly approve", do not invent a fifth verdict.
+Those four tokens are the complete set, defined by the `review-standards`
+skill — emit them verbatim. Pick one. Do not hedge, do not write "mostly
+approve", do not invent a fifth verdict, and do not reword one of the four
+into a variant.
 
 If you found nothing wrong, that is a fine answer: emit an empty findings
 section and `VERDICT: APPROVE`.

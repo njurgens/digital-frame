@@ -122,7 +122,7 @@ git --no-pager diff --no-color --no-ext-diff -M --name-only "${DIFF_RANGE[@]}" >
 UNTRACKED_COUNT=0
 UNTRACKED_SKIPPED=0
 if [ "$INCLUDE_UNTRACKED" -eq 1 ] && [ "$COMMITTED_ONLY" -eq 0 ]; then
-  while IFS= read -r f; do
+  while IFS= read -r -d '' f; do
     [ -n "$f" ] || continue
     [ -f "$f" ] || continue
     size=$(wc -c < "$f" | tr -d ' ')
@@ -134,7 +134,7 @@ if [ "$INCLUDE_UNTRACKED" -eq 1 ] && [ "$COMMITTED_ONLY" -eq 0 ]; then
     git --no-pager diff --no-color --no-ext-diff --no-index -- /dev/null "$f" >> "$DIFF_FILE" || true
     printf '%s\n' "$f" >> "$FILES_FILE"
     UNTRACKED_COUNT=$((UNTRACKED_COUNT + 1))
-  done < <(git ls-files --others --exclude-standard)
+  done < <(git ls-files --others --exclude-standard -z)
 fi
 
 # --- commit log ---------------------------------------------------------------
