@@ -138,9 +138,7 @@ Worked example: adding a hypothetical `flickr` provider.
 
        @property
        def source_dir(self) -> Path:
-           raw = self._config.read_nested(
-               "sync", "flickr", "source_dir", default="~/Pictures/flickr"
-           )
+           raw = self._config.read_nested("sync", "flickr", "source_dir", default="~/Pictures/flickr")
            return Path(str(raw)).expanduser()
 
 
