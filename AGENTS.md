@@ -61,10 +61,6 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 - `src/piframe/` — the app: `app.py` (entry point), `slideshow_player.py`,
   `photo_cache.py`, `config_store.py`, and `providers/` (the album
   providers — see docs/album-providers.md)
-- `slideshow/slideshow.py` — the retired standalone pygame app (kept for
-  reference)
-- `framesync/` — the retired OneDrive sync service (kept for rollback only;
-  its systemd units are disabled on the Pi)
 - `tests/` — pytest suite; `eng/` — the scripts above
 - `docs/` — public documentation: LLD (authoritative design), HLD, UX
   requirements, album-providers guide, hardware target
@@ -75,7 +71,7 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   aarch64 wheels but not cp314). Scripts run from `.venv/bin/`; no apt
   Python packages.
 - **`config.toml` holds secrets and is never committed.** Only
-  `src/config.toml` and `framesync/config.toml` are gitignored; the tracked
+  `src/config.toml` is gitignored; the tracked
   root `config.toml` and `config.toml.example` must never contain real
   credentials.
 - **The surface cache is `~/.cache/piframe/surfaces`** (not configurable).
@@ -88,6 +84,10 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0`.
 - **`eng/install.sh` patches system files as root** (sudoers, labwc
   autostart) — read the script before changing it.
+- **AI attribution.** Add a `Co-Authored-By:` line to every commit message,
+  PR, and GitHub issue you create, attributing the AI that did the work
+  (e.g. `Co-Authored-By: <model> (<agent>) <email>`), so it is transparent
+  that the work was AI-generated.
 
 ## Git & PR workflow
 
