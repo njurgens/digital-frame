@@ -10,37 +10,42 @@ from pygame import Rect, Surface
 
 from piframe.assets import IC_PAUSE, Assets
 from piframe.config_store import ConfigStore
+from piframe.image import IMAGE_EXTENSIONS
 from piframe.photo_cache import PhotoCache
+from piframe.providers import AlbumProvider
 from piframe.types import TRANS_DURATION
 
 
 class SlideshowPlayer:
-    """
-    Full-screen slideshow player with timed transitions.
+    """Full-screen slideshow player with timed transitions.
 
     Manages a playlist of photo paths, advancing on an interval and rendering
-    crossfade/slide/cut transitions between images.  The image directory is
-    rescanned each cycle so newly synced photos appear without a restart.
+    crossfade/slide/cut transitions between images.  The playlist is rebuilt
+    from the album provider's current collection each cycle, so newly synced
+    photos appear without a restart.
     """
 
     def __init__(
         self,
         config: ConfigStore,
+        *,
+        provider: AlbumProvider,
         cache: PhotoCache,
         screen_size: tuple[int, int],
         assets: Assets | None = None,
     ):
-        """
-        Initialise the player and load the initial playlist.
+        """Initialise the player and load the initial playlist.
 
         Args:
             config: Application configuration (interval, fit mode, shuffle, etc.).
+            provider: Album provider whose collection the playlist is built from.
             cache: Photo cache for pre-rendered surfaces.
             screen_size: ``(width, height)`` of the display.
             assets: Asset provider for icons (used by the pause PiP indicator).
 
         """
         self._config = config
+        self._provider = provider
         self._cache = cache
         self._assets = assets
         self._w, self._h = screen_size
@@ -59,19 +64,14 @@ class SlideshowPlayer:
         self.rescan()
 
     def rescan(self) -> None:
-        """
-        Re-read the output directory and rebuild the playlist.
+        """Rebuild the playlist from the provider's current album.
 
-        Loads all supported image files, optionally shuffles them, and
-        pre-loads the first slide into the cache.
+        The album is a snapshot owned by the provider.  The player applies an
+        independent extension filter as defense in depth, then optionally
+        shuffles, and pre-loads the first slide into the cache.
         """
-        output_dir = Path(self._config.sync.output_dir)
-        exts = {".jpg", ".jpeg", ".png", ".gif"}
-        files = (
-            sorted([p for p in output_dir.iterdir() if p.suffix.lower() in exts])
-            if output_dir.exists()
-            else []
-        )
+        album = self._provider.album()
+        files = sorted(img.path for img in album if img.path.suffix.lower() in IMAGE_EXTENSIONS)
         self._playlist = files
         if self._config.slideshow.shuffle:
             self._playlist = self._fisher_yates(self._playlist)
@@ -96,8 +96,7 @@ class SlideshowPlayer:
         return lst
 
     def update(self, dt: float) -> None:
-        """
-        Tick the player by *dt* seconds.
+        """Tick the player by *dt* seconds.
 
         Advances to the next slide when the interval elapses and drives
         in-progress transitions toward completion.
@@ -122,8 +121,7 @@ class SlideshowPlayer:
                 self.advance()
 
     def advance(self, direction: int = 1) -> None:
-        """
-        Move to the next (or previous) slide and start a transition.
+        """Move to the next (or previous) slide and start a transition.
 
         Args:
             direction: ``1`` for forward, ``-1`` for backward.
@@ -167,8 +165,7 @@ class SlideshowPlayer:
         return self.skip()
 
     def draw(self, screen: Surface) -> None:
-        """
-        Render the current slide (and transition) onto *screen*.
+        """Render the current slide (and transition) onto *screen*.
 
         Args:
             screen: Target pygame surface.
@@ -197,8 +194,7 @@ class SlideshowPlayer:
             screen.blit(self._current_surf, (0, 0))
 
     def draw_pip(self, screen: Surface) -> None:
-        """
-        Draw a small pause indicator pill when the player is paused.
+        """Draw a small pause indicator pill when the player is paused.
 
         Args:
             screen: Target pygame surface.

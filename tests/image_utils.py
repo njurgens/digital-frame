@@ -14,19 +14,13 @@ def assert_screenshot_matches(
     threshold: float = 0.02,
     ignore_rects: list[tuple[int, int, int, int]] | None = None,
 ) -> None:
-    """
-    Fail if more than `threshold` fraction of pixels differ by >10 per channel.
+    """Fail if more than `threshold` fraction of pixels differ by >10 per channel.
 
-    Parameters
-    ----------
-    actual_path:
-        Path to the screenshot captured from the device.
-    golden_name:
-        Base filename (without extension) of the golden image in tests/golden/.
-    threshold:
-        Maximum fraction of differing pixels allowed (default 2%).
-    ignore_rects:
-        List of (x, y, w, h) regions blacked out before comparison (e.g. clock area).
+    Args:
+        actual_path: Path to the screenshot captured from the device.
+        golden_name: Base filename (without extension) of the golden image in tests/golden/.
+        threshold: Maximum fraction of differing pixels allowed (default 2%).
+        ignore_rects: List of (x, y, w, h) regions blacked out before comparison (e.g. clock area).
 
     """
     actual_img = Image.open(actual_path).convert("RGB")

@@ -27,6 +27,7 @@ from piframe.keyboard import Keyboard
 from piframe.modules import (
     CacheModule,
     PlayerModule,
+    ProviderModule,
     SettingsModule,
     SyncModule,
     WifiModule,
@@ -89,11 +90,16 @@ class App:
         config_path = Path(__file__).parent.parent / "config.toml"
         self._config = ConfigStore(config_path)
 
-        # Modules construct services — conditional logic is encapsulated
+        # Modules construct services — conditional logic is encapsulated.
+        # The provider is created first and shared by the sync and player
+        # modules, which both consume the same instance (D-6, D-8).
+        self._provider = ProviderModule().create(self._config)
         self._cache = CacheModule().create(self._config)
         self._clock_w = ClockWidget(self._assets)
-        self._sync = SyncModule().create(self._config)
-        self._player = PlayerModule().create(self._config, cache=self._cache, assets=self._assets)
+        self._sync = SyncModule().create(self._config, provider=self._provider)
+        self._player = PlayerModule().create(
+            self._config, provider=self._provider, cache=self._cache, assets=self._assets
+        )
         self._backlight = BacklightController()
         self._overlay = OverlayUI(self._assets, self._config)
         self._wifi = WifiModule().create(self._config)
@@ -337,7 +343,7 @@ class App:
     def _cleanup(self):
         sync = getattr(self, "_sync", None)
         if sync is not None:
-            sync.stop()
+            sync.stop()  # sole owner of the provider's close (D-9)
         self._sleep.stop()
         self._clock_w.stop()
         self._config.flush_now()

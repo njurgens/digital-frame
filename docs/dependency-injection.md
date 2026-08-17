@@ -80,8 +80,6 @@ class WifiModule(DimModule[WifiManagerProtocol]):
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from piframe.config_store import ConfigStore
 from piframe.di import DimModule
 from piframe.photo_cache import PhotoCache
@@ -89,13 +87,14 @@ from piframe.types import SCREEN_H, SCREEN_W
 
 
 class CacheModule(DimModule[PhotoCache]):
-    """Constructs PhotoCache with config-driven cache directory."""
+    """Constructs PhotoCache with the default surface cache directory.
+
+    The surface cache is a player implementation detail, not provider
+    storage, so its location is not config-driven.
+    """
 
     def create(self, config: ConfigStore, **deps: object) -> PhotoCache:
-        return PhotoCache(
-            screen_size=(SCREEN_W, SCREEN_H),
-            cache_dir=Path(config.sync.cache_dir),
-        )
+        return PhotoCache(screen_size=(SCREEN_W, SCREEN_H))
 ```
 
 #### SyncModule
@@ -107,14 +106,17 @@ from __future__ import annotations
 
 from piframe.config_store import ConfigStore
 from piframe.di import DimModule
+from piframe.providers import AlbumProvider
 from piframe.sync_service import SyncService
 
 
 class SyncModule(DimModule[SyncService]):
-    """Constructs SyncService. No swapping needed today."""
+    """Constructs a SyncService that polls the given album provider."""
 
-    def create(self, config: ConfigStore, **deps: object) -> SyncService:
-        return SyncService(config)
+    def create(
+        self, config: ConfigStore, *, provider: AlbumProvider, **deps: object
+    ) -> SyncService:
+        return SyncService(config, provider)
 ```
 
 #### PlayerModule
@@ -124,11 +126,12 @@ class SyncModule(DimModule[SyncService]):
 
 from __future__ import annotations
 
+from piframe.assets import Assets
 from piframe.config_store import ConfigStore
 from piframe.di import DimModule
-from piframe.app import SlideshowPlayer
-from piframe.assets import Assets
 from piframe.photo_cache import PhotoCache
+from piframe.providers import AlbumProvider
+from piframe.slideshow_player import SlideshowPlayer
 from piframe.types import SCREEN_H, SCREEN_W
 
 
@@ -139,12 +142,14 @@ class PlayerModule(DimModule[SlideshowPlayer]):
         self,
         config: ConfigStore,
         *,
+        provider: AlbumProvider,
         cache: PhotoCache,
         assets: Assets,
         **deps: object,
     ) -> SlideshowPlayer:
         return SlideshowPlayer(
             config=config,
+            provider=provider,
             cache=cache,
             screen_size=(SCREEN_W, SCREEN_H),
             assets=assets,
@@ -241,27 +246,44 @@ This replaces `--mock-wifi` CLI flag. The flag can remain as a shortcut that set
 
 ## Adding a New Swappable Service
 
-When a new service needs environment-based swapping (e.g. album provider), add a module:
+When a new service needs config-based swapping (e.g. the album provider), add a module that reads the selection from config and constructs the concrete implementation. The shipped example is `ProviderModule`, which reads `config.sync.provider` and builds the matching provider with its config wrapper:
 
 ```python
-# piframe/modules/album.py
+# piframe/modules/provider.py
+
+from piframe.config_store import ConfigStore
+from piframe.di import DimModule
+from piframe.providers import (
+    AlbumProvider,
+    GooglePhotosConfig,
+    GooglePhotosProvider,
+    LocalConfig,
+    LocalProvider,
+    OneDriveConfig,
+    OneDriveProvider,
+    ProviderName,
+)
 
 
-class AlbumModule(DimModule[IAlbumProvider]):
-    def create(self, config: ConfigStore, **deps: object) -> IAlbumProvider:
-        match config.app.album_provider:
-            case "local":
-                return LocalProvider(config.album.local_path)
-            case "onedrive":
-                return OneDriveProvider(config.onedrive)
-            case _:
-                return OneDriveProvider(config.onedrive)
+class ProviderModule(DimModule[AlbumProvider]):
+    """Construct the album provider selected by ``config.sync.provider``."""
+
+    def create(self, config: ConfigStore, **deps: object) -> AlbumProvider:
+        name = config.sync.provider
+        match name:
+            case ProviderName.ONEDRIVE:
+                return OneDriveProvider(OneDriveConfig(config))
+            case ProviderName.LOCAL:
+                return LocalProvider(LocalConfig(config))
+            case ProviderName.GOOGLE:
+                return GooglePhotosProvider(GooglePhotosConfig(config))
+        raise ValueError(f"Unreachable provider name: {name!r}")
 ```
 
-Add the corresponding config key, and wire it into `App.__init__`:
+The module is registered in `App.__init__` before its consumers, and the DI container passes the constructed provider to the sync and player modules through their keyword dependencies:
 
 ```python
-self._album = AlbumModule().create(self._config)
+self._provider = ProviderModule().create(self._config)
 ```
 
 No changes to other modules or the module protocol.

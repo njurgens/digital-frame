@@ -31,8 +31,7 @@ class SettingsModule(DimModule[SettingsPanel]):
         app_ref: App,
         **deps: object,
     ) -> SettingsPanel:
-        """
-        Build a settings panel wired to the app's services.
+        """Build a settings panel wired to the app's services.
 
         Args:
             config: Application configuration.
@@ -44,8 +43,7 @@ class SettingsModule(DimModule[SettingsPanel]):
             app_ref: Reference to the owning ``App`` instance.
             **deps: Unused.
 
-        Returns
-        -------
+        Returns:
             A ``SettingsPanel`` instance.
 
         """

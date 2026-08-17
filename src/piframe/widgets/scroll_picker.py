@@ -28,8 +28,7 @@ class ScrollPicker(Widget):
         row_h: int = 44,
         visible_rows: int = 7,
     ) -> None:
-        """
-        Create a scroll picker.
+        """Create a scroll picker.
 
         Args:
             rect: Widget bounding rectangle.

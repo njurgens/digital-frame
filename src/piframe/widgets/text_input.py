@@ -33,8 +33,7 @@ class TextInput(Widget):
         on_focus: Callable[[], None] | None = None,
         on_change: Callable[[str], None] | None = None,
     ) -> None:
-        """
-        Create a text input field.
+        """Create a text input field.
 
         Args:
         rect: Position and size of the input.

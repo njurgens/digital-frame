@@ -9,7 +9,7 @@ dependencies = [
     "Pillow",
     "requests",
     "numpy",
-    "paramiko",
+    "tomli-w>=1.2.0",
 ]
 
 [project.scripts]
@@ -31,12 +31,15 @@ build-backend = "uv_build"
 [tool.ruff]
 target-version = "py313"
 line-length = 99
+# Agent tooling is not project code; keep lint focused on src/tests (mirrors
+# the basedpyright include list).
+exclude = [".agents"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "RUF", "ANN201", "ANN001", "D"]
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"
+convention = "google"
 
 [tool.basedpyright]
 pythonVersion = "3.13"

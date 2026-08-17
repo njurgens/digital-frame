@@ -31,8 +31,7 @@ class NavItem(Widget):
         active: bool = False,
         on_select: Callable[[], None] | None = None,
     ) -> None:
-        """
-        Create a navigation item.
+        """Create a navigation item.
 
         Args:
         rect: Position and size of the item.

@@ -1,5 +1,6 @@
-# Copy this file to config.toml and fill in your OneDrive credentials.
-# config.toml is excluded from version control (it contains secrets).
+# Copy this file to config.toml and update the values for your device.
+# Note: only src/config.toml is gitignored — the
+# tracked root config.toml must never contain real credentials.
 
 [app]
 mock_wifi = false    # use MockWifiManager instead of WifiManager
@@ -21,11 +22,23 @@ sleep_time = "22:00"   # 24-hour HH:MM
 wake_time  = "07:00"   # 24-hour HH:MM
 
 [sync]
-share_url        = "https://1drv.ms/f/YOUR_SHARE_URL_HERE"
-password         = ""
-output_dir       = "/home/frame/Pictures/slideshow"
-cache_dir        = "/home/frame/.cache/framesync"
+# Which album provider to use: "onedrive", "local", or "google".
+# Unknown values fail startup with a clear error.
+provider         = "local"
 interval_minutes = 60
+
+[sync.onedrive]
+# Used when provider = "onedrive".
+share_url = "https://1drv.ms/f/YOUR_SHARE_URL_HERE"
+password  = ""
+cache_dir = "/home/frame/.cache/piframe/onedrive"
+
+[sync.local]
+# Used when provider = "local".  The user manages this directory.
+source_dir = "/home/frame/Pictures/slideshow"
+
+[sync.google]
+# Reserved for the future Google Photos provider.
 
 [system]
 timezone = "America/Los_Angeles"

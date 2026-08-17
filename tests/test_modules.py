@@ -12,12 +12,45 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
 import pytest
 
+from piframe.album import Album
 from piframe.assets import Assets
 from piframe.config_store import ConfigStore
-from piframe.modules import CacheModule, PlayerModule, SyncModule, WifiModule
+from piframe.modules import (
+    CacheModule,
+    PlayerModule,
+    ProviderModule,
+    SyncModule,
+    WifiModule,
+)
 from piframe.photo_cache import PhotoCache
+from piframe.providers import (
+    GooglePhotosProvider,
+    LocalProvider,
+    OneDriveProvider,
+)
 from piframe.sync_service import SyncService
+from piframe.types import SyncStatus
 from piframe.wifi_manager import MockWifiManager, WifiManager
+
+
+class _StubAlbumProvider:
+    """Test double for the album provider protocol."""
+
+    @property
+    def storage_dir(self) -> Path | None:
+        return None
+
+    def sync(self) -> Album:
+        return Album()
+
+    def album(self) -> Album:
+        return Album()
+
+    def status(self) -> SyncStatus:
+        return SyncStatus()
+
+    def close(self) -> None:
+        pass
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -51,10 +84,9 @@ def test_wifi_module_selects_mock(config: ConfigStore) -> None:
 
 
 def test_cache_module_sets_cache_dir(config: ConfigStore) -> None:
-    """Cache module sets cache dir."""
-    """CacheModule passes the configured cache_dir to PhotoCache."""
+    """CacheModule constructs a PhotoCache at the default surface cache dir."""
     cache = CacheModule().create(config)
-    assert cache._cache_dir == Path("/home/frame/.cache/framesync")
+    assert cache._cache_dir == Path.home() / ".cache" / "piframe" / "surfaces"
 
 
 def test_cache_module_sets_screen_size(config: ConfigStore) -> None:
@@ -66,17 +98,47 @@ def test_cache_module_sets_screen_size(config: ConfigStore) -> None:
 
 
 def test_sync_module_creates_service(config: ConfigStore) -> None:
-    """Sync module creates service."""
-    """SyncModule returns a SyncService instance."""
-    sync = SyncModule().create(config)
+    """SyncModule returns a SyncService wired to the given provider."""
+    provider = _StubAlbumProvider()
+    sync = SyncModule().create(config, provider=provider)
     assert isinstance(sync, SyncService)
+    assert sync.provider is provider
+    sync.stop()
 
 
 def test_player_module_passes_deps(config: ConfigStore) -> None:
-    """Player module passes deps."""
-    """PlayerModule wires cache and assets into the SlideshowPlayer."""
+    """PlayerModule wires provider, cache, and assets into the SlideshowPlayer."""
+    provider = _StubAlbumProvider()
     cache = MagicMock(spec=PhotoCache)
     assets = MagicMock(spec=Assets)
-    player = PlayerModule().create(config, cache=cache, assets=assets)
+    player = PlayerModule().create(config, provider=provider, cache=cache, assets=assets)
+    assert player._provider is provider
     assert player._cache is cache
     assert player._assets is assets
+
+
+def test_provider_module_selects_local(config: ConfigStore) -> None:
+    """Provider module selects the local provider by default."""
+    provider = ProviderModule().create(config)
+    assert isinstance(provider, LocalProvider)
+
+
+def test_provider_module_selects_onedrive(config: ConfigStore) -> None:
+    """Provider module selects the OneDrive provider from config."""
+    config.set("sync", "provider", "onedrive")
+    provider = ProviderModule().create(config)
+    assert isinstance(provider, OneDriveProvider)
+
+
+def test_provider_module_selects_google(config: ConfigStore) -> None:
+    """Provider module selects the Google stub from config."""
+    config.set("sync", "provider", "google")
+    provider = ProviderModule().create(config)
+    assert isinstance(provider, GooglePhotosProvider)
+
+
+def test_provider_module_rejects_unknown_provider(config: ConfigStore) -> None:
+    """Provider module fails startup with a clear error on an unknown provider."""
+    config.set("sync", "provider", "dropbox")
+    with pytest.raises(ValueError, match="Unknown sync provider"):
+        ProviderModule().create(config)

@@ -1,0 +1,52 @@
+# Devcontainer defaults.  The app reads src/config.toml (gitignored), so
+# to use these defaults inside the container:
+#
+#     cp config.devcontainer.toml src/config.toml
+#
+# Secrets (OneDrive credentials) are supplied via environment variables,
+# not this file — see .env.example.
+
+[app]
+mock_wifi = true    # no real Wi-Fi management inside the container
+
+[slideshow]
+interval    = 30
+fit_mode    = "fit"
+shuffle     = true
+transition  = "crossfade"
+
+[display]
+brightness    = 72
+show_clock    = true
+timezone_auto = true
+
+[sleep]
+enabled    = false
+sleep_time = "22:00"
+wake_time  = "07:00"
+
+[sync]
+# Which album provider to use: "onedrive", "local", or "google".
+# Override at runtime with PIFRAME__SYNC__PROVIDER (see .env.example).
+provider         = "local"
+interval_minutes = 60
+
+[sync.onedrive]
+# share_url and password are injected via PIFRAME__SYNC__ONEDRIVE__*
+# environment variables; leave them empty here.
+share_url = ""
+password  = ""
+cache_dir = "/home/vscode/.cache/piframe/onedrive"
+
+[sync.local]
+# Point this at a directory of photos on the dev machine.
+source_dir = "/home/vscode/Pictures/slideshow"
+
+[sync.google]
+# Reserved for the future Google Photos provider.
+
+[system]
+timezone = "America/Los_Angeles"
+
+[update]
+repo = "njurgens/digital-frame"

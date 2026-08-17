@@ -1,37 +1,40 @@
-"""Background photo sync service that polls framesync on an interval."""
+"""Background photo sync service that polls its album provider on an interval."""
 
 from __future__ import annotations
 
-import copy
-import datetime
 import logging
-import sys
 import threading
-from pathlib import Path
 
 import pygame
 
 from piframe import types
 from piframe.config_store import ConfigStore
+from piframe.providers import AlbumProvider
 from piframe.types import SyncStatus
 
 
 class SyncService:
-    """Background sync service that runs framesync on a configurable interval."""
+    """Background sync service that runs its provider's sync on an interval.
 
-    def __init__(self, config: ConfigStore) -> None:
-        """
-        Create a sync service.
+    The provider owns the sync status: it sets in-progress, photo count,
+    last sync time, and last error during :meth:`AlbumProvider.sync`.  The
+    service only catches exceptions from a failed sync, logs them, and
+    posts the sync-complete event; the last known good album is retained by
+    the provider (FR-12).
+    """
+
+    def __init__(self, config: ConfigStore, *, provider: AlbumProvider) -> None:
+        """Create a sync service.
 
         Args:
-            config: Configuration store for sync interval.
+            config: Configuration store for the sync interval.
+            provider: Album provider that owns the photo files and status.
 
         """
         self._config = config
+        self._provider = provider
         self._stop_event = threading.Event()
         self._trigger_event = threading.Event()
-        self._status = SyncStatus()
-        self._status_lock = threading.Lock()
         self._interval_s = config.sync.interval_minutes * 60
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -49,71 +52,37 @@ class SyncService:
                 remaining -= wait_for
 
     def _do_sync(self) -> None:
-        with self._status_lock:
-            self._status.in_progress = True
-            self._status.last_error = None
         try:
-            framesync_dir = str(Path(__file__).parent.parent / "framesync")
-            if framesync_dir not in sys.path:
-                sys.path.insert(0, framesync_dir)
-            from framesync import sync as framesync_sync  # type: ignore[import-not-found]
-
-            cfg = self._config.sync
-            share_url = cfg.share_url
-            output_dir = Path(cfg.output_dir)
-            if not share_url:
-                logging.info("SyncService: no share_url configured, skipping sync")
-                with self._status_lock:
-                    self._status.in_progress = False
-                    self._status.last_sync_time = datetime.datetime.now()
-                    self._status.last_error = "No share URL configured"
-                try:
-                    if types.EVT_SYNC_COMPLETE is not None:
-                        pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
-                except Exception as exc:
-                    logging.warning("EVT_SYNC_COMPLETE post failed: %s", exc)
-                return
-
-            framesync_sync(cfg.share_url, cfg.password, cfg.output_dir)
-
-            photo_count = sum(
-                1
-                for path in output_dir.rglob("*")
-                if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".gif"}
-            )
-            with self._status_lock:
-                self._status.last_sync_time = datetime.datetime.now()
-                self._status.photo_count = photo_count
-                self._status.in_progress = False
-                self._status.last_error = None
-            try:
-                if types.EVT_SYNC_COMPLETE is not None:
-                    pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
-            except Exception as exc:
-                logging.warning("EVT_SYNC_COMPLETE post failed: %s", exc)
+            self._provider.sync()
         except Exception as exc:
-            with self._status_lock:
-                self._status.in_progress = False
-                self._status.last_error = str(exc)
-                self._status.last_sync_time = datetime.datetime.now()
-            logging.error("SyncService error: %s", exc)
-            try:
-                if types.EVT_SYNC_COMPLETE is not None:
-                    pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
-            except Exception as post_exc:
-                logging.warning("EVT_SYNC_COMPLETE post failed: %s", post_exc)
+            logging.error("SyncService: provider sync failed: %s", exc)
+        try:
+            if types.EVT_SYNC_COMPLETE is not None:
+                pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
+        except Exception as post_exc:
+            logging.warning("EVT_SYNC_COMPLETE post failed: %s", post_exc)
 
     def trigger(self) -> None:
         """Trigger an immediate sync."""
         self._trigger_event.set()
 
     def stop(self) -> None:
-        """Stop the sync service background thread."""
+        """Stop the sync service thread and release the provider.
+
+        Blocks: joins the worker thread (up to 5 s) and then closes the
+        provider, which waits up to 60 s for an in-flight sync to finish.
+        """
         self._stop_event.set()
         self._trigger_event.set()
+        self._thread.join(timeout=5.0)
+        self._provider.close()
+
+    @property
+    def provider(self) -> AlbumProvider:
+        """The album provider this service syncs."""
+        return self._provider
 
     @property
     def status(self) -> SyncStatus:
-        """Current sync status as an immutable copy."""
-        with self._status_lock:
-            return copy.copy(self._status)
+        """Current sync status, as a defensive copy from the provider."""
+        return self._provider.status()

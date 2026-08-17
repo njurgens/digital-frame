@@ -1,8 +1,6 @@
-"""Cache module: constructs a PhotoCache from config."""
+"""Cache module: constructs a PhotoCache for composited surfaces."""
 
 from __future__ import annotations
-
-from pathlib import Path
 
 from piframe.config_store import ConfigStore
 from piframe.di import DimModule
@@ -11,22 +9,22 @@ from piframe.types import SCREEN_H, SCREEN_W
 
 
 class CacheModule(DimModule[PhotoCache]):
-    """Construct a ``PhotoCache`` with screen size and cache dir from config."""
+    """Construct a ``PhotoCache`` with the default surface cache directory.
+
+    The surface cache is a player implementation detail, not provider
+    storage, so its location is not config-driven.
+    """
 
     def create(self, config: ConfigStore, **deps: object) -> PhotoCache:
-        """
-        Build a photo cache pointing at the configured cache directory.
+        """Build a photo cache at the default surface cache location.
 
         Args:
-            config: Application configuration.
+            config: Application configuration (unused; retained for the
+                module protocol).
             **deps: Unused.
 
-        Returns
-        -------
+        Returns:
             A ``PhotoCache`` instance.
 
         """
-        return PhotoCache(
-            screen_size=(SCREEN_W, SCREEN_H),
-            cache_dir=Path(config.sync.cache_dir),
-        )
+        return PhotoCache(screen_size=(SCREEN_W, SCREEN_H))

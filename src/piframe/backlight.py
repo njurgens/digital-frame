@@ -14,8 +14,7 @@ class BacklightController:
         self._last_percent: int | None = None
 
     def set_brightness(self, percent: int) -> None:
-        """
-        Set the backlight brightness to the given percentage (0-100).
+        """Set the backlight brightness to the given percentage (0-100).
 
         Args:
             percent: Brightness percentage to set.
@@ -33,11 +32,9 @@ class BacklightController:
             logging.warning("backlight write failed: %s", e)
 
     def get_brightness(self) -> int:
-        """
-        Read the current backlight brightness as a percentage (0-100).
+        """Read the current backlight brightness as a percentage (0-100).
 
-        Returns
-        -------
+        Returns:
             The current brightness percentage, or 50 if the sysfs path is
             unreadable.
 

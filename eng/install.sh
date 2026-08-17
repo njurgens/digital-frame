@@ -43,14 +43,14 @@ ssh "$PI" "
 "
 
 echo "==> Ensuring photo and cache directories exist..."
-ssh "$PI" 'mkdir -p /home/frame/Pictures/slideshow /home/frame/.cache/framesync'
+ssh "$PI" 'mkdir -p /home/frame/Pictures/slideshow /home/frame/.cache/piframe/surfaces'
 
 echo "==> Installing sudoers entry for Wi-Fi..."
 ssh "$PI" "
   sudo install -o root -g root -m 440 \
-    ${REMOTE_DIR}/framesync/framesync-wifi.sudoers \
-    /etc/sudoers.d/framesync-wifi
-  sudo visudo -c -f /etc/sudoers.d/framesync-wifi && echo 'sudoers OK'
+    ${REMOTE_DIR}/etc/sudoers.d/piframe-wifi \
+    /etc/sudoers.d/piframe-wifi
+  sudo visudo -c -f /etc/sudoers.d/piframe-wifi && echo 'sudoers OK'
 "
 
 echo "==> Patching /etc/xdg/labwc/autostart..."
@@ -103,8 +103,14 @@ print('autostart updated')
 PYEOF
 "
 
-echo "==> Disabling retired framesync systemd units..."
-ssh "$PI" 'sudo systemctl disable --now framesync.service framesync.timer 2>/dev/null || true'
+echo "==> Removing the retired framesync install (one-time cleanup)..."
+ssh "$PI" '
+  sudo rm -rf /home/frame/digital-frame/framesync
+  sudo systemctl disable --now framesync.service framesync.timer 2>/dev/null || true
+  sudo rm -f /etc/systemd/system/framesync.service /etc/systemd/system/framesync.timer
+  sudo systemctl daemon-reload
+  sudo rm -f /etc/sudoers.d/framesync-wifi
+'
 
 echo ""
 echo "==> Installation complete."
