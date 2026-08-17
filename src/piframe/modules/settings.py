@@ -44,7 +44,6 @@ class SettingsModule(DimModule[SettingsPanel]):
             **deps: Unused.
 
         Returns:
-        -------
             A ``SettingsPanel`` instance.
 
         """

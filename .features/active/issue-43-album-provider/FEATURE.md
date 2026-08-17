@@ -57,7 +57,7 @@ The config store is restructured to support provider selection and provider-spec
 
 ### FR-10: Environment Variable Overrides
 
-`ConfigStore` reads `PIFRAME_`-prefixed environment variables and overlays them onto the loaded TOML config after defaults are merged. Unknown env vars are silently ignored. Environment variables can override any config key. Enables secrets injection via `.env` files or CI/CD.
+`ConfigStore` reads `PIFRAME__`-prefixed environment variables and overlays them onto the loaded TOML config after defaults are merged. The remainder of a variable name is the config path, upper-cased with components joined by `__` (e.g. `PIFRAME__SYNC__ONEDRIVE__SHARE_URL` overrides `sync.onedrive.share_url`). Unknown env vars are silently ignored. Environment variables can override any config key. Enables secrets injection via `.env` files or CI/CD.
 
 ### FR-11: Devcontainer Configuration
 
@@ -87,7 +87,7 @@ Each provider is independently unit-testable without network access. `SyncServic
 
 ### NFR-4: Minimal Footprint
 
-No new runtime dependencies are added. Only stdlib and existing project dependencies (`requests` for OneDrive, `PIL` for EXIF).
+At most one new runtime dependency is added: `tomli-w` (the config store's TOML writer; see exit criterion 12). Everything else is stdlib and existing project dependencies (`requests` for OneDrive, `PIL` for EXIF).
 
 ### NFR-5: Thread Safety
 

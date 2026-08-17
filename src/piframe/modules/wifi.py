@@ -19,7 +19,6 @@ class WifiModule(DimModule[WifiManagerProtocol]):
             **deps: Unused.
 
         Returns:
-        -------
             A wifi manager implementing ``WifiManagerProtocol``.
 
         """

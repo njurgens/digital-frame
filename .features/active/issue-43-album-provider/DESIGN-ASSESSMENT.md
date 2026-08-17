@@ -122,7 +122,7 @@ The most impactful gap is the absence of an **ImageCollection** type and **lazy 
 | # | Finding | Status |
 |---|---------|--------|
 | 4 | FR-5: Google `sync()` raises instead of returning empty album | **RESOLVED** — `sync()` returns `Album([])` and sets `last_error` |
-| 6 | FR-10: `_ENV_PREFIX = "PIFRAME__"` wrong | **RESOLVED** — changed to `"PIFRAME_"`, examples updated to `PIFRAME_SYNC__ONEDRIVE__SHARE_URL` |
+| 6 | FR-10: `_ENV_PREFIX = "PIFRAME__"` wrong | **RESOLVED (superseded)** — the final code keeps the `PIFRAME__` prefix with `__`-separated paths (e.g. `PIFRAME__SYNC__ONEDRIVE__SHARE_URL`); the single-underscore variant proposed here was not adopted |
 | 7 | FR-12: Provider initialization failure not addressed | **DEFERRED to #51** — removed from FEATURE.md as out of scope |
 | 9 | FR-13: Runtime sync failure | **RESOLVED** — design now explicit: provider retains cached album on error, slideshow keeps last-known playlist |
 | 10 | FR-9: Provider keys read-only in UI | **STRIKEN** — UI read-only requirement removed from FEATURE.md (out of scope) |

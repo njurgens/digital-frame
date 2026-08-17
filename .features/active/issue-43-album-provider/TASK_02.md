@@ -1,3 +1,5 @@
+> **Superseded:** this task doc predates the final design; its references and details may not match the shipped code — see `DESIGN.md` and `FEATURE.md`.
+
 # T02: Fix `album_provider.py` — rename to `DirectoryReader`, drop broken import
 
 ## Description

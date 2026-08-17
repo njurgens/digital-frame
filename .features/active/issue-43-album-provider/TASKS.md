@@ -1,3 +1,8 @@
+> **Superseded.** The task list below reflects the pre-revision design: its
+"References" links point at sections of an earlier draft of `DESIGN.md`, and a few steps
+(e.g. removing `framesync/`) were deferred or changed. The implemented design is documented
+in `FEATURE.md` and `DESIGN.md`.
+
 # Tasks: Album Provider Abstraction
 
 Ordered task list for the Album Provider Abstraction feature. Each task is self-contained with validation steps. A coding agent should complete tasks in order, run validation, commit, then proceed to the next.

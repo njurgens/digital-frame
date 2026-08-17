@@ -10,7 +10,7 @@ import pytest
 
 from piframe.config_store import ConfigStore
 from piframe.settings_panel import Section, SettingsPanel
-from piframe.types import SCREEN_H, SCREEN_W, WifiStatus
+from piframe.types import SCREEN_H, SCREEN_W, SyncStatus, WifiStatus
 
 
 class _StubFont:
@@ -38,6 +38,44 @@ class _StubAssets:
 
 def _make_panel(tmp_path: Path) -> SettingsPanel:
     return SettingsPanel(assets=_StubAssets(), config=ConfigStore(tmp_path / "config.toml"))  # type: ignore[arg-type]
+
+
+def test_device_info_storage_row_uses_provider_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The storage row measures the provider's storage directory, with exact numbers."""
+    measured: list[Path] = []
+
+    def _fake_disk_usage(path: object) -> SimpleNamespace:
+        measured.append(Path(str(path)))
+        return SimpleNamespace(used=5 * 1024**3, total=32 * 1024**3)
+
+    monkeypatch.setattr("piframe.settings_panel.shutil.disk_usage", _fake_disk_usage)
+    provider = SimpleNamespace(storage_dir=tmp_path)
+    sync = SimpleNamespace(provider=provider, status=SyncStatus())
+    panel = SettingsPanel(
+        assets=_StubAssets(),  # type: ignore[arg-type]
+        config=ConfigStore(tmp_path / "config.toml"),
+        sync_service=sync,  # type: ignore[arg-type]
+    )
+    rows = panel._get_device_info()
+    storage = [value for label, value in rows if label == "Storage"]
+    assert storage == ["5.0 / 32 GB"]
+    assert measured == [tmp_path]
+
+
+def test_device_info_storage_row_dash_without_storage(tmp_path: Path) -> None:
+    """Providers without local storage (e.g. the Google stub) show a dash."""
+    provider = SimpleNamespace(storage_dir=None)
+    sync = SimpleNamespace(provider=provider, status=SyncStatus())
+    panel = SettingsPanel(
+        assets=_StubAssets(),  # type: ignore[arg-type]
+        config=ConfigStore(tmp_path / "config.toml"),
+        sync_service=sync,  # type: ignore[arg-type]
+    )
+    rows = panel._get_device_info()
+    storage = [value for label, value in rows if label == "Storage"]
+    assert storage == ["—"]
 
 
 def _screen() -> pygame.Surface:

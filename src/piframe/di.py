@@ -22,7 +22,6 @@ class DimModule[T](Protocol):
             **deps: Optional dependency objects required by the service.
 
         Returns:
-        -------
             A fully initialised service instance.
 
         """

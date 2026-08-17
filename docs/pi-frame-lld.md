@@ -86,7 +86,8 @@ digital-frame/
 │   ├── __init__.py
 │   ├── app.py              # App class, main loop, state machine
 │   ├── photo_cache.py      # PhotoCache: PIL composite → pygame.Surface, LRU
-│   ├── sync_service.py     # SyncService: daemon thread wrapping framesync
+│   ├── slideshow_player.py # SlideshowPlayer: playlist from the album provider
+│   ├── sync_service.py     # SyncService: daemon thread scheduling the provider
 │   ├── overlay_ui.py       # OverlayUI: transient player controls + brightness
 │   ├── settings_panel.py   # SettingsPanel: all settings sections
 │   ├── keyboard.py         # On-screen keyboard widget (full-row)
@@ -97,6 +98,27 @@ digital-frame/
 │   ├── sleep_scheduler.py  # SleepScheduler: sleep/wake daemon thread
 │   ├── assets.py           # Assets singleton: font+icon loader
 │   ├── types.py            # Shared dataclasses and enums
+│   ├── album.py            # Album: immutable snapshot of an image collection
+│   ├── image.py            # Image: path + lazily loaded EXIF metadata
+│   ├── exif.py             # Exif value object + Pillow loader
+│   ├── album_provider.py   # DirectoryReader: legacy reader (kept per exit criteria)
+│   ├── di.py               # DI container
+│   ├── providers/
+│   │   ├── __init__.py     # Re-exports the protocol and the implementations
+│   │   ├── album_provider.py  # AlbumProvider protocol (structural)
+│   │   ├── base.py         # BaseAlbumProvider: status lifecycle + close()
+│   │   ├── onedrive.py     # OneDriveProvider: Badger API, own cache
+│   │   ├── local.py        # LocalProvider: direct references, no copy
+│   │   ├── google.py       # GooglePhotosProvider: stub (not implemented)
+│   │   └── provider_name.py  # ProviderName enum
+│   ├── modules/
+│   │   ├── __init__.py
+│   │   ├── provider.py     # ProviderModule: creates the selected provider
+│   │   ├── sync.py         # SyncModule: creates the SyncService
+│   │   ├── player.py       # PlayerModule: creates the SlideshowPlayer
+│   │   ├── cache.py        # CacheModule: creates the PhotoCache
+│   │   ├── settings.py     # SettingsModule
+│   │   └── wifi.py         # WifiModule
 │   ├── widgets/
 │   │   ├── __init__.py     # Re-exports all widget classes
 │   │   ├── base.py         # Widget ABC
@@ -115,10 +137,11 @@ digital-frame/
 │           ├── NotoSans-Regular.ttf
 │           ├── NotoSans-Bold.ttf
 │           └── MaterialIcons-Regular.ttf
-├── framesync/              # OneDrive sync module (modifiable)
-│   └── framesync.py        # sync_folder(), load_config(); used by SyncService
-├── config.toml             # Not committed (secrets)
+├── framesync/              # Retired OneDrive sync (kept for rollback only)
+│   └── framesync.py        # sync_folder(), load_config(); no longer used by the app
+├── config.toml             # Tracked placeholder (not a template); devcontainer users copy config.devcontainer.toml; the app's own copy is src/config.toml (gitignored)
 ├── config.toml.example     # Committed template
+├── config.devcontainer.toml  # Devcontainer template
 ├── tests/                  # pytest unit + headless + integration tests
 │   ├── conftest.py
 │   ├── image_utils.py
@@ -682,17 +705,21 @@ the playlist and first frame.
 #### `rescan()`
 
 ```python
-output_dir = Path(_config.sync.output_dir)
-files = sorted(
-    [p for p in output_dir.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".gif"}]
-)
-_playlist = files
-if _config.slideshow.shuffle:
-    _playlist = _fisher_yates(_playlist)
-_index = 0
-if _playlist:
-    _current_surf = _cache.get(_playlist[0], _config.slideshow.fit_mode, _w, _h)
+album = self._provider.album()
+files = sorted(img.path for img in album if img.path.suffix.lower() in IMAGE_EXTENSIONS)
+self._playlist = files
+if self._config.slideshow.shuffle:
+    self._playlist = self._fisher_yates(self._playlist)
+self._index = 0
+if self._playlist:
+    self._current_surf = self._cache.get(
+        self._playlist[0], self._config.slideshow.fit_mode, self._w, self._h
+    )
 ```
+
+The playlist is built from the album provider's current album (a snapshot the
+provider owns), not from a directory scan. The player applies an independent
+extension filter as defense in depth (issue-43, D-6).
 
 #### `_fisher_yates(lst)`
 
@@ -1234,56 +1261,56 @@ _stop_event.set()
 ### 3.8 `piframe/sync_service.py` — `SyncService`
 
 #### Purpose
-Runs `framesync.sync_folder()` in a daemon thread on a configurable interval.
-Posts `EVT_SYNC_COMPLETE` on success. Exposes `trigger()` for manual sync.
+Runs the album provider's `sync()` in a daemon thread on a configurable interval.
+Posts `EVT_SYNC_COMPLETE` after each sync. Exposes `trigger()` for manual sync.
+(issue-43: the provider owns the photo lifecycle; the service only schedules it.)
 
 #### Data members
 
 | Member | Type | Description |
 |--------|------|-------------|
+| `_config` | `ConfigStore` | Live config reference (interval) |
+| `_provider` | `AlbumProvider` | The provider the service syncs; sole owner of the status |
 | `_stop_event` | `threading.Event` | Shutdown signal |
 | `_trigger_event` | `threading.Event` | Manual trigger signal |
-| `_status` | `SyncStatus` | Protected by `_status_lock` |
-| `_status_lock` | `threading.Lock` | — |
-| `_interval_s` | `int` | Seconds between auto-syncs |
+| `_interval_s` | `int` | Seconds between auto-syncs (re-read each cycle) |
+| `_thread` | `threading.Thread` | Daemon worker thread |
 
 #### Thread loop
 
 ```python
 def _run(self):
-    while not _stop_event.is_set():
-        _do_sync()
-        remaining = _interval_s
-        while remaining > 0 and not _stop_event.is_set():
-            triggered = _trigger_event.wait(timeout=min(remaining, 60))
-            if triggered:
-                _trigger_event.clear()
+    while not self._stop_event.is_set():
+        self._do_sync()
+        self._interval_s = self._config.sync.interval_minutes * 60
+        remaining = self._interval_s
+        while remaining > 0 and not self._stop_event.is_set():
+            wait_for = min(remaining, 60)
+            if self._trigger_event.wait(timeout=wait_for):
+                self._trigger_event.clear()
                 break
-            remaining -= 60
+            remaining -= wait_for
 ```
 
 #### `_do_sync()`
 
 ```python
-with _status_lock:
-    _status.in_progress = True
-try:
-    from framesync import sync_folder, load_config
-
-    cfg = load_config()
-    sync_folder(cfg)
-    with _status_lock:
-        _status.last_sync_time = datetime.datetime.now()
-        _status.in_progress = False
-        _status.last_error = None
-        _status.photo_count = len(list(Path(cfg["output_dir"]).glob("*.jp*g")))
-    pygame.event.post(pygame.event.Event(EVT_SYNC_COMPLETE))
-except Exception as e:
-    with _status_lock:
-        _status.in_progress = False
-        _status.last_error = str(e)
-    logging.error("SyncService error: %s", e)
+def _do_sync(self):
+    try:
+        self._provider.sync()
+    except Exception as exc:
+        logging.error("SyncService: provider sync failed: %s", exc)
+    try:
+        if types.EVT_SYNC_COMPLETE is not None:
+            pygame.event.post(pygame.event.Event(types.EVT_SYNC_COMPLETE))
+    except Exception as post_exc:
+        logging.warning("EVT_SYNC_COMPLETE post failed: %s", post_exc)
 ```
+
+The provider sets the status itself (in-progress, photo count, last sync
+time, last error) during `sync()`; the service never touches it.  The
+sync-complete event is posted after every sync, successful or failed, so the
+player always rescans.
 
 #### `trigger()`
 
@@ -1294,15 +1321,22 @@ _trigger_event.set()
 #### `stop()`
 
 ```python
-_stop_event.set()
-_trigger_event.set()  # unblock wait
+def stop(self):
+    self._stop_event.set()
+    self._trigger_event.set()  # unblock wait
+    self._thread.join(timeout=5.0)
+    self._provider.close()  # waits up to 60 s for an in-flight sync
 ```
+
+`stop()` blocks until the worker thread has exited and the provider is
+closed; the app calls it once from its cleanup path.
 
 #### `status -> SyncStatus`
 
 ```python
-with _status_lock:
-    return copy.copy(_status)
+@property
+def status(self) -> SyncStatus:
+    return self._provider.status()  # defensive copy from the provider
 ```
 
 ---
@@ -1401,11 +1435,19 @@ sleep_time = "22:00"
 wake_time  = "07:00"
 
 [sync]
-share_url        = ""
-password         = ""
-output_dir       = "/home/frame/Pictures/slideshow"
-cache_dir        = "/home/frame/.cache/framesync"
+provider         = "local"    # "onedrive" | "local" | "google"
 interval_minutes = 60
+
+[sync.onedrive]
+share_url = ""
+password  = ""
+cache_dir   = "/home/frame/.cache/piframe/onedrive"
+
+[sync.local]
+source_dir = "/home/frame/Pictures/slideshow"
+
+[sync.google]
+# reserved for the future Google Photos provider
 
 [system]
 timezone = "America/Los_Angeles"
@@ -1416,7 +1458,7 @@ repo = "njurgens/digital-frame"
 
 #### Protected keys (never overwritten by `flush()`)
 
-`sync.share_url`, `sync.password`, `sync.output_dir`, `sync.cache_dir`
+`sync.provider`, `sync.onedrive.share_url`, `sync.onedrive.password`
 
 #### Data members
 
@@ -1444,12 +1486,30 @@ if _dirty_at and now - _dirty_at >= 0.5:
 #### `flush_now()`
 
 ```python
-disk = _read_raw()
-for key in ("share_url", "password", "output_dir", "cache_dir"):
-    _data["sync"][key] = disk.get("sync", {}).get(key, _data["sync"][key])
-_write_toml(_data)
-_dirty_at = None
+def flush_now(self):
+    disk = _read_raw()  # None when the file is missing or unreadable (a real read yields a dict)
+    to_write = deepcopy(self._data)
+    if disk is not None:
+        for path in _PROTECTED:  # (sync.provider, sync.onedrive.share_url, ...)
+            disk_val = _get_path(disk, path)
+            _set_or_remove(to_write, path, disk_val)
+            if os.environ.get(_env_name_for(path)) is None:
+                _set_or_remove(self._data, path, disk_val)
+    else:
+        for path in _PROTECTED:
+            if os.environ.get(_env_name_for(path)) is not None:
+                _remove_path(to_write, path)  # env-owned secrets are never written
+    self._write_toml(to_write)
+    self._dirty_at = None
 ```
+
+Protected keys are never persisted from memory: the on-disk value always
+wins (or the key is omitted when absent from disk), so env-var-injected
+secrets and user-edited values stay safe.  When the file is missing or
+unreadable, in-memory values are written except for env-var-owned secrets.
+One documented exception: values moved from the file's own legacy keys by
+the migration are written from memory, converging the file to the new
+layout.
 
 #### `set(section, key, value)`
 
@@ -2517,8 +2577,14 @@ from the current window. Prevents unbounded growth on ~600 IANA timezone entries
 
 ### OR-09: framesync systemd units retired
 
-**Decision:** `framesync/framesync.py` is a modifiable module. `SyncService._do_sync()`
-calls `framesync.sync_folder()` directly after importing from the `framesync` package.
+> **Superseded by issue-43:** `SyncService._do_sync()` no longer calls
+> `framesync.sync_folder()`; it delegates to the pluggable album provider
+> (see the album provider design doc). The `framesync/` package is retained
+> in the tree only for rollback until a follow-up deployment removes it.
+
+**(Superseded — see note above.)** ~~**Decision:** `framesync/framesync.py` is a
+modifiable module. `SyncService._do_sync()` calls `framesync.sync_folder()` directly
+after importing from the `framesync` package.~~
 
 The `framesync.service` and `framesync.timer` units are disabled and stopped in Stage 9:
 

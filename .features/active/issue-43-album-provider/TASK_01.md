@@ -1,3 +1,5 @@
+> **Superseded:** this task doc predates the final design; its references and details may not match the shipped code — see `DESIGN.md` and `FEATURE.md`.
+
 # T01: Create `providers/` package with `AlbumProvider` Protocol and `ProviderName` enum
 
 ## Description

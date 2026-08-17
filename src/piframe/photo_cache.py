@@ -32,12 +32,14 @@ class PhotoCache:
 
         Args:
             screen_size: Target screen dimensions.
-            cache_dir: Directory for disk cache, or default to ~/.cache/framesync.
+            cache_dir: Directory for disk cache, or default to ~/.cache/piframe/surfaces.
 
         """
         self._w, self._h = screen_size
         self._cache_dir = (
-            Path(cache_dir) if cache_dir is not None else Path.home() / ".cache" / "framesync"
+            Path(cache_dir)
+            if cache_dir is not None
+            else Path.home() / ".cache" / "piframe" / "surfaces"
         )
         self._fit_mode = "fit"
         self._cache: OrderedDict[str, pygame.Surface] = OrderedDict()

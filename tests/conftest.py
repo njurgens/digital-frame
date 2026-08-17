@@ -35,6 +35,14 @@ def pygame_init() -> Generator[None]:
     pygame.quit()
 
 
+@pytest.fixture(autouse=True)
+def clean_piframe_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remove PIFRAME__* env vars so default-value assertions are hermetic."""
+    for name in list(os.environ):
+        if name.startswith("PIFRAME__"):
+            monkeypatch.delenv(name)
+
+
 @pytest.fixture
 def mock_backlight() -> Generator[MagicMock]:
     """Mock the sysfs backlight file for testing."""

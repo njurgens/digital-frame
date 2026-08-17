@@ -1,31 +1,5 @@
-[app]
-mock_wifi = false
-
-[slideshow]
-interval = 30.0
-fit_mode = "fit"
-shuffle = true
-transition = "crossfade"
-
-[display]
-brightness = 75
-show_clock = true
-timezone_auto = true
-
-[sleep]
-enabled = false
-sleep_time = "22:00"
-wake_time = "07:00"
-
-[sync]
-share_url = ""
-password = ""
-output_dir = "/home/frame/Pictures/slideshow"
-cache_dir = "/home/frame/.cache/framesync"
-interval_minutes = 60
-
-[system]
-timezone = "America/Los_Angeles"
-
-[update]
-repo = "njurgens/digital-frame"
+# This tracked file is a placeholder, not a template: the canonical
+# annotated template is config.toml.example, which install.sh copies to
+# this location on the Pi at first deploy (the app itself reads
+# src/config.toml, which is gitignored).  Devcontainer users copy
+# config.devcontainer.toml to src/config.toml instead.

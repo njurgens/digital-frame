@@ -3,30 +3,31 @@
 ## Architecture
 
 ```
-[OneDrive] ──sync──> framesync.service (oneshot, hourly timer)
-                          |
-                          v
-               /home/frame/Pictures/slideshow/
-                          |
-              framesync.py calls slideshow.py IPC
-                          |
-                          v
-              mpv (fullscreen, Wayland/labwc) <── /tmp/mpv-socket
-              launched by /etc/xdg/labwc/autostart
+[Photo source] ──sync──> album provider (OneDrive | local | Google stub)
+                              |
+                              v
+                     Album (in-memory snapshot)
+                              |
+                              v
+        slideshow.py (pygame, fullscreen, Wayland/labwc)
+        launched by /etc/xdg/labwc/autostart
 ```
 
-- **mpv** runs fullscreen under Wayland/labwc. No browser, no Flask, no frontend.
-- **framesync** syncs photos from OneDrive on a timer, then injects new files into the running mpv playlist via IPC.
-- **slideshow.py** is both a Python library (imported by framesync.py) and a CLI tool for manual control.
-- **labwc autostart** suppresses the desktop and launches mpv directly.
+- **slideshow.py** is a self-contained pygame app. It runs fullscreen under labwc via `/etc/xdg/labwc/autostart` and writes its PID to `/tmp/slideshow.pid`. It is not managed by systemd.
+- **Album providers** own the photo lifecycle. The active provider is selected by `sync.provider` in the config:
+  - `onedrive` — syncs a shared OneDrive folder (Badger token API) into its own cache directory, with destructive cleanup of files no longer present remotely.
+  - `local` — exposes a user-managed directory directly: no copying, no cleanup.
+  - `google` — a stub for the future Google Photos source; returns an empty album.
+- The player rescans the provider's album at the start of each cycle, so newly synced photos appear without a restart.
+- **labwc autostart** suppresses the desktop and launches the slideshow directly.
 
 ---
 
 ## Prerequisites
 
-- Raspberry Pi running Raspberry Pi OS Bookworm with labwc Wayland session
+- Raspberry Pi running Raspberry Pi OS Bookworm with a labwc Wayland session
 - SSH access: `frame@10.1.7.58`
-- `mpv` (installed by `install.sh`)
+- Python 3.13 managed by uv (installed by `install.sh`)
 
 ---
 
@@ -34,122 +35,82 @@
 
 ```bash
 # From repo root on your dev machine:
-bash install.sh
+bash eng/install.sh
 ```
 
-Then SSH in and edit config.toml if it was just created:
+`install.sh` rsyncs the repo to the Pi, installs apt packages, runs `uv sync`, writes the Wi-Fi sudoers entry, disables the retired framesync systemd units, and patches `/etc/xdg/labwc/autostart`. It is idempotent — safe to re-run.
+
+If the config was just created, edit it:
 ```bash
-ssh frame@10.1.7.58 'nano /home/frame/framesync/config.toml'
+ssh frame@10.1.7.58 'nano /home/frame/digital-frame/config.toml'
 ```
 
-Run an initial sync to populate the slideshow directory:
+Reboot the Pi to apply autostart changes:
 ```bash
-ssh frame@10.1.7.58 'python3 /home/frame/framesync/framesync.py'
-```
-
-Reboot the Pi:
-```bash
-ssh frame@10.1.7.58 'sudo reboot'
+ssh frame@10.1.7.58 'sudo reboot now'
 ```
 
 ---
 
 ## Configuration
 
-### `/home/frame/framesync/config.toml`
+The app reads **`src/config.toml`** (gitignored). `install.sh` seeds the root `config.toml` from `config.toml.example` as a starting template — copy it to `src/config.toml` (or edit that file directly) to activate your settings. See `config.toml.example` for the full annotated template.
+
+The sync section selects the album provider:
+
 ```toml
-share_url      = "https://1drv.ms/f/YOUR_SHARE_URL"
-password       = "your-password"
-output_dir     = "/home/frame/Pictures/slideshow"
-image_duration = 8
-mpv_socket     = "/tmp/mpv-socket"
+[sync]
+provider         = "onedrive"   # "onedrive" | "local" | "google"
+interval_minutes = 60
+
+[sync.onedrive]
+share_url = "https://1drv.ms/f/YOUR_SHARE_URL"
+password  = "your-password"
+cache_dir   = "/home/frame/.cache/piframe/onedrive"
+
+[sync.local]
+source_dir = "/home/frame/Pictures/slideshow"
 ```
 
-> ⚠️ `config.toml` is excluded from version control. Copy `config.toml.example` and fill in your values.
+- `sync.provider` selects the album provider; unknown values fail startup with a clear error.
+- Provider-specific keys live in the provider's sub-section (`[sync.onedrive]`, `[sync.local]`, `[sync.google]`).
+- Any key can be overridden at startup (when the config is loaded) with a `PIFRAME__`-prefixed environment variable: the remainder of the name is the config path, upper-cased and joined with `__` (e.g. `PIFRAME__SYNC__ONEDRIVE__SHARE_URL`). Protected keys (provider selection, OneDrive credentials) are never written back to the file.
+- **Upgrading from a pre-provider config:** a legacy file (flat `[sync]` `share_url`/`password`/`output_dir` keys) is auto-migrated on first load — the OneDrive settings move to `[sync.onedrive]` and the old `output_dir` becomes the provider's `cache_dir`, so existing photos are reused instead of re-downloaded. The legacy keys are preserved in the file, so a rollback to the old code still works. The rendered-surface cache location is no longer configurable; it is fixed at `~/.cache/piframe/surfaces`.
 
----
-
-## mpv Slideshow Control
-
-`slideshow.py` is a CLI tool and Python library for controlling the running mpv instance via its IPC socket.
-
-```bash
-# Append new files to the playlist (hot-reload without restart)
-python3 /home/frame/framesync/slideshow.py append /home/frame/Pictures/slideshow/*.jpg
-
-# Navigation
-python3 /home/frame/framesync/slideshow.py next
-python3 /home/frame/framesync/slideshow.py prev
-
-# Pause / resume
-python3 /home/frame/framesync/slideshow.py pause
-python3 /home/frame/framesync/slideshow.py resume
-
-# Show current playlist
-python3 /home/frame/framesync/slideshow.py playlist
-```
-
-### mpv IPC Reference
-
-The IPC socket lives at `/tmp/mpv-socket`. Commands are newline-terminated JSON:
-
-```bash
-# Get current playlist
-echo '{"command":["get_property","playlist"]}' | socat - /tmp/mpv-socket
-
-# Append a file
-echo '{"command":["loadfile","/path/to/photo.jpg","append-play"]}' | socat - /tmp/mpv-socket
-
-# Skip to next
-echo '{"command":["playlist-next"]}' | socat - /tmp/mpv-socket
-
-# Pause / resume
-echo '{"command":["set_property","pause",true]}' | socat - /tmp/mpv-socket
-echo '{"command":["set_property","pause",false]}' | socat - /tmp/mpv-socket
-```
-
-### Crossfade Notes
-
-The Pi 3A+ VideoCore IV supports OpenGL ES 2.0 only. GLSL crossfade shaders (e.g., gl-transitions) require ES 3.0+ and are not used. The slideshow uses hard cuts with `--image-display-duration=8`. A software fade can be added later via `--vf=lavfi=[fade=...]` if desired.
-
----
-
-## Systemd Services
-
-| Service | Purpose |
-|---------|---------|
-| `framesync` | OneDrive sync (oneshot, run by timer) |
-| `framesync.timer` | Triggers `framesync` hourly |
-
-> `framesync-server` (Flask) has been removed. mpv is started by labwc autostart, not systemd.
+> ⚠️ The tracked root `config.toml` must never contain real credentials — only the app's `src/config.toml` copy is gitignored.
 
 ---
 
 ## Debugging
 
 ```bash
-# OneDrive sync logs
-journalctl -u framesync -f
+# Slideshow log (when manually launched)
+cat /tmp/slideshow.log
 
-# Timer logs
-journalctl -u framesync.timer
+# Slideshow PID
+cat /tmp/slideshow.pid
 
-# Check synced photos
-ls /home/frame/Pictures/slideshow/
+# Composited-surface cache
+ls /home/frame/.cache/piframe/surfaces/
 
-# Verify mpv is running
-pgrep -a mpv
-
-# Query mpv playlist via IPC
-echo '{"command":["get_property","playlist"]}' | socat - /tmp/mpv-socket
+# OneDrive provider cache
+ls /home/frame/.cache/piframe/onedrive/
 
 # Check labwc autostart
 cat /etc/xdg/labwc/autostart
 
-# Manual slideshow controls
-python3 /home/frame/framesync/slideshow.py playlist
-python3 /home/frame/framesync/slideshow.py next
+# Kill the slideshow (do NOT use pkill -f slideshow.py — it matches the SSH command itself)
+ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid)'
+
+# Manual restart (for testing without a reboot)
+ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /home/frame/digital-frame/.venv/bin/slideshow > /tmp/slideshow.log 2>&1 &'
 ```
+
+---
+
+## Retired components
+
+The mpv-based slideshow and the `framesync` systemd units predate the current app and are no longer used. `install.sh` disables `framesync.service`/`framesync.timer`, and the `framesync/` directory is kept in the repo only for rollback until a follow-up deployment removes it. The old mpv IPC controls (`slideshow.py append/next/prev/...` against `/tmp/mpv-socket`) no longer apply.
 
 ---
 
@@ -165,7 +126,7 @@ sudo reboot
 
 ## Security Notes
 
-- `config.toml` (OneDrive credentials) is excluded from version control.
+- OneDrive credentials live in the app's `src/config.toml` (gitignored); the tracked root `config.toml` must never contain real credentials.
 - WiFi passphrases are never logged.
 - `nmcli connect` runs via a targeted sudoers entry (`/etc/sudoers.d/framesync-wifi`); no process runs as root directly.
-- mpv runs as the `frame` user under the Wayland session.
+- The slideshow runs as the `frame` user under the Wayland session.

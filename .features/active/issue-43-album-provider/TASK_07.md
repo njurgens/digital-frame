@@ -1,3 +1,5 @@
+> **Superseded:** this task doc predates the final design; its references and details may not match the shipped code — see `DESIGN.md` and `FEATURE.md`.
+
 # T07a: Refactor `SyncService` and `SyncModule` for `AlbumProvider`
 
 ## Description
@@ -17,26 +19,34 @@ Refactor `SyncService` to accept an `AlbumProvider` in its constructor and updat
 def test_sync_service_delegates_to_provider(mocker):
     """SyncService._do_sync() calls provider.sync() with correct output_dir."""
 
+
 def test_sync_service_posts_event_on_success(mocker):
     """EVT_SYNC_COMPLETE is posted after successful sync."""
+
 
 def test_sync_service_catches_provider_error(mocker):
     """Exception from provider is caught, last_error is set."""
 
+
 def test_sync_service_stop_calls_provider_stop(mocker):
     """stop() calls provider.stop()."""
+
 
 def test_sync_module_resolves_onedrive(tmp_path):
     """config with provider='onedrive' produces OneDriveProvider instance."""
 
+
 def test_sync_module_resolves_local(tmp_path):
     """config with provider='local' produces LocalProvider instance."""
+
 
 def test_sync_module_resolves_google(tmp_path):
     """config with provider='google' produces GooglePhotosProvider instance."""
 
+
 def test_sync_module_rejects_unknown(tmp_path):
     """config with provider='unknown' raises ValueError."""
+
 
 def test_sync_module_defaults_to_local(tmp_path):
     """No provider field defaults to LocalProvider."""

@@ -1,3 +1,9 @@
+> **Superseded.** This issue doc describes the pre-revision design (a protocol with
+`stop()`, an `images/` package layout, removal of `framesync/`, a `NotImplementedError`
+Google stub, and a different protected-key set). The implemented design is documented in
+`FEATURE.md` and `DESIGN.md` — consult those for the current protocol, module layout, and
+rollout decisions.
+
 # AlbumProvider Protocol & Image/Album Types
 
 ## Problem

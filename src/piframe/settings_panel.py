@@ -604,15 +604,19 @@ class SettingsPanel:
             uptime = "unknown"
         rows.append(("Uptime", uptime))
 
-        # Storage usage for the photos directory
+        # Storage usage for the active provider's photo directory.
+        # Providers without local storage (e.g. the Google stub) show "—".
         try:
             photos_dir = (
-                self._config.sync.output_dir if self._config else "/home/frame/Pictures/slideshow"
+                self._sync_service.provider.storage_dir if self._sync_service is not None else None
             )
-            usage = shutil.disk_usage(photos_dir)
-            used_gb = usage.used / (1024**3)
-            total_gb = usage.total / (1024**3)
-            storage = f"{used_gb:.1f} / {total_gb:.0f} GB"
+            if photos_dir is None:
+                storage = "—"
+            else:
+                usage = shutil.disk_usage(photos_dir)
+                used_gb = usage.used / (1024**3)
+                total_gb = usage.total / (1024**3)
+                storage = f"{used_gb:.1f} / {total_gb:.0f} GB"
         except Exception:
             storage = "unknown"
         rows.append(("Storage", storage))

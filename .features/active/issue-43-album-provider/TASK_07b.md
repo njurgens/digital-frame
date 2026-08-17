@@ -1,3 +1,5 @@
+> **Superseded:** this task doc predates the final design; its references and details may not match the shipped code — see `DESIGN.md` and `FEATURE.md`.
+
 # T07b: Remove deprecated `share_url`/`password` from `ConfigStore`
 
 ## Description

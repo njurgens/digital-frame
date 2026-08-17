@@ -1,8 +1,19 @@
-"""Album providers: supply image paths for the slideshow player."""
+"""Legacy directory scanner retained for issue-43 exit criteria.
+
+``DirectoryReader`` is not used by the application: the slideshow player
+builds its playlist from the active album provider's collection.  It is
+kept because the issue-43 exit criteria require it to keep working.  The
+local provider supersedes it for any new use.
+
+Note the name collision: this module is *not* the provider protocol —
+that lives in ``piframe.providers.album_provider``.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+
+from piframe.image import IMAGE_EXTENSIONS
 
 
 class DirectoryReader:
@@ -10,8 +21,6 @@ class DirectoryReader:
 
     Non-recursive; matches the existing ``rescan()`` behaviour.
     """
-
-    _EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".gif"})
 
     def __init__(self, directory: str | Path) -> None:
         """Initialise with the directory to scan.
@@ -34,5 +43,5 @@ class DirectoryReader:
         if not self._directory.exists():
             return []
         return sorted(
-            [p for p in self._directory.iterdir() if p.suffix.lower() in self._EXTENSIONS]
+            [p for p in self._directory.iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
         )

@@ -1,3 +1,5 @@
+> **Superseded:** this task doc predates the final design; its references and details may not match the shipped code — see `DESIGN.md` and `FEATURE.md`.
+
 # T10: Remove `framesync/` directory and update `eng/install.sh`
 
 ## Description

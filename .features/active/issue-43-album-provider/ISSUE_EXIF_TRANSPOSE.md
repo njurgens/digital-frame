@@ -22,6 +22,7 @@ img = img.convert("RGB")
 
 # After
 from PIL import ImageOps
+
 img = Image.open(path)
 img = ImageOps.exif_transpose(img)
 img = img.convert("RGB")

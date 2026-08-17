@@ -1,3 +1,5 @@
+> **Superseded:** this task doc predates the final design; its references and details may not match the shipped code — see `DESIGN.md` and `FEATURE.md`.
+
 # T13: Ensure all existing tests pass and `eng/check.sh` is clean
 
 ## Description

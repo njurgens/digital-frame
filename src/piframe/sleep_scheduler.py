@@ -17,13 +17,12 @@ def is_sleep_time(now: datetime.time, sleep_t: datetime.time, wake_t: datetime.t
     """Determine whether the given time falls within the sleep window.
 
     Args:
-    now: The current time to check.
-    sleep_t: The sleep time.
-    wake_t: The wake time.
+        now: The current time to check.
+        sleep_t: The sleep time.
+        wake_t: The wake time.
 
     Returns:
-    -------
-    True if *now* is between *sleep_t* and *wake_t*.
+        True if *now* is between *sleep_t* and *wake_t*.
 
     """
     now_m = now.hour * 60 + now.minute

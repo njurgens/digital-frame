@@ -15,11 +15,10 @@ def check_update(repo: str) -> tuple[str, str]:
     """Check GitHub for the latest release of the given repo.
 
     Args:
-    repo: GitHub repository in the format *owner/repo*.
+        repo: GitHub repository in the format *owner/repo*.
 
     Returns:
-    -------
-    A tuple of (tag_name, tarball_url) for the latest release.
+        A tuple of (tag_name, tarball_url) for the latest release.
 
     """
     url = GITHUB_API.format(repo=repo)
