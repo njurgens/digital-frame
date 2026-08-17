@@ -24,10 +24,6 @@ wake_time  = "07:00"   # 24-hour HH:MM
 [sync]
 # Which album provider to use: "onedrive", "local", or "google".
 # Unknown values fail startup with a clear error.
-# Upgrading from a pre-provider file (flat share_url/password/output_dir keys)?
-# It is auto-migrated on first load: the OneDrive keys move to [sync.onedrive]
-# and the old output_dir becomes cache_dir. The legacy keys are preserved in
-# the file, so a rollback to the old code still works.
 provider         = "local"
 interval_minutes = 60
 

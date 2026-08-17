@@ -6,28 +6,18 @@ the current collection as an `Album`. The app never touches a provider's
 storage directly — it reads the album through `album()` and lets the sync
 service call `sync()` on an interval.
 
-## The provider contract
+## Contents
 
-A provider is any object that satisfies the `AlbumProvider` protocol
-(`src/piframe/providers/album_provider.py`):
+**Users**
 
-| Member | Type | Contract |
-|--------|------|----------|
-| `sync()` | `-> Album` | Refresh the local cache from the source. Runs to completion in the caller's thread. On failure, records the error in the status before raising; the last known good album is retained. |
-| `album()` | `-> Album` | A defensive copy of the current album. Empty before the first successful sync; never raises. |
-| `status()` | `-> SyncStatus` | A defensive copy of the sync status (`last_sync_time`, `photo_count`, `in_progress`, `last_error`). Never raises. |
-| `close()` | `-> None` | Release resources. Idempotent; waits up to 60 s for an in-flight sync. No further calls after close. |
-| `storage_dir` | `Path \| None` (property) | The directory holding the provider's image files (its cache, or the source directory it exposes). `None` when the provider has no local storage. |
+- [Available providers](#available-providers)
+- [Configuration](#configuration)
+- [Sync behaviour](#sync-behaviour)
 
-All concrete providers subclass `BaseAlbumProvider`
-(`src/piframe/providers/base.py`), which implements the whole lifecycle:
-status bookkeeping under a lock, defensive copies, last-known-good album
-retention, and close semantics. A concrete provider therefore only
-implements:
+**Developers**
 
-- `_do_sync() -> Album` — the source-specific work (fetch, scan, download).
-- `_release() -> None` — optional; called once from `close()`.
-- the `storage_dir` property.
+- [The provider contract](#the-provider-contract)
+- [Implementing a new provider](#implementing-a-new-provider)
 
 ## Available providers
 
@@ -76,13 +66,6 @@ source_dir = "/home/frame/Pictures/slideshow"
   `PIFRAME__SYNC__ONEDRIVE__SHARE_URL=...`). Protected keys (provider
   selection, OneDrive credentials) are never written back to the config
   file, so env-var-injected secrets do not leak into it.
-- **Upgrading from a pre-provider config.** A legacy file (flat
-  `share_url`/`password`/`output_dir` keys) is auto-migrated on first
-  load: OneDrive keys move to `[sync.onedrive]` (the old `output_dir`
-  becomes `cache_dir`, so photos are not re-downloaded), and an
-  `output_dir` without a `share_url` seeds `sync.local.source_dir`. The
-  legacy keys are preserved in the file, so a rollback to the old code
-  still works.
 
 ## Sync behaviour
 
@@ -92,6 +75,29 @@ album after each completed sync. A failed sync keeps the last known good
 album and surfaces the error in `status().last_error` (shown in the
 settings panel). On shutdown, `close()` waits up to 60 s for an in-flight
 sync before releasing the provider.
+
+## The provider contract
+
+A provider is any object that satisfies the `AlbumProvider` protocol
+(`src/piframe/providers/album_provider.py`):
+
+| Member | Type | Contract |
+|--------|------|----------|
+| `sync()` | `-> Album` | Refresh the local cache from the source. Runs to completion in the caller's thread. On failure, records the error in the status before raising; the last known good album is retained. |
+| `album()` | `-> Album` | A defensive copy of the current album. Empty before the first successful sync; never raises. |
+| `status()` | `-> SyncStatus` | A defensive copy of the sync status (`last_sync_time`, `photo_count`, `in_progress`, `last_error`). Never raises. |
+| `close()` | `-> None` | Release resources. Idempotent; waits up to 60 s for an in-flight sync. No further calls after close. |
+| `storage_dir` | `Path \| None` (property) | The directory holding the provider's image files (its cache, or the source directory it exposes). `None` when the provider has no local storage. |
+
+All concrete providers subclass `BaseAlbumProvider`
+(`src/piframe/providers/base.py`), which implements the whole lifecycle:
+status bookkeeping under a lock, defensive copies, last-known-good album
+retention, and close semantics. A concrete provider therefore only
+implements:
+
+- `_do_sync() -> Album` — the source-specific work (fetch, scan, download).
+- `_release() -> None` — optional; called once from `close()`.
+- the `storage_dir` property.
 
 ## Implementing a new provider
 
@@ -131,7 +137,9 @@ Worked example: adding a hypothetical `flickr` provider.
 
        @property
        def source_dir(self) -> Path:
-           raw = self._config.read_nested("sync", "flickr", "source_dir", default="~/Pictures/flickr")
+           raw = self._config.read_nested(
+               "sync", "flickr", "source_dir", default="~/Pictures/flickr"
+           )
            return Path(str(raw)).expanduser()
 
 
