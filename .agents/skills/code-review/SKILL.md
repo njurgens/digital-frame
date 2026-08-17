@@ -1,5 +1,5 @@
 ---
-name: peer-review
+name: code-review
 description: Runs a multi-round peer review of a finished code change by spawning the `reviewer` subagent once per domain — architecture, correctness, testing, backwards-compatibility, security, performance, code-style, technical-communication — strictly one at a time, then aggregating the eight verdicts into a single pass/fail decision. Use this after writing or coordinating a code change and before calling it done, whenever a change needs review, sign-off, or a quality gate. Includes the exact Agent / get_subagent_result call sequence and the recovery procedure for when the local model fails to emit a tool call.
 ---
 
@@ -170,7 +170,7 @@ The diff is against the merge base {MERGE_BASE} with branch {BASE_REF}.
 
 ## What to do
 1. Read the diff file at the path above.
-2. Read .pi/skills/review-standards/{domain}.md.
+2. Load the `review-standards` skill, then read its {domain}.md checklist.
 3. Review only the "{domain}" domain, using that checklist.
 
 Open any file you need for context with read, grep, or find. You have no shell:
@@ -180,7 +180,7 @@ cannot open, record it under NOT_REVIEWED.
 Do not comment on other domains — they have their own reviewers. Do not modify
 any files.
 
-Follow the required output format from .pi/skills/review-standards/SKILL.md
+Follow the required output format from the `review-standards` skill
 exactly. Cite file:line for every finding. Your final message must end with a
 single VERDICT line and nothing after it.
 ```
@@ -336,30 +336,99 @@ These are the pi-subagents tools this skill uses. Use only these parameters.
 
 **`Agent`** — spawn or resume a subagent.
 
-| Parameter | Type | Notes |
-| --- | --- | --- |
-| `prompt` | string | **Required.** The filled-in template above. |
-| `description` | string | **Required.** Short label, e.g. `"Review security"`. |
-| `subagent_type` | string | **Required.** Always `"reviewer"` here. |
-| `model` | string | Leave unset — the reviewer's frontmatter governs. |
-| `thinking` | string | Leave unset — the reviewer's frontmatter sets `medium`. |
-| `max_turns` | int | Leave unset unless a reviewer is truncating; frontmatter sets 20. |
-| `run_in_background` | boolean | Always `true` in this workflow. |
-| `resume` | string | An existing `agent_id`, to continue that session. Cannot be combined with `schedule`. |
-| `isolated` | boolean | Leave unset. |
-| `isolation` | string | Leave unset. |
-| `inherit_context` | boolean | Leave unset — the reviewer uses `prompt_mode: replace`. |
+```js
+// Spawn a new reviewer for a single domain
+Agent({
+  subagent_type: "reviewer",
+  description: "Review security",
+  run_in_background: true,
+  prompt: `You are reviewing a code change for the "security" domain only.
+
+## Change summary
+{change_summary}
+
+## Task context
+{original_task_description}
+
+## Where to find the change
+Diff file:          /path/to/.pi/tmp/peer-review/review.diff
+Changed files list: /path/to/.pi/tmp/peer-review/changed-files.txt
+Commit messages:    /path/to/.pi/tmp/peer-review/commits.txt
+Diff summary:       /path/to/.pi/tmp/peer-review/diffstat.txt
+Repository root:    /path/to/repo
+
+The diff is against the merge base abc123 with branch main.
+
+## What to do
+1. Read the diff file at the path above.
+2. Load the `review-standards` skill, then read its security.md checklist.
+3. Review only the "security" domain, using that checklist.
+
+Open any file you need for context with read, grep, or find. You have no shell:
+do not try to run git, the tests, or any other command. If you need something you
+cannot open, record it under NOT_REVIEWED.
+
+Do not comment on other domains — they have their own reviewers. Do not modify
+any files.
+
+Follow the required output format from the `review-standards` skill
+exactly. Cite file:line for every finding. Your final message must end with a
+single VERDICT line and nothing after it.`
+});
+```
+
+```js
+// Resume a stalled reviewer (malformed-output recovery)
+Agent({
+  subagent_type: "reviewer",
+  description: "Resume review security",
+  resume: "agent-abc123",
+  run_in_background: true,
+  prompt: `You did not produce a completed review in the required format. Continue now
+and output your review using the exact format from the review-standards
+skill, ending with a VERDICT line. Do not restart the review. Do not modify
+any files.`
+});
+```
 
 **`get_subagent_result`** — collect a subagent's result.
 
-| Parameter | Type | Notes |
-| --- | --- | --- |
-| `agent_id` | string | **Required.** From the `Agent` call. |
-| `wait` | boolean | Always `true` in this workflow — this is what enforces sequencing. |
-| `verbose` | boolean | Set `true` when diagnosing a malformed result, to see the full transcript. |
+```js
+// Block until the reviewer finishes (enforces sequencing)
+get_subagent_result({
+  agent_id: "agent-abc123",
+  wait: true,
+});
+```
+
+```js
+// Diagnose a malformed result — include the full transcript
+get_subagent_result({
+  agent_id: "agent-abc123",
+  wait: true,
+  verbose: true,
+});
+```
 
 **`make-review-diff.sh`** — produce the artifacts reviewers read. Run once, in
 Step 0, before any reviewer is spawned.
+
+```bash
+# Default: diff against main, include untracked files
+./scripts/make-review-diff.sh
+```
+
+```bash
+# Diff against a different parent branch
+./scripts/make-review-diff.sh --base develop
+```
+
+```bash
+# Committed-only, skip untracked, custom output directory
+./scripts/make-review-diff.sh --base main --committed --no-untracked --out-dir .pi/tmp/custom-review
+```
+
+Options:
 
 | Option | Default | Notes |
 | --- | --- | --- |
@@ -372,6 +441,15 @@ Exit codes: `0` artifacts written, `1` error (message on stderr), `2` nothing to
 review.
 
 **`steer_subagent`** — redirect a subagent that is still running.
+
+```js
+steer_subagent({
+  agent_id: "agent-abc123",
+  message: "Focus on the authentication flow in src/auth/ — the diff file covers lines 1-200.",
+});
+```
+
+Parameters:
 
 | Parameter | Type | Notes |
 | --- | --- | --- |

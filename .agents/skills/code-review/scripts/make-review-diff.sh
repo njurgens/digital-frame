@@ -6,7 +6,7 @@
 # open with the `read` tool. This script writes those files.
 #
 # Usage:
-#   .pi/skills/peer-review/scripts/make-review-diff.sh [options]
+#   .agents/skills/code-review/scripts/make-review-diff.sh [options]
 #
 # Options:
 #   --base <ref>      Parent branch to diff against. Default: first of
