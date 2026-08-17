@@ -314,7 +314,7 @@ def test_legacy_sync_keys_without_share_url_log_migration_hint(
 ) -> None:
     """A pre-provider config with no migratable keys logs a hint and stays local."""
     p = tmp_path / "config.toml"
-    p.write_text('[sync]\ncache_dir = "~/.cache/framesync"\n')
+    p.write_text('[sync]\ncache_dir = "~/.cache/old"\n')
     with caplog.at_level(logging.WARNING):
         cfg = ConfigStore(p)
     assert cfg.sync.provider is ProviderName.LOCAL
@@ -371,7 +371,7 @@ def test_load_migrates_legacy_onedrive_config(
         'share_url = "https://1drv.ms/f/old"\n'
         'password = "pw"\n'
         'output_dir = "~/Pictures/slideshow"\n'
-        'cache_dir = "~/.cache/framesync"\n'
+        'cache_dir = "~/.cache/old"\n'
     )
     with caplog.at_level(logging.INFO):
         cfg = ConfigStore(p)

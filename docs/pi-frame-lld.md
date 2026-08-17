@@ -81,7 +81,6 @@ module/section that satisfies it and its v1/deferred status.
 
 ```
 digital-frame/
-├── slideshow.py            # Entry point: from piframe.app import App; App().run()
 ├── piframe/                # Main application package
 │   ├── __init__.py
 │   ├── app.py              # App class, main loop, state machine
@@ -137,12 +136,10 @@ digital-frame/
 │           ├── NotoSans-Regular.ttf
 │           ├── NotoSans-Bold.ttf
 │           └── MaterialIcons-Regular.ttf
-├── framesync/              # Retired OneDrive sync (kept for rollback only)
-│   └── framesync.py        # sync_folder(), load_config(); no longer used by the app
 ├── config.toml             # Tracked placeholder (not a template); devcontainer users copy config.devcontainer.toml; the app's own copy is src/config.toml (gitignored)
 ├── config.toml.example     # Committed template
 ├── config.devcontainer.toml  # Devcontainer template
-├── tests/                  # pytest unit + headless + integration tests
+├── tests/                  # pytest unit + headless tests
 │   ├── conftest.py
 │   ├── image_utils.py
 │   ├── golden/
@@ -2579,8 +2576,8 @@ from the current window. Prevents unbounded growth on ~600 IANA timezone entries
 
 > **Superseded by issue-43:** `SyncService._do_sync()` no longer calls
 > `framesync.sync_folder()`; it delegates to the pluggable album provider
-> (see the album provider design doc). The `framesync/` package is retained
-> in the tree only for rollback until a follow-up deployment removes it.
+> (see the album provider design doc). The `framesync/` package has since
+> been removed from the tree.
 
 **(Superseded — see note above.)** ~~**Decision:** `framesync/framesync.py` is a
 modifiable module. `SyncService._do_sync()` calls `framesync.sync_folder()` directly
@@ -2592,7 +2589,7 @@ The `framesync.service` and `framesync.timer` units are disabled and stopped in 
 sudo systemctl disable --now framesync.service framesync.timer || true
 ```
 
-Unit files removed from `eng/install.sh`; `framesync/framesync.py` kept in the repository.
+Unit files removed from `eng/install.sh`; the `framesync/` package has since been removed from the repository.
 
 ---
 

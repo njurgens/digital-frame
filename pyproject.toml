@@ -9,7 +9,6 @@ dependencies = [
     "Pillow",
     "requests",
     "numpy",
-    "paramiko",
     "tomli-w>=1.2.0",
 ]
 

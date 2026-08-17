@@ -1,4 +1,4 @@
-"""Tests for SyncService with a mock provider (no network, no framesync)."""
+"""Tests for SyncService with a mock provider (no network)."""
 
 from __future__ import annotations
 

@@ -38,7 +38,7 @@
 bash eng/install.sh
 ```
 
-`install.sh` rsyncs the repo to the Pi, installs apt packages, runs `uv sync`, writes the Wi-Fi sudoers entry, disables the retired framesync systemd units, and patches `/etc/xdg/labwc/autostart`. It is idempotent — safe to re-run.
+`install.sh` rsyncs the repo to the Pi, installs apt packages, runs `uv sync`, writes the Wi-Fi sudoers entry, removes the retired sync-service install, and patches `/etc/xdg/labwc/autostart`. It is idempotent — safe to re-run.
 
 If the config was just created, edit it:
 ```bash
@@ -110,7 +110,7 @@ ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /h
 
 ## Retired components
 
-The mpv-based slideshow and the `framesync` systemd units predate the current app and are no longer used. `install.sh` disables `framesync.service`/`framesync.timer`, and the `framesync/` directory is kept in the repo only for rollback until a follow-up deployment removes it. The old mpv IPC controls (`slideshow.py append/next/prev/...` against `/tmp/mpv-socket`) no longer apply.
+The first-generation mpv-based slideshow and the external OneDrive sync service predate the current app and are no longer in the repo; `install.sh` removes any leftover install of the sync service from the Pi. The old mpv IPC controls (`append/next/prev/...` against `/tmp/mpv-socket`) no longer apply.
 
 ---
 
@@ -128,5 +128,5 @@ sudo reboot
 
 - OneDrive credentials live in the app's `src/config.toml` (gitignored); the tracked root `config.toml` must never contain real credentials.
 - WiFi passphrases are never logged.
-- `nmcli connect` runs via a targeted sudoers entry (`/etc/sudoers.d/framesync-wifi`); no process runs as root directly.
+- `nmcli connect` runs via a targeted sudoers entry (`/etc/sudoers.d/piframe-wifi`); no process runs as root directly.
 - The slideshow runs as the `frame` user under the Wayland session.

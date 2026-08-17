@@ -1,5 +1,5 @@
 # Copy this file to config.toml and update the values for your device.
-# Note: only src/config.toml and framesync/config.toml are gitignored — the
+# Note: only src/config.toml is gitignored — the
 # tracked root config.toml must never contain real credentials.
 
 [app]

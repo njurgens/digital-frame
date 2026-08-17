@@ -1,5 +1,4 @@
 # Secrets — never commit
-framesync/config.toml
 src/config.toml
 .devcontainer/.env
 
