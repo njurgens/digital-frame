@@ -59,13 +59,14 @@ source_dir = "/home/frame/Pictures/slideshow"
   files that were removed remotely.
 - **Local.** `source_dir` (default `~/Pictures/slideshow`) is scanned for
   `.jpg`, `.jpeg`, `.png`, and `.gif` files.
-- **Environment overrides.** Any key can be overridden at startup with a
-  `PIFRAME__`-prefixed variable: the remainder of the name is the config
-  path, upper-cased and joined with `__` (e.g.
+- **Environment overrides.** Any existing config key can be overridden at
+  startup with a `PIFRAME__`-prefixed variable: the remainder of the name is
+  the config path, upper-cased and joined with `__` (e.g.
   `PIFRAME__SYNC__PROVIDER=local`,
-  `PIFRAME__SYNC__ONEDRIVE__SHARE_URL=...`). Protected keys (provider
-  selection, OneDrive credentials) are never written back to the config
-  file, so env-var-injected secrets do not leak into it.
+  `PIFRAME__SYNC__ONEDRIVE__SHARE_URL=...`). Unknown paths are silently
+  ignored. Protected keys (provider selection, OneDrive credentials) are
+  never written back to the config file, so env-var-injected secrets do not
+  leak into it.
 
 ## Sync behaviour
 
@@ -183,7 +184,7 @@ Worked example: adding a hypothetical `flickr` provider.
    - **Validate external names** before using them as path components
      (see `_is_safe_name` in `onedrive.py`).
 
-3. **Wire it into DI.** Add a case to `ProviderModule.create` in
+3. **Wire it into dependency injection (DI).** Add a case to `ProviderModule.create` in
    `src/piframe/modules/provider.py`:
 
    ```python
