@@ -80,6 +80,9 @@ class OneDriveProvider(BaseAlbumProvider):
     The provider owns its cache: it downloads new files, performs
     destructive cleanup (deletes cached files no longer present on the
     remote), and exposes the cached images as an album.
+
+    For configuration and how to add a new provider, see
+    ``docs/album-providers.md``.
     """
 
     def __init__(self, config: OneDriveConfig) -> None:

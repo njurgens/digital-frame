@@ -26,6 +26,9 @@ class GooglePhotosProvider(BaseAlbumProvider):
     ``sync`` returns an empty album and reports a not-yet-implemented
     status instead of raising, so the slideshow keeps running with an
     empty collection (FR-5).
+
+    For configuration and how to add a new provider, see
+    ``docs/album-providers.md``.
     """
 
     def __init__(self, config: GooglePhotosConfig) -> None:

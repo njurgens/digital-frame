@@ -21,6 +21,9 @@ class AlbumProvider(Protocol):
     they are stored, when they are downloaded, and when they are deleted.
     Consumers read the current collection through :meth:`album` and never
     touch the provider's storage directly.
+
+    For the available providers, their configuration, and how to add a new
+    one, see ``docs/album-providers.md``.
     """
 
     @property

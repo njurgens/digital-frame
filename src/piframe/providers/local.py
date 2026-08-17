@@ -36,6 +36,9 @@ class LocalProvider(BaseAlbumProvider):
     Returns direct references to the source files: no copying, no
     caching, no cleanup.  The user controls the source directory
     contents (FR-4).
+
+    For configuration and how to add a new provider, see
+    ``docs/album-providers.md``.
     """
 
     def __init__(self, config: LocalConfig) -> None:
