@@ -25,7 +25,7 @@ Remove the worktree only after the PR is merged. If the branch was deleted remot
 
 ## Code Review Gauntlet
 
-**All code changes must pass a five-round sequential review before merge.** Each round is handled by a dedicated sub-agent in `.claude/agents/`. The top-level agent resolves all critical, high, and medium findings between rounds and re-runs the reviewer until it signs off.
+**All code changes must pass a five-round sequential review before merge.** Each round is handled by a dedicated reviewer sub-agent. The top-level agent resolves all critical, high, and medium findings between rounds and re-runs the reviewer until it signs off.
 
 ### Round order (must not be skipped or reordered)
 

@@ -64,7 +64,7 @@ git worktree remove ../digital-frame-issue-$ISSUE
 
 ## Step 4 — Implement the fix
 
-Follow the project conventions in `AGENTS.md` and `CLAUDE.md`:
+Follow the project conventions in `AGENTS.md`:
 
 - **No venv, no pip.** All Python dependencies must be `apt` packages.
 - **No comments** unless the WHY is non-obvious.

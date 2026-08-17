@@ -207,4 +207,4 @@ Worked example: adding a hypothetical `flickr` provider.
 
 - [Dependency injection — module pattern](dependency-injection.md) — how `ProviderModule` fits the app's DI
 - [Pi Frame LLD](pi-frame-lld.md) — full design, including the config store's protected-key rules
-- [DESIGN.md](../.features/active/issue-43-album-provider/DESIGN.md) — the accepted design for this feature
+- [DESIGN.md](../.features/completed/issue-43-album-provider/DESIGN.md) — the accepted design for this feature
