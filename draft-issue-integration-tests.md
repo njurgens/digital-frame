@@ -13,8 +13,8 @@ The app already has the right seed for what we actually want: the
 control channel (`/tmp/piframe_test.sock`) that can query app state, drive the
 UI (tap/swipe), change config values, trigger a sync, take a screenshot, and
 quit the app. Commands are executed on the app's main loop
-(`_drain_harness_queue`), so they observe the app the same way a user's input
-would.
+(`_drain_harness_queue`): `tap` and `swipe` are injected as real pygame
+input events, while the other commands read or invoke the app directly.
 
 ## Goal
 
@@ -37,10 +37,10 @@ without depending on any particular machine, OS, or display.
   script (not a re-implementation of the app), as a child process, and
   communicate only through the harness channel.
 - **Documented, stable protocol.** The harness command/response schema
-  (`state`, `tap`, `swipe`, `set_config`, `trigger_sync`, `screenshot`,
-  `quit`, …) is documented in the LLD and treated as a contract: tests may
-  depend on it, and changing it is a design change, not an implementation
-  detail.
+  (`state`, `tap`, `swipe`, `play_pause`, `prev`, `next`, `set_config`,
+  `trigger_sync`, `screenshot`, `quit`) is to be documented in the LLD and
+  treated as a contract: tests may depend on it, and changing it is a design
+  change, not an implementation detail.
 - **Part of the test gate.** A script (e.g. `eng/test-integration.sh`, or a
   flag on `eng/test.sh`) runs them headlessly in the devcontainer; they pass
   on a clean checkout with no device attached.

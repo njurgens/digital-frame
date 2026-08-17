@@ -9,11 +9,11 @@
                      Album (in-memory snapshot)
                               |
                               v
-        slideshow.py (pygame, fullscreen, Wayland/labwc)
+        slideshow (pygame app, fullscreen, Wayland/labwc)
         launched by /etc/xdg/labwc/autostart
 ```
 
-- **slideshow.py** is a self-contained pygame app. It runs fullscreen under labwc via `/etc/xdg/labwc/autostart` and writes its PID to `/tmp/slideshow.pid`. It is not managed by systemd.
+- **`slideshow`** is the app's console script (`.venv/bin/slideshow`, running `piframe.app:main`): a self-contained pygame app that runs fullscreen under labwc via `/etc/xdg/labwc/autostart` and writes its PID to `/tmp/slideshow.pid`. It is not managed by systemd.
 - **Album providers** own the photo lifecycle. The active provider is selected by `sync.provider` in the config:
   - `onedrive` — syncs a shared OneDrive folder (Badger token API) into its own cache directory, with destructive cleanup of files no longer present remotely.
   - `local` — exposes a user-managed directory directly: no copying, no cleanup.
