@@ -94,9 +94,9 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 - **`.pi/tmp/` is the scratch working directory** for agent artifacts (issue
   drafts, review outputs). Its contents are gitignored; the folder is kept by
   `.gitkeep`.
-- **AI attribution.** Add a `Co-Authored-By:` line to every commit message,
+- **AI attribution.** Add a `Co-authored-by:` line to every commit message,
   PR, and GitHub issue you create, attributing the AI that did the work
-  (e.g. `Co-Authored-By: <model> (Pi) <email>`), so it is transparent
+  (e.g. `Co-authored-by: Pi (<model>) <email>`), so it is transparent
   that the work was AI-generated.
 
 ## Git & PR workflow
