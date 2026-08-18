@@ -15,7 +15,7 @@ reviewers, collect their structured results, and aggregate.
 ## When to run this
 
 - A code change is complete and ready for review.
-- Before the change is marked done, merged, or handed to the next devloop stage.
+- Before the change is marked done, merged, or handed to the next dev-loop stage.
 
 Do not run peer review on a work-in-progress change. Finish the change first.
 
@@ -291,7 +291,7 @@ the first match:
 | Any domain returned `BLOCK` | **FAIL — stop** | Do not proceed. Fix every `blocker` finding, then re-run peer review from domain 1. |
 | Any domain returned `REQUEST_CHANGES` | **FAIL — fix first** | Address every `blocker` and `major` finding, then re-run peer review from domain 1. |
 | Any domain is `INCOMPLETE` | **HOLD** | Report which domains went unreviewed and ask the user whether to proceed or retry those domains. Do not silently pass. |
-| All domains `APPROVE` or `APPROVE_WITH_SUGGESTIONS` | **PASS** | Proceed to the next devloop stage. Report the suggestions; the author may fix or decline them. |
+| All domains `APPROVE` or `APPROVE_WITH_SUGGESTIONS` | **PASS** | Proceed to the next dev-loop stage. Report the suggestions; the author may fix or decline them. |
 
 Re-running after fixes means re-running `make-review-diff.sh` to regenerate the
 diff, then running all eight domains again in order — not just the domains that

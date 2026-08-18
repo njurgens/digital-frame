@@ -66,7 +66,10 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   one-off tools that build the test image set (see docs/stock-images.md)
 - `docs/` — public documentation: LLD (authoritative design), HLD, UX
   requirements, album-providers guide, hardware target
-- `.pi/` — agent config: `prompts/` (prompt templates, e.g. `/create-issue`)
+- `.agents/` — agent config: `skills/`, `agents/`, and `prompts/` (prompt
+  templates, e.g. `/create-issue` and `/dev-loop`; not auto-discovered by pi —
+  loaded via the `prompts` entry in `.pi/settings.json`)
+- `.pi/` — `settings.json` (points prompt discovery at `.agents/prompts/`)
   and `tmp/` (scratch working directory for issue drafts and review artifacts)
 
 ## Conventions
