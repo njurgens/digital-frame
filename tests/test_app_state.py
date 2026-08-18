@@ -278,7 +278,10 @@ def test_pointer_up_rejects_swipe_at_elapsed_boundary(
 
 
 def test_restart_calls_execve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """restart() calls os.execve to re-execute the process."""
+    """restart() re-executes the process via os.execve.
+
+    The restart environment derives XDG_RUNTIME_DIR from the process uid.
+    """
     import sys
 
     captured: list[tuple] = []
@@ -289,3 +292,4 @@ def test_restart_calls_execve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
     assert len(captured) == 1
     assert captured[0][0][0] == sys.executable
+    assert captured[0][0][2]["XDG_RUNTIME_DIR"] == f"/run/user/{os.getuid()}"

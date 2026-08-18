@@ -202,22 +202,27 @@ def test_dispatch_batch_with_notification_omits_its_response() -> None:
     assert resp == [{"jsonrpc": "2.0", "result": {"state": "SLIDESHOW"}, "id": 1}]
 
 
-def test_dispatch_batch_all_notifications_returns_empty_array() -> None:
-    """A batch of only notifications gets an (empty) array response."""
+def test_dispatch_batch_all_notifications_gets_no_response() -> None:
+    """A batch of only notifications gets no response.
+
+    The spec says the server MUST NOT reply to notifications and MUST NOT
+    return an empty array.
+    """
     resp = dispatch([{"jsonrpc": "2.0", "method": "state"}], {"state": _state_executor})
-    assert resp == []
+    assert resp is None
 
 
-def test_dispatch_empty_batch_gets_invalid_request() -> None:
-    """An empty batch is not a valid request: one -32600 error in an array."""
+def test_dispatch_empty_batch_gets_bare_invalid_request() -> None:
+    """An empty batch is answered with a single (bare) Response object.
+
+    The spec's own example shows a bare object, not an array.
+    """
     resp = dispatch([], {"state": _state_executor})
-    assert resp == [
-        {
-            "jsonrpc": "2.0",
-            "error": {"code": -32600, "message": "a batch must not be empty"},
-            "id": None,
-        }
-    ]
+    assert resp == {
+        "jsonrpc": "2.0",
+        "error": {"code": -32600, "message": "a batch must not be empty"},
+        "id": None,
+    }
 
 
 def test_dispatch_batch_mixed_valid_and_invalid() -> None:
@@ -455,3 +460,53 @@ def test_server_stop_removes_socket_and_refuses_new_connections(tmp_path: Path) 
             client.connect(str(path))
     finally:
         client.close()
+
+
+def test_server_oversized_line_gets_parse_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An oversized line gets a -32700 parse error and a closed connection.
+
+    A runaway client must not grow the accept thread's memory.
+    """
+    import piframe.ipc as ipc_mod
+
+    monkeypatch.setattr(ipc_mod, "_MAX_LINE", 64)
+    server = IpcServer(tmp_path / "piframe.sock", {"state": _state_executor})
+    try:
+        client = _client(tmp_path / "piframe.sock")
+        try:
+            client.sendall(b"{" + b"x" * 200 + b"\n")
+            data = b""
+            while not data.endswith(b"\n"):
+                chunk = client.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+            resp = json.loads(data)
+        finally:
+            client.close()
+        assert resp["error"]["code"] == -32700
+        assert resp["id"] is None
+    finally:
+        server.stop()
+
+
+def test_server_stalled_client_does_not_block_the_accept_loop(tmp_path: Path) -> None:
+    """A stalled client is closed after the read timeout.
+
+    The accept loop still services new connections afterwards.
+    """
+    server = IpcServer(tmp_path / "piframe.sock", {"state": _state_executor}, recv_timeout=0.5)
+    try:
+        stalled = _client(tmp_path / "piframe.sock")
+        time.sleep(1.0)  # let the accept loop time out on the stalled client
+        client = _client(tmp_path / "piframe.sock")
+        try:
+            resp = _roundtrip(server, client, '{"jsonrpc": "2.0", "method": "state", "id": 1}')
+        finally:
+            client.close()
+        assert resp == {"jsonrpc": "2.0", "result": {"state": "SLIDESHOW"}, "id": 1}
+        stalled.close()
+    finally:
+        server.stop()

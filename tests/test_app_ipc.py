@@ -71,7 +71,13 @@ def test_ipc_state_reports_state(tmp_path: Path) -> None:
 def test_ipc_tap_posts_mouse_events(tmp_path: Path) -> None:
     """Tap posts a down/up pair at the given coordinates."""
     app = make_app(tmp_path)
-    assert app._ipc_tap({"x": 10, "y": 20}) == {}
+    pygame.event.get()  # drain any stray events first
+    app._ipc_tap({"x": 10, "y": 20})
+    events = pygame.event.get()
+    down = [e for e in events if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1]
+    up = [e for e in events if e.type == pygame.MOUSEBUTTONUP and e.button == 1]
+    assert [e.pos for e in down] == [(10, 20)]
+    assert [e.pos for e in up] == [(10, 20)]
 
 
 def test_ipc_tap_rejects_missing_and_non_integer_coords(tmp_path: Path) -> None:
@@ -85,9 +91,20 @@ def test_ipc_tap_rejects_missing_and_non_integer_coords(tmp_path: Path) -> None:
 
 
 def test_ipc_swipe_posts_motion_events(tmp_path: Path) -> None:
-    """Swipe posts a down, a series of motions, and an up."""
+    """Swipe posts a down, a series of motions, and an up at the endpoints."""
     app = make_app(tmp_path)
-    assert app._ipc_swipe({"x": 0, "y": 0, "dx": 100, "dy": 0, "ms": 16}) == {}
+    pygame.event.get()  # drain any stray events first
+    app._ipc_swipe({"x": 0, "y": 0, "dx": 100, "dy": 0, "ms": 16})
+    events = pygame.event.get()
+    down = [e for e in events if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1]
+    up = [e for e in events if e.type == pygame.MOUSEBUTTONUP and e.button == 1]
+    motion = [e for e in events if e.type == pygame.MOUSEMOTION]
+    # ms=16 → steps = max(5, 16 // 16) = 5
+    assert [e.pos for e in down] == [(0, 0)]
+    assert [e.pos for e in up] == [(100, 0)]
+    assert len(motion) == 5
+    assert motion[0].pos == (20, 0)
+    assert motion[-1].pos == (100, 0)
 
 
 def test_ipc_swipe_rejects_missing_coords(tmp_path: Path) -> None:

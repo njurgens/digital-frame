@@ -72,6 +72,8 @@ def test_app_boots_headless_with_local_provider(
     try:
         assert pid_file.read_text().strip() == str(os.getpid())
         assert app._screen.get_size() == (1280, 800)
+        # [ipc] disabled: no socket is created (the default-off safety property).
+        assert not (tmp_path / "piframe.sock").exists()
     finally:
         os.close(app._pid_fd)
 
@@ -104,5 +106,59 @@ def test_app_ipc_roundtrip_state(
             time.sleep(0.01)
         client.close()
         assert json.loads(data) == {"jsonrpc": "2.0", "result": {"state": "SLIDESHOW"}, "id": 1}
+    finally:
+        if app._ipc is not None:
+            app._ipc.stop()
+        os.close(app._pid_fd)
+
+
+def test_app_rejects_removed_test_harness_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The retired --test-harness flag is an argument error (V-1)."""
+    monkeypatch.setattr(app_module, "resolve_runtime_dir", lambda: tmp_path)
+    monkeypatch.setattr(app_module, "CONFIG_PATH", tmp_path / "config.toml")
+    monkeypatch.setattr(sys, "argv", ["slideshow", "--test-harness"])
+    with pytest.raises(SystemExit):
+        App()
+
+
+def test_app_fails_closed_when_fallback_dir_uncreatable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F-2: an uncreatable fallback dir (unwritable ~/.local) fails closed.
+
+    The error names the directory.
+    """
+    home = tmp_path / "home"
+    (home / ".local").mkdir(parents=True)
+    (home / ".local").chmod(0o555)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    monkeypatch.setattr(app_module, "CONFIG_PATH", tmp_path / "config.toml")
+    monkeypatch.setattr(sys, "argv", ["slideshow", "--windowed"])
+    with pytest.raises(OSError, match="cannot create fallback runtime dir"):
+        App()
+
+
+def test_app_continues_without_api_when_ipc_server_fails(
+    pid_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F-3: a failing IPC server does not stop the app (fail-soft).
+
+    With the API enabled but the server failing to start, the app boots
+    without the API and no socket is present.
+    """
+
+    class _FailingIpcModule:
+        def create(self, config: object, **deps: object) -> object:
+            raise OSError("simulated bind failure")
+            raise OSError("simulated bind failure")
+
+    monkeypatch.setattr(app_module, "IpcModule", _FailingIpcModule)
+    app = _boot_app(pid_file, tmp_path, monkeypatch, ipc_enabled=True)
+    try:
+        assert app._ipc is None
+        assert not (tmp_path / "piframe.sock").exists()
     finally:
         os.close(app._pid_fd)

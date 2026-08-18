@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
 
 from piframe.config_store import ConfigStore
 from piframe.di import DimModule
-from piframe.ipc import IpcServer
+from piframe.ipc import Executor, IpcServer
 
 
 class IpcModule(DimModule["IpcServer | None"]):
@@ -18,7 +18,7 @@ class IpcModule(DimModule["IpcServer | None"]):
         config: ConfigStore,
         *,
         socket_path: Path,
-        executors: Mapping[str, Callable[[dict], object]],
+        executors: Mapping[str, Executor],
         **deps: object,
     ) -> IpcServer | None:
         """Build and start the IPC server, or return None when the API is disabled.

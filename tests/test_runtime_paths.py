@@ -14,9 +14,10 @@ from piframe import runtime_paths
 def test_runtime_dir_returns_xdg_dir_when_it_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The XDG runtime dir is used when it is set and exists."""
+    """The XDG runtime dir is used when it is set, private, and owned."""
     d = tmp_path / "runtime"
     d.mkdir()
+    d.chmod(0o700)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(d))
     assert runtime_paths.runtime_dir() == d
 
@@ -35,6 +36,21 @@ def test_runtime_dir_none_when_dir_missing(
     assert runtime_paths.runtime_dir() is None
 
 
+def test_runtime_dir_rejects_group_or_other_accessible_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A runtime dir carrying group/other bits is treated as absent.
+
+    A 0755 (or looser) dir is not private enough for the 0600 artifacts, so
+    resolution falls back to the user-creatable dir.
+    """
+    d = tmp_path / "runtime"
+    d.mkdir()
+    d.chmod(0o755)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(d))
+    assert runtime_paths.runtime_dir() is None
+
+
 def test_fallback_dir_is_local_piframe(monkeypatch: pytest.MonkeyPatch) -> None:
     """The fallback dir is ~/.local/piframe."""
     monkeypatch.setenv("HOME", "/fake/home")
@@ -47,6 +63,7 @@ def test_resolve_uses_runtime_dir_when_available(
     """Resolution prefers the XDG runtime dir over the fallback."""
     d = tmp_path / "runtime"
     d.mkdir()
+    d.chmod(0o700)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(d))
     assert runtime_paths.resolve_runtime_dir() == d
 
@@ -64,17 +81,37 @@ def test_resolve_creates_fallback_0700_and_warns(
     assert any(str(tmp_path / ".local" / "piframe") in m for m in caplog.messages)
 
 
-def test_resolve_uses_existing_fallback_as_is(
+def test_resolve_tightens_existing_fallback_to_0700(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """An existing fallback dir is used as-is: its mode is not changed."""
+    """An existing fallback dir is tightened to 0700.
+
+    A looser pre-existing mode would let other local users plant files in
+    the artifact dir.
+    """
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
     d = tmp_path / ".local" / "piframe"
     d.mkdir(parents=True)
     d.chmod(0o755)
     assert runtime_paths.resolve_runtime_dir() == d
-    assert stat.S_IMODE(d.stat().st_mode) == 0o755
+    assert stat.S_IMODE(d.stat().st_mode) == 0o700
+
+
+def test_resolve_fails_closed_when_fallback_uncreatable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An uncreatable fallback dir (unwritable ~/.local) fails closed.
+
+    The error names the directory (F-2).
+    """
+    home = tmp_path / "home"
+    (home / ".local").mkdir(parents=True)
+    (home / ".local").chmod(0o555)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    with pytest.raises(OSError, match="cannot create fallback runtime dir"):
+        runtime_paths.resolve_runtime_dir()
 
 
 def test_socket_and_pid_file_paths(tmp_path: Path) -> None:

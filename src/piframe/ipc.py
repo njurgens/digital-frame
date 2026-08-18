@@ -119,16 +119,22 @@ def dispatch(parsed: object, executors: Mapping[str, Executor]) -> dict | list[d
     (a non-empty array of request objects), or a value that is not a request
     (which yields an invalid-request error).  Returns the response — an object
     for a single request, an array for a batch — or None when no response is
-    due (a notification).
+    due (a notification, or a batch of only notifications).
     """
     if isinstance(parsed, list):
         if not parsed:
-            return [make_error(None, INVALID_REQUEST, "a batch must not be empty")]
-        return [
+            # The spec's own example: an empty batch is answered with a
+            # single Response object, not an array.
+            return make_error(None, INVALID_REQUEST, "a batch must not be empty")
+        responses = [
             response
             for response in (_dispatch_element(element, executors) for element in parsed)
             if response is not None
         ]
+        # A batch of only notifications produces no Response objects: the spec
+        # says the server MUST NOT reply to notifications and MUST NOT return
+        # an empty array — send nothing.
+        return responses if responses else None
     return _dispatch_element(parsed, executors)
 
 
@@ -170,6 +176,15 @@ def require_scalar(params: dict, name: str) -> float | str | bool:
     return value
 
 
+#: Max bytes of one request line before the accept thread answers -32700 and
+#: closes the connection (a runaway client must not grow its memory).
+_MAX_LINE = 1 << 20  # 1 MiB
+
+#: Default read timeout (s) for an accepted connection: a client that
+#: connects and stalls must not hold the accept loop.
+_RECV_TIMEOUT = 30.0
+
+
 class IpcServer:
     """The app's Unix-socket command server: one JSON-RPC request per connection.
 
@@ -179,13 +194,21 @@ class IpcServer:
     calls :meth:`poll` each iteration, dispatches via :meth:`handle`, and
     sends the response via :meth:`respond` — the side that sends the
     response closes the connection, so the two sides cannot disagree about a
-    connection's life.
+    connection's life.  The read is bounded: a stalled client is closed
+    after the read timeout, and a line longer than the cap is answered
+    -32700, so one client cannot hold the accept loop or its memory.
     """
 
-    def __init__(self, socket_path: Path, executors: Mapping[str, Executor]) -> None:
+    def __init__(
+        self,
+        socket_path: Path,
+        executors: Mapping[str, Executor],
+        recv_timeout: float = _RECV_TIMEOUT,
+    ) -> None:
         """Bind *socket_path* (0600, unlinked first if stale) and start the accept thread."""
         self._socket_path = socket_path
         self._executors = dict(executors)
+        self._recv_timeout = recv_timeout
         self._queue: queue.SimpleQueue = queue.SimpleQueue()
         try:
             os.unlink(self._socket_path)
@@ -249,12 +272,32 @@ class IpcServer:
             except OSError:
                 return  # the listening socket was closed (stop)
             try:
+                conn.settimeout(self._recv_timeout)
                 data = b""
-                while b"\n" not in data:
-                    chunk = conn.recv(4096)
+                got = 0
+                over = False
+                while b"\n" not in data and not over:
+                    try:
+                        chunk = conn.recv(4096)
+                    except TimeoutError:
+                        break  # stalled: no data arrived within the timeout
                     if not chunk:
                         break
                     data += chunk
+                    got += len(chunk)
+                    if len(data) > _MAX_LINE:
+                        over = True
+                if over:
+                    self.respond(conn, make_error(None, PARSE_ERROR, "line too long"))
+                    continue
+                if not got:
+                    # The client connected and sent nothing: close without a
+                    # response (there is no request to answer).
+                    try:
+                        conn.close()
+                    except OSError:
+                        pass
+                    continue
                 line = data.split(b"\n", 1)[0]
                 try:
                     parsed = json.loads(line)

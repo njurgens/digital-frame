@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import logging
 import os
 import subprocess
 import sys
 import time
-from collections.abc import Callable
 from pathlib import Path
 
 import pygame
@@ -19,7 +19,16 @@ from piframe.assets import Assets
 from piframe.backlight import BacklightController
 from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
-from piframe.ipc import IpcServer, optional_int, require_int, require_scalar, require_str
+from piframe.ipc import (
+    INVALID_PARAMS,
+    Executor,
+    IpcError,
+    IpcServer,
+    optional_int,
+    require_int,
+    require_scalar,
+    require_str,
+)
 from piframe.keyboard import Keyboard
 from piframe.modules import (
     CacheModule,
@@ -148,7 +157,7 @@ class App:
         self._overlay.set_brightness(self._config.display.brightness)
         self._backlight.set_brightness(self._config.display.brightness)
 
-        self._ipc_executors: dict[str, Callable[[dict], object]] = {
+        self._ipc_executors: dict[str, Executor] = {
             "state": self._ipc_state,
             "tap": self._ipc_tap,
             "swipe": self._ipc_swipe,
@@ -160,11 +169,15 @@ class App:
             "set_config": self._ipc_set_config,
             "trigger_sync": self._ipc_trigger_sync,
         }
-        self._ipc: IpcServer | None = IpcModule().create(
-            self._config,
-            socket_path=socket_path(self._runtime_dir),
-            executors=self._ipc_executors,
-        )
+        try:
+            self._ipc: IpcServer | None = IpcModule().create(
+                self._config,
+                socket_path=socket_path(self._runtime_dir),
+                executors=self._ipc_executors,
+            )
+        except Exception as e:  # the API is auxiliary: the app runs without it (F-3)
+            logging.error("IPC API disabled: could not start the socket server: %s", e)
+            self._ipc = None
 
     def _on_brightness_change(self, value: int) -> None:
         self._backlight.set_brightness(value)
@@ -458,6 +471,8 @@ class App:
         dx = require_int(params, "dx")
         dy = require_int(params, "dy")
         ms = optional_int(params, "ms", 300)
+        if not 0 <= ms <= 60_000:
+            raise IpcError(INVALID_PARAMS, "param ms must be between 0 and 60000")
         steps = max(5, ms // 16)
         pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
         delay_s = max(0.001, (ms / 1000.0) / float(steps))
