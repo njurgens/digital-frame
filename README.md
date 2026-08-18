@@ -74,7 +74,7 @@ source_dir = "/home/frame/Pictures/slideshow"
 
 - `sync.provider` selects the album provider; unknown values fail startup with a clear error.
 - Provider-specific keys live in the provider's sub-section (`[sync.onedrive]`, `[sync.local]`, `[sync.google]`).
-- Any key can be overridden at startup (when the config is loaded) with a `PIFRAME__`-prefixed environment variable: the remainder of the name is the config path, upper-cased and joined with `__` (e.g. `PIFRAME__SYNC__ONEDRIVE__SHARE_URL`). Protected keys (provider selection, OneDrive credentials) are never written back to the file.
+- Any key can be overridden at startup (when the config is loaded) with a `PIFRAME_`-prefixed environment variable: the remainder of the name is the config path, upper-cased and joined with `__` (e.g. `PIFRAME_SYNC__ONEDRIVE__SHARE_URL`). Protected keys (provider selection, OneDrive credentials) are never written back to the file.
 - **Rendered-surface cache:** the composited-surface cache location is not configurable; it is fixed at `~/.cache/piframe/surfaces`.
 
 > ⚠️ The tracked root `config.toml` must never contain real credentials — only the app's `src/config.toml` copy is gitignored.

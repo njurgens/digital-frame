@@ -60,10 +60,10 @@ source_dir = "/home/frame/Pictures/slideshow"
 - **Local.** `source_dir` (default `~/Pictures/slideshow`) is scanned for
   `.jpg`, `.jpeg`, `.png`, and `.gif` files.
 - **Environment overrides.** Any existing config key can be overridden at
-  startup with a `PIFRAME__`-prefixed variable: the remainder of the name is
+  startup with a `PIFRAME_`-prefixed variable: the remainder of the name is
   the config path, upper-cased and joined with `__` (e.g.
-  `PIFRAME__SYNC__PROVIDER=local`,
-  `PIFRAME__SYNC__ONEDRIVE__SHARE_URL=...`). Unknown paths are silently
+  `PIFRAME_SYNC__PROVIDER=local`,
+  `PIFRAME_SYNC__ONEDRIVE__SHARE_URL=...`). Unknown paths are silently
   ignored. Protected keys (provider selection, OneDrive credentials) are
   never written back to the config file, so env-var-injected secrets do not
   leak into it.
