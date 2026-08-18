@@ -414,9 +414,10 @@ retaining.
 | ID | Failure | Trigger | Blast radius | Detection | Designed response | Residual risk |
 |---|---|---|---|---|---|---|
 | F-1 | Runtime dir set but missing | XDG_RUNTIME_DIR exported without logind | App start | The app's own check | Fall back to the user-creatable dir with a warning (QA-2) | A shared-directory exposure class, but inside a 0700 user dir — strictly better than /tmp |
-| F-2 | $HOME unset or unwritable | Degenerate environment | App start | The mkdir or open error | Fail closed: a clear error naming the missing directory; no start | The app cannot run there (same as today's unwritable /tmp) |
+| F-2 | $HOME unset or unwritable, or the fallback dir cannot be secured | Degenerate environment | App start | The mkdir, open, or chmod error | Fail closed: a clear error naming the directory; no start | The app cannot run there (same as today's unwritable /tmp) |
 | F-3 | Socket bind fails with IPC enabled | Permissions, path too long | The IPC API only | The logged error | The app continues without the API (fail-soft: the API is a dev/ops convenience, not app-critical) | An operator who enabled the API gets a slideshow but no socket until the cause is fixed |
 | F-4 | Stale socket or PID file from a crash | Previous crash | Next start | — | Unlink-then-bind for the socket; flock for the PID file; the 0700 dir makes planting impossible | None beyond a same-user race the user already owns |
+| F-5 | Two launches resolve different dirs | One session has XDG_RUNTIME_DIR, the other does not | The second launch | The cross-location lock probe | The second launch is refused: before taking its own lock, the app probes the other candidate location for a held lock | No second instance per user, as with the old global /tmp lock |
 
 The posture is asymmetric on purpose: the PID file is a liveness prerequisite, so its
 failure is fatal (F-2); the socket is a convenience, so its failure degrades (F-3).

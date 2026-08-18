@@ -40,7 +40,7 @@ from piframe.modules import (
     WifiModule,
 )
 from piframe.overlay_ui import OverlayUI
-from piframe.runtime_paths import pid_file_path, resolve_runtime_dir, socket_path
+from piframe.runtime_paths import fallback_dir, pid_file_path, resolve_runtime_dir, socket_path
 from piframe.sleep_scheduler import SleepScheduler
 from piframe.types import (
     FPS,
@@ -86,6 +86,27 @@ def acquire_pid_file(path: str | Path) -> int:
     return fd
 
 
+def _probe_other_instance(path: Path) -> None:
+    """Exit if another instance holds the lock at *path*.
+
+    The PID-file lock is per-resolved-dir, so two launches that resolve
+    different dirs (one session with XDG_RUNTIME_DIR, one without) would
+    not contend on the same file; probing the other candidate location
+    restores the one-instance-per-user guarantee.  A missing or free file
+    is a no-op: the probe never creates the file and holds no lock.
+    """
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(fd)
+        sys.exit("another slideshow is already running; refusing to start a second instance")
+    os.close(fd)
+
+
 class App:
     """Main application class for the Pi Frame digital photo frame."""
 
@@ -102,6 +123,14 @@ class App:
         init_events()
 
         self._runtime_dir = resolve_runtime_dir()
+        # The lock is per-resolved-dir: also probe the other candidate
+        # location so two launches that resolve different dirs still contend.
+        other_dir = (
+            fallback_dir()
+            if self._runtime_dir != fallback_dir()
+            else Path(f"/run/user/{os.getuid()}")
+        )
+        _probe_other_instance(pid_file_path(other_dir))
         self._pid_fd = acquire_pid_file(pid_file_path(self._runtime_dir))
 
         if self._args.windowed:

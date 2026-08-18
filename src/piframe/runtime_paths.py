@@ -57,7 +57,13 @@ def resolve_runtime_dir() -> Path:
         return d
     d = fallback_dir()
     if d.is_dir():
-        os.chmod(d, 0o700)
+        try:
+            os.chmod(d, 0o700)
+        except OSError as e:
+            # e.g. the dir is owned by another user (a shared $HOME): the
+            # boundary cannot be enforced, so fail closed like the creation
+            # branch does.
+            raise OSError(f"cannot secure fallback runtime dir {d}: {e}") from e
     else:
         # Create the leaf directly at its final mode so it is never
         # group/other accessible, even for the instant between mkdir and

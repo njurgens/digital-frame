@@ -81,9 +81,22 @@ def _error_id(obj: dict) -> object:
 
 
 def _dispatch_element(obj: object, executors: Mapping[str, Executor]) -> dict | None:
-    """Validate, dispatch, and build the response for one request object."""
+    """Validate, dispatch, and build the response for one request object.
+
+    A notification (a request object without an id member) never gets a
+    response, whatever the outcome: the spec says the server MUST NOT reply
+    to a notification.
+    """
     if not isinstance(obj, dict):
         return make_error(None, INVALID_REQUEST, "a request must be a JSON object")
+    response = _dispatch_request(obj, executors)
+    if "id" not in obj:
+        return None
+    return response
+
+
+def _dispatch_request(obj: dict, executors: Mapping[str, Executor]) -> dict:
+    """Validate and dispatch one request object; always returns a response."""
     if obj.get("jsonrpc") != "2.0":
         return make_error(_error_id(obj), INVALID_REQUEST, "jsonrpc must be '2.0'")
     method = obj.get("method")
@@ -107,8 +120,6 @@ def _dispatch_element(obj: object, executors: Mapping[str, Executor]) -> dict | 
         return make_error(rid, e.code, e.message)
     except Exception as e:
         return make_error(rid, INTERNAL_ERROR, str(e))
-    if "id" not in obj:
-        return None  # a notification: executed, but no response is due
     return make_response(rid, result)
 
 

@@ -114,6 +114,26 @@ def test_resolve_fails_closed_when_fallback_uncreatable(
         runtime_paths.resolve_runtime_dir()
 
 
+def test_resolve_fails_closed_when_existing_fallback_cannot_be_secured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An existing fallback dir that cannot be tightened fails closed.
+
+    E.g. the dir is owned by another user; the error names the directory.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    d = tmp_path / ".local" / "piframe"
+    d.mkdir(parents=True)
+
+    def boom(path: object, mode: int) -> None:
+        raise PermissionError(13, "Operation not permitted", str(path))
+
+    monkeypatch.setattr(runtime_paths.os, "chmod", boom)
+    with pytest.raises(OSError, match="cannot secure fallback runtime dir"):
+        runtime_paths.resolve_runtime_dir()
+
+
 def test_socket_and_pid_file_paths(tmp_path: Path) -> None:
     """The artifact paths are the resolved dir plus fixed file names."""
     assert runtime_paths.socket_path(tmp_path) == tmp_path / "piframe.sock"

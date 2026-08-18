@@ -84,6 +84,25 @@ def test_dispatch_notification_produces_no_response() -> None:
     assert calls == [1]
 
 
+def test_dispatch_failed_notification_gets_no_response() -> None:
+    """A notification that fails dispatch gets no response.
+
+    The spec says the server MUST NOT reply to a notification, even a
+    failed one (here: an unknown method).
+    """
+    resp = dispatch({"jsonrpc": "2.0", "method": "nope"}, {"state": _state_executor})
+    assert resp is None
+
+
+def test_dispatch_malformed_notification_gets_no_response() -> None:
+    """A notification with a malformed envelope gets no response.
+
+    The envelope failure does not turn a notification into a request.
+    """
+    resp = dispatch({"method": "state"}, {"state": _state_executor})
+    assert resp is None
+
+
 def test_dispatch_null_id_is_a_request_not_a_notification() -> None:
     """An explicit null id is a request (the id member is present): it gets a response."""
     resp = dispatch({"jsonrpc": "2.0", "method": "state", "id": None}, {"state": _state_executor})

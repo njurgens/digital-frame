@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import socket
@@ -59,6 +60,7 @@ def _boot_app(
         f'source_dir = "{REPO_ROOT / "tests" / "fixtures" / "stock"}"\n'
     )
     monkeypatch.setattr(app_module, "resolve_runtime_dir", lambda: tmp_path)
+    monkeypatch.setattr(app_module, "fallback_dir", lambda: tmp_path / "fallback")
     monkeypatch.setattr(app_module, "CONFIG_PATH", config)
     monkeypatch.setattr(sys, "argv", ["slideshow", "--windowed"])
     return App()
@@ -117,6 +119,7 @@ def test_app_rejects_removed_test_harness_flag(
 ) -> None:
     """The retired --test-harness flag is an argument error (V-1)."""
     monkeypatch.setattr(app_module, "resolve_runtime_dir", lambda: tmp_path)
+    monkeypatch.setattr(app_module, "fallback_dir", lambda: tmp_path / "fallback")
     monkeypatch.setattr(app_module, "CONFIG_PATH", tmp_path / "config.toml")
     monkeypatch.setattr(sys, "argv", ["slideshow", "--test-harness"])
     with pytest.raises(SystemExit):
@@ -135,10 +138,37 @@ def test_app_fails_closed_when_fallback_dir_uncreatable(
     (home / ".local").chmod(0o555)
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+    monkeypatch.setattr(app_module, "fallback_dir", lambda: home / ".local" / "piframe")
     monkeypatch.setattr(app_module, "CONFIG_PATH", tmp_path / "config.toml")
     monkeypatch.setattr(sys, "argv", ["slideshow", "--windowed"])
     with pytest.raises(OSError, match="cannot create fallback runtime dir"):
         App()
+
+
+def test_app_refuses_when_other_location_locked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A second instance is refused when the other location is locked.
+
+    The lock is per-resolved-dir, so a second launch that resolves a
+    different candidate location is refused by the cross-location probe.
+    """
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    other_pid = other_dir / "slideshow.pid"
+    other_pid.write_text("12345\n")
+    fd = os.open(other_pid, os.O_RDWR)
+    fcntl.flock(fd, fcntl.LOCK_EX)  # hold the lock in the test process
+    try:
+        monkeypatch.setattr(app_module, "resolve_runtime_dir", lambda: tmp_path)
+        monkeypatch.setattr(app_module, "fallback_dir", lambda: other_dir)
+        monkeypatch.setattr(app_module, "CONFIG_PATH", tmp_path / "config.toml")
+        monkeypatch.setattr(sys, "argv", ["slideshow", "--windowed"])
+        with pytest.raises(SystemExit):
+            App()
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 
 def test_app_continues_without_api_when_ipc_server_fails(
