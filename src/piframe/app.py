@@ -4,29 +4,26 @@ from __future__ import annotations
 
 import argparse
 import fcntl
-import json
 import os
-import queue
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pygame
 import pygame.freetype
-
-if TYPE_CHECKING:
-    import socket
 
 from piframe import types as app_types
 from piframe.assets import Assets
 from piframe.backlight import BacklightController
 from piframe.clock_widget import ClockWidget
 from piframe.config_store import ConfigStore
+from piframe.ipc import IpcServer, optional_int, require_int, require_scalar, require_str
 from piframe.keyboard import Keyboard
 from piframe.modules import (
     CacheModule,
+    IpcModule,
     PlayerModule,
     ProviderModule,
     SettingsModule,
@@ -34,6 +31,7 @@ from piframe.modules import (
     WifiModule,
 )
 from piframe.overlay_ui import OverlayUI
+from piframe.runtime_paths import pid_file_path, resolve_runtime_dir, socket_path
 from piframe.sleep_scheduler import SleepScheduler
 from piframe.types import (
     FPS,
@@ -52,24 +50,23 @@ _SWIPE_MAX_DT = 0.4
 _SWIPE_MAX_SLOPE = 0.5
 _TAP_MAX_DIST = 20.0
 
-#: Where the app records its PID. The file is flock-locked for the process
-#: lifetime, so its lock state is a liveness oracle for eng/run.sh.
-PID_FILE = "/tmp/slideshow.pid"
-
 #: The app's config file (gitignored; bootstrapped by eng/run.sh).
 CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
 
 
-def acquire_pid_file(path: str | Path = PID_FILE) -> int:
+def acquire_pid_file(path: str | Path) -> int:
     """Open *path*, take an exclusive flock, and write our PID to it.
 
-    The lock is held on the returned fd for the process lifetime (the kernel
-    releases it on death), so the lock state is a liveness oracle: eng/run.sh
-    probes it to tell a live instance from a stale file.
+    The file is chmod'd 0600 after creation (deterministic regardless of
+    umask or a pre-existing file), and the lock is held on the returned fd
+    for the process lifetime (the kernel releases it on death), so the lock
+    state is a liveness oracle: eng/run.sh probes it to tell a live instance
+    from a stale file.
 
     Returns the fd. Exits if another instance already holds the lock.
     """
-    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+    os.fchmod(fd, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -86,7 +83,6 @@ class App:
     def __init__(self) -> None:
         """Initialise all services and enter the main loop."""
         parser = argparse.ArgumentParser()
-        parser.add_argument("--test-harness", action="store_true")
         parser.add_argument(
             "--windowed", action="store_true", help="Run in a window instead of fullscreen"
         )
@@ -96,7 +92,8 @@ class App:
         pygame.freetype.init()
         init_events()
 
-        self._pid_fd = acquire_pid_file(PID_FILE)
+        self._runtime_dir = resolve_runtime_dir()
+        self._pid_fd = acquire_pid_file(pid_file_path(self._runtime_dir))
 
         if self._args.windowed:
             # Plain window: the SCALED (high-DPI) flag requires a hardware
@@ -151,9 +148,23 @@ class App:
         self._overlay.set_brightness(self._config.display.brightness)
         self._backlight.set_brightness(self._config.display.brightness)
 
-        self._harness_queue: queue.SimpleQueue = queue.SimpleQueue()
-        if self._args.test_harness:
-            self._start_harness()
+        self._ipc_executors: dict[str, Callable[[dict], object]] = {
+            "state": self._ipc_state,
+            "tap": self._ipc_tap,
+            "swipe": self._ipc_swipe,
+            "play_pause": self._ipc_play_pause,
+            "prev": self._ipc_prev,
+            "next": self._ipc_next,
+            "screenshot": self._ipc_screenshot,
+            "quit": self._ipc_quit,
+            "set_config": self._ipc_set_config,
+            "trigger_sync": self._ipc_trigger_sync,
+        }
+        self._ipc: IpcServer | None = IpcModule().create(
+            self._config,
+            socket_path=socket_path(self._runtime_dir),
+            executors=self._ipc_executors,
+        )
 
     def _on_brightness_change(self, value: int) -> None:
         self._backlight.set_brightness(value)
@@ -176,7 +187,7 @@ class App:
             prev_time = now
 
             self._process_pygame_events()
-            self._drain_harness_queue()  # drain even when sleeping
+            self._drain_ipc_queue()  # drain even when sleeping
             if self._state == AppState.SLEEPING:
                 time.sleep(0.25)
                 continue
@@ -374,6 +385,9 @@ class App:
         sync = getattr(self, "_sync", None)
         if sync is not None:
             sync.stop()  # sole owner of the provider's close (D-9)
+        ipc = getattr(self, "_ipc", None)
+        if ipc is not None:
+            ipc.stop()
         self._sleep.stop()
         self._clock_w.stop()
         self._config.flush_now()
@@ -382,7 +396,7 @@ class App:
         """Restart the application by re-executing the process."""
         self._cleanup()
         env = os.environ.copy()
-        env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+        env["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
         env["WAYLAND_DISPLAY"] = "wayland-0"
         os.execve(sys.executable, [sys.executable, *sys.argv], env)
 
@@ -408,145 +422,108 @@ class App:
         self._overlay.show()
         self._sleep.set_grace(time.monotonic() + WAKE_GRACE)
 
-    def _start_harness(self):
-        import socket as sock_mod
-        import threading
+    def _drain_ipc_queue(self) -> None:
+        """Execute queued IPC requests on the main thread and send their responses.
 
-        sock_path = "/tmp/piframe_test.sock"
-        try:
-            os.unlink(sock_path)
-        except FileNotFoundError:
-            pass
-        server = sock_mod.socket(sock_mod.AF_UNIX, sock_mod.SOCK_STREAM)
-        server.bind(sock_path)
-        server.listen(5)
-        t = threading.Thread(target=self._harness_loop, args=(server,), daemon=True)
-        t.start()
+        The accept thread only reads and parses; this is where commands run
+        (the main thread is the sole executor of pygame work) and responses
+        go out.  A None response (a notification) just closes the
+        connection.
+        """
+        if self._ipc is None:
+            return
+        while (item := self._ipc.poll()) is not None:
+            parsed, conn = item
+            self._ipc.respond(conn, self._ipc.handle(parsed))
 
-    def _harness_loop(self, server: socket.socket) -> None:
-        while True:
-            conn = None
-            try:
-                conn, _ = server.accept()
-                data = b""
-                while True:
-                    chunk = conn.recv(4096)
-                    if not chunk:
-                        break
-                    data += chunk
-                    if b"\n" in data:
-                        break
-                msg = json.loads(data.strip())
-                _ = self._handle_harness_cmd(msg, conn)
-            except Exception as e:
-                if conn is not None:
-                    try:
-                        conn.sendall((json.dumps({"ok": False, "error": str(e)}) + "\n").encode())
-                    except Exception:
-                        pass
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
+    # --- IPC executors: one per JSON-RPC method -----------------------------
 
-    def _handle_harness_cmd(self, msg: dict, conn: socket.socket) -> None:
-        import threading
+    def _ipc_state(self, params: dict) -> dict:
+        """Report the current app state."""
+        return {"state": self._state.name}
 
-        cmd = msg.get("cmd")
-        response_event = threading.Event()
-        result_holder = {}
-        self._harness_queue.put((cmd, msg, conn, response_event, result_holder))
+    def _ipc_tap(self, params: dict) -> dict:
+        """Post a synthetic tap (down + up) at (x, y)."""
+        x = require_int(params, "x")
+        y = require_int(params, "y")
+        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
+        time.sleep(0.05)
+        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x, y), button=1))
+        return {}
 
-    def _drain_harness_queue(self):
-        while True:
-            try:
-                cmd, msg, conn, done_event, result_holder = self._harness_queue.get_nowait()
-                _ = done_event, result_holder
-            except Exception:
-                break
-            try:
-                resp = self._exec_harness_cmd(cmd, msg)
-            except Exception as e:
-                resp = {"ok": False, "error": str(e)}
-            try:
-                conn.sendall((json.dumps(resp) + "\n").encode())
-            except Exception:
-                pass
-            finally:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
+    def _ipc_swipe(self, params: dict) -> dict:
+        """Post a synthetic swipe from (x, y) by (dx, dy) over ms milliseconds."""
+        x = require_int(params, "x")
+        y = require_int(params, "y")
+        dx = require_int(params, "dx")
+        dy = require_int(params, "dy")
+        ms = optional_int(params, "ms", 300)
+        steps = max(5, ms // 16)
+        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1))
+        delay_s = max(0.001, (ms / 1000.0) / float(steps))
+        for i in range(1, steps + 1):
+            mv = pygame.event.Event(
+                pygame.MOUSEMOTION,
+                pos=(x + dx * i // steps, y + dy * i // steps),
+                rel=(dx // steps, dy // steps),
+                buttons=(1, 0, 0),
+            )
+            pygame.event.post(mv)
+            time.sleep(delay_s)
+        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x + dx, y + dy), button=1))
+        return {}
 
-    def _exec_harness_cmd(self, cmd: str, msg: dict) -> dict:
-        import time as _time
+    def _ipc_play_pause(self, params: dict) -> dict:
+        """Toggle playback and report the new paused state."""
+        self._player.is_paused = not self._player.is_paused
+        self._overlay.set_paused(self._player.is_paused)
+        return {"paused": self._player.is_paused}
 
-        if cmd == "state":
-            return {"ok": True, "state": self._state.name}
-        if cmd == "tap":
-            x, y = msg["x"], msg["y"]
-            ev = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1)
-            pygame.event.post(ev)
-            _time.sleep(0.05)
-            ev2 = pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x, y), button=1)
-            pygame.event.post(ev2)
-            return {"ok": True}
-        if cmd == "swipe":
-            x, y, dx, dy, ms = msg["x"], msg["y"], msg["dx"], msg["dy"], msg.get("ms", 300)
-            steps = max(5, ms // 16)
-            down = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(x, y), button=1)
-            pygame.event.post(down)
-            delay_s = max(0.001, (ms / 1000.0) / float(steps))
-            for i in range(1, steps + 1):
-                fx = x + dx * i // steps
-                fy = y + dy * i // steps
-                mv = pygame.event.Event(
-                    pygame.MOUSEMOTION,
-                    pos=(fx, fy),
-                    rel=(dx // steps, dy // steps),
-                    buttons=(1, 0, 0),
-                )
-                pygame.event.post(mv)
-                _time.sleep(delay_s)
-            up = pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(x + dx, y + dy), button=1)
-            pygame.event.post(up)
-            return {"ok": True}
-        if cmd == "play_pause":
-            self._player.is_paused = not self._player.is_paused
-            self._overlay.set_paused(self._player.is_paused)
-            return {"ok": True, "paused": self._player.is_paused}
-        if cmd == "prev":
-            self._player.go_back()
-            if self._state == AppState.OVERLAY:
-                self._overlay.dismissed = False
-                self._overlay._extend_dismiss()
-            return {"ok": True}
-        if cmd == "next":
-            self._player.skip()
-            if self._state == AppState.OVERLAY:
-                self._overlay.dismissed = False
-                self._overlay._extend_dismiss()
-            return {"ok": True}
-        if cmd == "screenshot":
-            path = msg["path"]
-            pygame.image.save(self._screen, path)
-            return {"ok": True}
-        if cmd == "quit":
-            self._quit()
-            return {"ok": True}
-        if cmd == "set_config":
-            self._config.set(msg["section"], msg["key"], msg["value"])
-            if msg.get("section") == "sleep":
-                self._sleep.kick()
-            if hasattr(self, "_settings"):
-                self._settings.sync_from_config()
-            return {"ok": True}
-        if cmd == "trigger_sync":
-            sync = getattr(self, "_sync", None)
-            if sync is not None:
-                sync.trigger()
-            return {"ok": True}
-        return {"ok": False, "error": f"unknown command: {cmd}"}
+    def _ipc_prev(self, params: dict) -> dict:
+        """Go back one slide."""
+        self._player.go_back()
+        if self._state == AppState.OVERLAY:
+            self._overlay.dismissed = False
+            self._overlay._extend_dismiss()
+        return {}
+
+    def _ipc_next(self, params: dict) -> dict:
+        """Skip to the next slide."""
+        self._player.skip()
+        if self._state == AppState.OVERLAY:
+            self._overlay.dismissed = False
+            self._overlay._extend_dismiss()
+        return {}
+
+    def _ipc_screenshot(self, params: dict) -> dict:
+        """Save the current screen to the given path."""
+        path = require_str(params, "path")
+        pygame.image.save(self._screen, path)
+        return {}
+
+    def _ipc_quit(self, params: dict) -> dict:
+        """Quit the app (a notification: the process exits before any response)."""
+        self._quit()
+        return {}
+
+    def _ipc_set_config(self, params: dict) -> dict:
+        """Set a config value, then refresh the sleep schedule and settings panel."""
+        section = require_str(params, "section")
+        key = require_str(params, "key")
+        value = require_scalar(params, "value")
+        self._config.set(section, key, value)
+        if section == "sleep":
+            self._sleep.kick()
+        if hasattr(self, "_settings"):
+            self._settings.sync_from_config()
+        return {}
+
+    def _ipc_trigger_sync(self, params: dict) -> dict:
+        """Trigger a photo sync."""
+        sync = getattr(self, "_sync", None)
+        if sync is not None:
+            sync.trigger()
+        return {}
 
 
 def main() -> None:

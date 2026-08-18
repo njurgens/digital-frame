@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from collections.abc import Generator
 from pathlib import Path
-from queue import SimpleQueue
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
@@ -54,11 +53,10 @@ def make_app(tmp_path: Path) -> App:
     app._sleep = MagicMock()
     app._backlight = MagicMock()
     app._dialog = None
-    app._harness_queue = SimpleQueue()
+    app._ipc = None
     app._swipe_start_pos = None
     app._swipe_start_time = None
     app._suppress_next_tap = False
-    app._args = MagicMock(test_harness=False)
     return app
 
 
