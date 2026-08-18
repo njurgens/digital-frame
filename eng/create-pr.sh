@@ -63,6 +63,14 @@ if [[ ! -f "$BODY_FILE" ]]; then
     exit 1
 fi
 
+# The body must carry the AI-attribution trailer (AGENTS.md convention).
+if ! grep -qiE '^[[:space:]]*co-authored-by:' "$BODY_FILE"; then
+    echo "Error: $BODY_FILE must include a 'Co-Authored-By:' trailer line" >&2
+    echo "       (AI attribution, see AGENTS.md), e.g.:" >&2
+    echo "       Co-Authored-By: <model> (<agent>) <email>" >&2
+    exit 1
+fi
+
 # Detect current branch
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
 if [[ -z "$BRANCH" ]]; then

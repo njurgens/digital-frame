@@ -67,6 +67,13 @@ if [[ -n "$BODY_FILE" ]]; then
         echo "Error: body file not found: $BODY_FILE" >&2
         exit 1
     fi
+    # A body replacement must keep the AI-attribution trailer (AGENTS.md).
+    if ! grep -qiE '^[[:space:]]*co-authored-by:' "$BODY_FILE"; then
+        echo "Error: $BODY_FILE must include a 'Co-Authored-By:' trailer line" >&2
+        echo "       (AI attribution, see AGENTS.md), e.g.:" >&2
+        echo "       Co-Authored-By: <model> (<agent>) <email>" >&2
+        exit 1
+    fi
     CMD+=(--body-file "$BODY_FILE")
 fi
 
