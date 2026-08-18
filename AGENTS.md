@@ -96,8 +96,9 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   `.gitkeep`.
 - **AI attribution.** Add a `Co-authored-by:` line to every commit message,
   PR, and GitHub issue you create, attributing the AI that did the work
-  (e.g. `Co-authored-by: Pi (<model>) <model@pi-agent.local>`), so it is
-  transparent that the work was AI-generated.
+  (e.g. `Co-authored-by: Pi (<model>) <model@pi-agent.local>`, filling
+  `<model>` from the `PI_MODEL` env var), so it is transparent that the work
+  was AI-generated.
 
 ## Git & PR workflow
 
