@@ -175,10 +175,10 @@ def test_deep_merge_preserves_sibling_defaults(tmp_path: Path) -> None:
 
 
 def test_env_override_flat_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """PIFRAME__ env vars override flat config keys with type coercion."""
-    monkeypatch.setenv("PIFRAME__SLIDESHOW__INTERVAL", "15")
-    monkeypatch.setenv("PIFRAME__DISPLAY__BRIGHTNESS", "40")
-    monkeypatch.setenv("PIFRAME__SLIDESHOW__SHUFFLE", "false")
+    """PIFRAME_ env vars override flat config keys with type coercion."""
+    monkeypatch.setenv("PIFRAME_SLIDESHOW__INTERVAL", "15")
+    monkeypatch.setenv("PIFRAME_DISPLAY__BRIGHTNESS", "40")
+    monkeypatch.setenv("PIFRAME_SLIDESHOW__SHUFFLE", "false")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.slideshow.interval == 15.0
     assert cfg.display.brightness == 40
@@ -188,11 +188,11 @@ def test_env_override_flat_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 def test_env_override_nested_provider_keys(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """PIFRAME__ env vars override nested provider keys."""
-    monkeypatch.setenv("PIFRAME__SYNC__PROVIDER", "onedrive")
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__SHARE_URL", "https://injected")
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__PASSWORD", "s3cret")
-    monkeypatch.setenv("PIFRAME__SYNC__LOCAL__SOURCE_DIR", "/tmp/photos")
+    """PIFRAME_ env vars override nested provider keys."""
+    monkeypatch.setenv("PIFRAME_SYNC__PROVIDER", "onedrive")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__SHARE_URL", "https://injected")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__PASSWORD", "s3cret")
+    monkeypatch.setenv("PIFRAME_SYNC__LOCAL__SOURCE_DIR", "/tmp/photos")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.sync.provider is ProviderName.ONEDRIVE
     assert cfg.read_nested("sync", "onedrive", "share_url") == "https://injected"
@@ -202,25 +202,41 @@ def test_env_override_nested_provider_keys(
 
 def test_env_override_unknown_ignored(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Unknown env var paths are silently ignored (no new sections created)."""
-    monkeypatch.setenv("PIFRAME__NONSENSE__KEY", "value")
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__FAKE", "value")
+    monkeypatch.setenv("PIFRAME_NONSENSE__KEY", "value")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__FAKE", "value")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert "nonsense" not in cfg._data
     assert cfg.read_nested("sync", "onedrive", "fake", default=None) is None
+
+
+def test_env_override_retired_double_prefix_ignored(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The retired ``PIFRAME__`` (double-underscore) prefix is no longer honoured.
+
+    Old-style names now parse to a path whose first component is ``_sync``
+    (or similar) — not a known section — so they are silently ignored like
+    any unknown variable (FR-10).
+    """
+    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__SHARE_URL", "https://old-style")
+    monkeypatch.setenv("PIFRAME__DISPLAY__BRIGHTNESS", "10")
+    cfg = ConfigStore(tmp_path / "nonexistent.toml")
+    assert cfg.read_nested("sync", "onedrive", "share_url") == ""
+    assert cfg.display.brightness == 72
 
 
 def test_env_override_bad_number_keeps_existing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A non-numeric env value for a numeric key keeps the existing value."""
-    monkeypatch.setenv("PIFRAME__DISPLAY__BRIGHTNESS", "not-a-number")
+    monkeypatch.setenv("PIFRAME_DISPLAY__BRIGHTNESS", "not-a-number")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.display.brightness == 72
 
 
 def test_env_override_clamped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Env overrides are clamped like file values."""
-    monkeypatch.setenv("PIFRAME__DISPLAY__BRIGHTNESS", "250")
+    monkeypatch.setenv("PIFRAME_DISPLAY__BRIGHTNESS", "250")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.display.brightness == 100
 
@@ -229,7 +245,7 @@ def test_flush_does_not_persist_env_secret(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Env-injected secrets are never written to the file (V-4)."""
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__PASSWORD", "s3cret")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__PASSWORD", "s3cret")
     p = tmp_path / "config.toml"
     write_toml(p, '[sync]\nprovider = "onedrive"\n')
     cfg = ConfigStore(p)
@@ -261,7 +277,7 @@ def test_flush_restores_file_secret_over_memory(tmp_path: Path) -> None:
 
 def test_writer_nested_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The TOML writer handles nested sub-sections without corrupting the file."""
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__CACHE_DIR", "/tmp/od-cache")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__CACHE_DIR", "/tmp/od-cache")
     p = tmp_path / "config.toml"
     write_toml(p, '[sync]\nprovider = "onedrive"\n')
     cfg = ConfigStore(p)
@@ -427,14 +443,14 @@ def test_env_override_malformed_name_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Env var names with empty path components are ignored."""
-    monkeypatch.setenv("PIFRAME__DISPLAY__", "75")
+    monkeypatch.setenv("PIFRAME_DISPLAY__", "75")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.display.brightness == 72
 
 
 def test_env_override_dict_key_ignored(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An env var targeting a table-valued key is ignored (no scalar overwrite)."""
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE", "scalar")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE", "scalar")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert isinstance(cfg.read_nested("sync", "onedrive"), dict)
 
@@ -443,7 +459,7 @@ def test_env_override_path_through_scalar_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A path whose intermediate component is a scalar value is ignored."""
-    monkeypatch.setenv("PIFRAME__SLIDESHOW__INTERVAL__X", "5")
+    monkeypatch.setenv("PIFRAME_SLIDESHOW__INTERVAL__X", "5")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.slideshow.interval == 30.0
 
@@ -452,7 +468,7 @@ def test_env_override_bad_float_keeps_existing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A non-numeric env value for a float key keeps the existing value."""
-    monkeypatch.setenv("PIFRAME__SLIDESHOW__INTERVAL", "not-a-number")
+    monkeypatch.setenv("PIFRAME_SLIDESHOW__INTERVAL", "not-a-number")
     cfg = ConfigStore(tmp_path / "nonexistent.toml")
     assert cfg.slideshow.interval == 30.0
 
@@ -494,8 +510,8 @@ def test_flush_missing_file_does_not_write_env_secret(
     env-owned credentials in it.
     """
     p = tmp_path / "config.toml"
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__SHARE_URL", "https://injected")
-    monkeypatch.setenv("PIFRAME__SYNC__ONEDRIVE__PASSWORD", "s3cret")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__SHARE_URL", "https://injected")
+    monkeypatch.setenv("PIFRAME_SYNC__ONEDRIVE__PASSWORD", "s3cret")
     cfg = ConfigStore(p)
     assert cfg.read_nested("sync", "onedrive", "share_url") == "https://injected"
     cfg.set("display", "brightness", 30)

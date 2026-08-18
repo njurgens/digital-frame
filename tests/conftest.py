@@ -29,9 +29,9 @@ def pygame_init() -> Generator[None]:
 
 @pytest.fixture(autouse=True)
 def clean_piframe_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Remove PIFRAME__* env vars so default-value assertions are hermetic."""
+    """Remove PIFRAME_* env vars so default-value assertions are hermetic."""
     for name in list(os.environ):
-        if name.startswith("PIFRAME__"):
+        if name.startswith("PIFRAME_"):
             monkeypatch.delenv(name)
 
 

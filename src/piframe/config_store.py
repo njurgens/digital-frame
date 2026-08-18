@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
 #: Environment variable prefix for config overrides.  The remainder of the
 #: variable name is a ``__``-separated, upper-case config path, e.g.
-#: ``PIFRAME__SYNC__ONEDRIVE__SHARE_URL`` overrides ``sync.onedrive.share_url``.
-_ENV_PREFIX = "PIFRAME__"
+#: ``PIFRAME_SYNC__ONEDRIVE__SHARE_URL`` overrides ``sync.onedrive.share_url``.
+_ENV_PREFIX = "PIFRAME_"
 _ENV_SEP = "__"
 
 #: Keys the app must never persist: their on-disk values always win on
@@ -504,10 +504,10 @@ class ConfigStore:
         return default if value is None else value
 
     def _apply_env_overrides(self) -> None:
-        """Overlay ``PIFRAME__``-prefixed environment variables onto the config.
+        """Overlay ``PIFRAME_``-prefixed environment variables onto the config.
 
         The remainder of a variable name is a ``__``-separated, upper-case
-        config path (e.g. ``PIFRAME__SYNC__ONEDRIVE__SHARE_URL``).  Values
+        config path (e.g. ``PIFRAME_SYNC__ONEDRIVE__SHARE_URL``).  Values
         are coerced to the type of the existing value.  Unknown paths are
         silently ignored (FR-10).
         """
