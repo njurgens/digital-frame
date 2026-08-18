@@ -67,7 +67,7 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 - `docs/` — public documentation: LLD (authoritative design), HLD, UX
   requirements, album-providers guide, hardware target
 - `.agents/` — agent config: `skills/`, `agents/`, and `prompts/` (prompt
-  templates, e.g. `/create-issue` and `/dev-loop`; not auto-discovered by pi —
+  templates, e.g. `/create-issue` and `/dev-loop`; not auto-discovered by Pi —
   loaded via the `prompts` entry in `.pi/settings.json`)
 - `.pi/` — `settings.json` (points prompt discovery at `.agents/prompts/`)
   and `tmp/` (scratch working directory for issue drafts and review artifacts)
@@ -96,7 +96,7 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   `.gitkeep`.
 - **AI attribution.** Add a `Co-Authored-By:` line to every commit message,
   PR, and GitHub issue you create, attributing the AI that did the work
-  (e.g. `Co-Authored-By: <model> (<agent>) <email>`), so it is transparent
+  (e.g. `Co-Authored-By: <model> (Pi) <email>`), so it is transparent
   that the work was AI-generated.
 
 ## Git & PR workflow
