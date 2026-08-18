@@ -3,15 +3,15 @@
 # get-issue.sh — Fetch a GitHub issue by number and print it as markdown.
 #
 # Usage:
-#   eng/get-issue.sh ISSUE_NUMBER [--repo REPO]
+#   get-issue.sh ISSUE_NUMBER [--repo REPO]
 #
 # Options:
 #   --repo REPO   Override repo (default: njurgens/digital-frame)
 #   --help       Show this help text
 #
 # Example:
-#   eng/get-issue.sh 42
-#   eng/get-issue.sh 42 --repo other/repo
+#   get-issue.sh 42
+#   get-issue.sh 42 --repo other/repo
 #
 set -euo pipefail
 
@@ -42,6 +42,16 @@ done
 if [[ -z "$ISSUE_NUM" ]]; then
     echo "Error: issue number is required" >&2
     usage 1
+fi
+
+# Pre-flight: the 'gh' CLI must be installed and logged in
+if ! command -v gh >/dev/null 2>&1; then
+    echo "Error: the 'gh' CLI is not installed (see https://cli.github.com/)." >&2
+    exit 1
+fi
+if ! gh auth status >/dev/null 2>&1; then
+    echo "Error: 'gh' is not logged in. Run 'gh auth login' first." >&2
+    exit 1
 fi
 
 # Fetch issue data as JSON

@@ -45,7 +45,7 @@ if [[ -z "$PR_NUM" ]]; then
 fi
 
 # Fetch PR data as JSON
-DATA=$(gh pr view "$PR_NUM" --repo "$REPO" --json title,state,body,labels,headRefName,baseRefName,createdAt,closedAt,mergedAt,reviewComments,comments)
+DATA=$(gh pr view "$PR_NUM" --repo "$REPO" --json title,state,body,labels,headRefName,baseRefName,createdAt,closedAt,mergedAt,reviews,comments)
 
 # Extract fields
 TITLE=$(echo "$DATA" | jq -r '.title')
@@ -57,7 +57,7 @@ CREATED=$(echo "$DATA" | jq -r '.createdAt')
 CLOSED=$(echo "$DATA" | jq -r '.closedAt // empty')
 MERGED=$(echo "$DATA" | jq -r '.mergedAt // empty')
 LABELS=$(echo "$DATA" | jq -r '.labels[].name' | paste -sd ', ' -)
-COMMENT_COUNT=$(echo "$DATA" | jq '.reviewComments | length')
+COMMENT_COUNT=$(echo "$DATA" | jq '[.reviews[].comments[]] | length')
 ISSUE_COMMENTS=$(echo "$DATA" | jq '.comments | length')
 
 # Print as markdown

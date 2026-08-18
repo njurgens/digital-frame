@@ -17,7 +17,8 @@ bash eng/format.sh          # auto-format code (ruff)
 bash eng/check.sh           # lint + format check + type check
 bash eng/test.sh            # run tests (90% diff-coverage gate)
 bash eng/test.sh -k foo     # filter tests
-bash eng/run.sh             # run the app locally, windowed (devcontainer)
+bash eng/run.sh             # run the app in the devcontainer: background (default),
+                            #   -f for foreground, --kill to stop
 bash eng/install.sh         # deploy to the Pi (idempotent, safe to re-run)
 ```
 
@@ -61,9 +62,12 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 - `src/piframe/` — the app: `app.py` (entry point), `slideshow_player.py`,
   `photo_cache.py`, `config_store.py`, and `providers/` (the album
   providers — see docs/album-providers.md)
-- `tests/` — pytest suite; `eng/` — the scripts above
+- `tests/` — pytest suite; `eng/` — the scripts above; `eng/fixtures/` —
+  one-off tools that build the test image set (see docs/stock-images.md)
 - `docs/` — public documentation: LLD (authoritative design), HLD, UX
   requirements, album-providers guide, hardware target
+- `.pi/` — agent config: `prompts/` (prompt templates, e.g. `/create-issue`)
+  and `tmp/` (scratch working directory for issue drafts and review artifacts)
 
 ## Conventions
 
@@ -84,6 +88,9 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0`.
 - **`eng/install.sh` patches system files as root** (sudoers, labwc
   autostart) — read the script before changing it.
+- **`.pi/tmp/` is the scratch working directory** for agent artifacts (issue
+  drafts, review outputs). Its contents are gitignored; the folder is kept by
+  `.gitkeep`.
 - **AI attribution.** Add a `Co-Authored-By:` line to every commit message,
   PR, and GitHub issue you create, attributing the AI that did the work
   (e.g. `Co-Authored-By: <model> (<agent>) <email>`), so it is transparent
@@ -101,18 +108,23 @@ git worktree remove ../features/<feature-slug>  # remove after merge (--force if
 
 Remove the worktree only after the PR is merged.
 
-Issues and PRs go through the `eng/` scripts (see each script's `--help`):
+Issues go through the `github-issues` skill; PRs go through the `eng/`
+scripts (see each script's `--help`):
 
-| Task | Script |
-|------|--------|
-| Create issue | `eng/create-issue.sh --title "..." --body-file FILE [--label L]` |
-| Get issue | `eng/get-issue.sh ISSUE_NUMBER` |
+| Task | How |
+|------|-----|
+| Create, get, or list issues | Load the `github-issues` skill |
 | Create PR | `eng/create-pr.sh --title "..." --body-file FILE [--reviewer U]` |
 | Get PR | `eng/get-pr.sh PR_NUMBER` |
 | Update PR | `eng/update-pr.sh PR_NUMBER --body-file FILE` |
 
 The repo also ships a `code-review` skill (`.agents/skills/code-review/`)
 for multi-domain peer review of a finished change.
+
+To file an issue from a conversation, use the `github-issues` skill
+(`.agents/skills/github-issues/`) — or just type `/create-issue`. It drafts
+the issue in `.pi/tmp/`, peer-reviews the draft (technical-communication
+domain), and files it with the skill's bundled `scripts/create-issue.sh`.
 
 > If `gh` or git operations fail inside the dev container, see
 > [`.devcontainer/README.md`](.devcontainer/README.md) for setup (SSH agent,
