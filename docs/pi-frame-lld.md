@@ -413,7 +413,7 @@ class App:
 9. Construct `WifiManager`.
 10. Construct `SyncService`; start daemon thread.
 11. Construct `SleepScheduler`; start daemon thread.
-12. Write PID to `/tmp/slideshow.pid`.
+12. Resolve the runtime dir (the XDG runtime dir if present, else the `~/.local/piframe` fallback); write the PID to `<runtime dir>/slideshow.pid` (0600).
 13. Set `_state = AppState.SLIDESHOW`.
 
 #### `run()` — main loop
@@ -423,7 +423,7 @@ def run(self) -> None:
     while True:
         dt = ...
         self._process_pygame_events()
-        self._drain_harness_queue()
+        self._drain_ipc_queue()
         if self._state == AppState.SLEEPING:
             time.sleep(0.25)
             continue
@@ -521,7 +521,7 @@ def restart(self) -> None:
     import os, sys
 
     env = os.environ.copy()
-    env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+    env["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
     env["WAYLAND_DISPLAY"] = "wayland-0"
     os.execve(sys.executable, [sys.executable] + sys.argv, env)
 
@@ -1415,6 +1415,9 @@ Protected keys are never overwritten.
 #### TOML schema
 
 ```toml
+[ipc]
+enabled = false
+
 [slideshow]
 interval    = 30
 fit_mode    = "fit"
@@ -2479,7 +2482,7 @@ Wayland environment variables:
 def restart(self) -> None:
     self._cleanup()
     env = os.environ.copy()
-    env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+    env["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
     env["WAYLAND_DISPLAY"] = "wayland-0"
     os.execve(sys.executable, [sys.executable] + sys.argv, env)
 ```

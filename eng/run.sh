@@ -5,10 +5,10 @@
 #                           prints the PID; output goes to $PIFRAME_LOG
 #   eng/run.sh -f            run in the foreground (Ctrl-C to stop);
 #                           also accepted: --foreground, --fg
-#   eng/run.sh --kill        stop the background instance (via /tmp/slideshow.pid)
+#   eng/run.sh --kill        stop the background instance (via the PID file in the runtime dir)
 #   eng/run.sh --kill <PID>  stop a specific PID
 #
-# Extra arguments are passed through to the slideshow (e.g. --test-harness).
+# Extra arguments are passed through to the slideshow.
 #
 # Environment overrides:
 #   PIFRAME_SYNC__PROVIDER            (default: local)
@@ -17,7 +17,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PIDFILE=/tmp/slideshow.pid
+# Resolve the PID file the same way the app does: the per-user runtime dir
+# if it exists, else the user-creatable fallback dir (created 0700 if absent).
+if [[ -n "${XDG_RUNTIME_DIR:-}" && -d "$XDG_RUNTIME_DIR" ]]; then
+  PIFRAME_RUNTIME_DIR="$XDG_RUNTIME_DIR"
+else
+  PIFRAME_RUNTIME_DIR="${HOME}/.local/piframe"
+  if [[ ! -d "$PIFRAME_RUNTIME_DIR" ]]; then
+    mkdir -p "$PIFRAME_RUNTIME_DIR"
+    chmod 700 "$PIFRAME_RUNTIME_DIR"
+  fi
+fi
+PIDFILE="$PIFRAME_RUNTIME_DIR/slideshow.pid"
 LOG="${PIFRAME_LOG:-/tmp/piframe-run.log}"
 
 # --- stop mode ---------------------------------------------------------------

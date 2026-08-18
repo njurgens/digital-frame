@@ -9,6 +9,12 @@
 [app]
 mock_wifi = true    # no real Wi-Fi management inside the container
 
+[ipc]
+# The devcontainer has no logind, so the socket and PID file land in the
+# ~/.local/piframe fallback dir; the API is on by default here so the agent
+# workflow works out of the box.
+enabled = true
+
 [slideshow]
 interval    = 30
 fit_mode    = "fit"

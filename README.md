@@ -13,7 +13,7 @@
         launched by /etc/xdg/labwc/autostart
 ```
 
-- **`slideshow`** is the app's console script (`.venv/bin/slideshow`, running `piframe.app:main`): a self-contained pygame app that runs fullscreen under labwc via `/etc/xdg/labwc/autostart` and writes its PID to `/tmp/slideshow.pid`. It is not managed by systemd.
+- **`slideshow`** is the app's console script (`.venv/bin/slideshow`, running `piframe.app:main`): a self-contained pygame app that runs fullscreen under labwc via `/etc/xdg/labwc/autostart` and writes its PID to `$XDG_RUNTIME_DIR/slideshow.pid` (the per-user runtime dir, or `~/.local/piframe` when that is unavailable). It is not managed by systemd.
 - **Album providers** own the photo lifecycle. The active provider is selected by `sync.provider` in the config:
   - `onedrive` — syncs a shared OneDrive folder (Badger token API) into its own cache directory, with destructive cleanup of files no longer present remotely.
   - `local` — exposes a user-managed directory directly: no copying, no cleanup.
@@ -88,7 +88,7 @@ source_dir = "/home/frame/Pictures/slideshow"
 cat /tmp/slideshow.log
 
 # Slideshow PID
-cat /tmp/slideshow.pid
+cat /run/user/1000/slideshow.pid
 
 # Composited-surface cache
 ls /home/frame/.cache/piframe/surfaces/
@@ -100,7 +100,7 @@ ls /home/frame/.cache/piframe/onedrive/
 cat /etc/xdg/labwc/autostart
 
 # Kill the slideshow (do NOT use pkill -f slideshow.py — it matches the SSH command itself)
-ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid)'
+ssh frame@10.1.7.58 'kill -9 $(cat /run/user/1000/slideshow.pid)'
 
 # Manual restart (for testing without a reboot)
 ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /home/frame/digital-frame/.venv/bin/slideshow > /tmp/slideshow.log 2>&1 &'

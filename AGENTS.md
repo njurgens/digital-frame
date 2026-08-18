@@ -34,11 +34,11 @@ ssh frame@10.1.7.58 'sudo reboot now'
 ```
 
 Kill or restart without a reboot (the app writes its PID to
-`/tmp/slideshow.pid`):
+`/run/user/1000/slideshow.pid`):
 
 ```bash
 # Kill (returns immediately)
-ssh frame@10.1.7.58 'kill -9 $(cat /tmp/slideshow.pid)'
+ssh frame@10.1.7.58 'kill -9 $(cat /run/user/1000/slideshow.pid)'
 
 # Restart manually (for testing)
 ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /home/frame/digital-frame/.venv/bin/slideshow > /tmp/slideshow.log 2>&1 &'
@@ -52,7 +52,7 @@ so the SSH session kills itself and hangs.
 
 ```bash
 ssh frame@10.1.7.58 'cat /tmp/slideshow.log'                 # app log (when manually launched)
-ssh frame@10.1.7.58 'cat /tmp/slideshow.pid'                 # app PID
+ssh frame@10.1.7.58 'cat /run/user/1000/slideshow.pid'      # app PID
 ssh frame@10.1.7.58 'ls /home/frame/.cache/piframe/surfaces/'  # surface cache
 ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 ```
