@@ -27,7 +27,7 @@ import re
 import sys
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from fractions import Fraction
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -92,6 +92,7 @@ class Candidate:
 
 
 def make_session() -> requests.Session:
+    """Return a requests session with the collector's User-Agent header."""
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
     return session
@@ -150,9 +151,7 @@ def gps_from_pillow(path: Path) -> str:
 
         def to_float(rationals: object) -> float:
             d, m, s = rationals  # type: ignore[misc]
-            return (
-                float(Fraction(d)) + float(Fraction(m)) / 60 + float(Fraction(s)) / 3600
-            )
+            return float(Fraction(d)) + float(Fraction(m)) / 60 + float(Fraction(s)) / 3600
 
         if not lat or not lon:
             return ""
@@ -185,12 +184,14 @@ def local_exif(path: Path) -> tuple[int | None, str, str | None, str]:
 
 
 def credit_line(artist: str, license: str) -> str:
+    """Format the attribution credit line for a file."""
     if not license or "public domain" in license.lower():
         return f"Author: {artist or 'unknown'}. Public Domain, via Wikimedia Commons."
     return f"Author: {artist or 'unknown'}. License: {license}, via Wikimedia Commons."
 
 
 def human_size(n: int) -> str:
+    """Format a byte count as a human-readable megabyte string."""
     return f"{n / 1024 / 1024:.1f} MB"
 
 
@@ -202,7 +203,10 @@ def download(session: requests.Session, url: str, dest: Path) -> None:
             resp = session.get(url, stream=True, timeout=60)
         except requests.exceptions.RequestException as e:
             wait = backoff
-            print(f"    connection error ({type(e).__name__}); waiting {wait:.0f}s (attempt {attempt})...")
+            print(
+                f"    connection error ({type(e).__name__}); "
+                f"waiting {wait:.0f}s (attempt {attempt})..."
+            )
             time.sleep(wait)
             backoff = min(backoff * 2, 60)
             continue
@@ -221,9 +225,13 @@ def download(session: requests.Session, url: str, dest: Path) -> None:
 
 
 def main() -> int:
+    """Collect a random sample of smartphone photos from Wikimedia Commons."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--category", default="Category:Taken_with_iPhone",
-                        help="comma-separated list of Commons categories to draw from")
+    parser.add_argument(
+        "--category",
+        default="Category:Taken_with_iPhone",
+        help="comma-separated list of Commons categories to draw from",
+    )
     parser.add_argument("--count", type=int, default=12, help="files to keep (default 12)")
     parser.add_argument("--out", default=str(REPO / ".pi" / "tmp" / "stock-images"))
     parser.add_argument("--min-mb", type=float, default=0.5)
@@ -243,8 +251,7 @@ def main() -> int:
         "--max-downloads",
         type=int,
         default=0,
-        help="download budget (default: 4x --count); bounds 429 exposure when "
-        "filtering by camera",
+        help="download budget (default: 4x --count); bounds 429 exposure when filtering by camera",
     )
     parser.add_argument("--dry-run", action="store_true", help="filter only; no downloads")
     parser.add_argument(
@@ -322,8 +329,10 @@ def main() -> int:
     for c in dropped:
         print(f"  - {c.title}: {c.skipped}")
     if not kept:
-        print("No candidates survived the filters — widen --min-px/--max-mb and retry.",
-              file=sys.stderr)
+        print(
+            "No candidates survived the filters — widen --min-px/--max-mb and retry.",
+            file=sys.stderr,
+        )
         return 1
 
     # 4. Download and verify EXIF locally. With --camera, non-matching files
@@ -354,17 +363,21 @@ def main() -> int:
             print(f"  [x] {name}  camera={c.local_camera or '—'}  (discarded)")
             continue
         kept_files.append(c)
-        print(f"  [{len(kept_files)}/{args.count}] {name}  {c.license or 'license?'}  "
-              f"{c.width}x{c.height}  {human_size(c.size_bytes)}  camera={c.local_camera or '—'}")
+        print(
+            f"  [{len(kept_files)}/{args.count}] {name}  {c.license or 'license?'}  "
+            f"{c.width}x{c.height}  {human_size(c.size_bytes)}  camera={c.local_camera or '—'}"
+        )
     kept = kept_files
     print(f"Kept {len(kept)} of {downloads} downloads ({len(rejected)} rejected by camera filter)")
     if not kept:
-        print("No files matched the filters — try more categories or a wider --camera regex.",
-              file=sys.stderr)
+        print(
+            "No files matched the filters — try more categories or a wider --camera regex.",
+            file=sys.stderr,
+        )
         return 1
 
     # 5. Write ATTRIBUTION.md + manifest.json.
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     cats = ", ".join(f"[`{c}`](https://commons.wikimedia.org/wiki/{c})" for c in categories)
     lines = [
         "# Stock image attribution",
@@ -376,18 +389,22 @@ def main() -> int:
         "> trademarks, and sensitive content. Keep the credit lines below verbatim in",
         "> the repo's attribution file.",
         "",
-        "| # | File | Author | License | Size | W×H | Camera | EXIF orient | GPS | Captured |",
+        "| # | File | Author | License | Size | W×H | Camera | EXIF orient | GPS | Captured |",  # noqa: RUF001
         "|---|------|--------|---------|------|-----|--------|-------------|-----|----------|",
     ]
     for i, c in enumerate(kept, 1):
         name = Path(c.local_path).name if c.local_path else c.title
-        orient = ("—" if c.local_orientation is None else c.local_orientation) if not args.dry_run else "—"
+        orient = (
+            ("—" if c.local_orientation is None else c.local_orientation)
+            if not args.dry_run
+            else "—"
+        )
         gps = (c.local_gps or c.api_gps or "—") if not args.dry_run else (c.api_gps or "—")
         camera = (c.local_camera or "—") if not args.dry_run else "—"
         dt = c.local_datetime or c.api_datetime or "—"
         lines.append(
             f"| {i} | {name} | {c.artist or '—'} | {c.license or '—'} "
-            f"| {human_size(c.size_bytes)} | {c.width}×{c.height} "
+            f"| {human_size(c.size_bytes)} | {c.width}×{c.height} "  # noqa: RUF001
             f"| {camera} | {orient} | {gps} | {dt} |"
         )
     lines += ["", "## Credit lines", ""]
