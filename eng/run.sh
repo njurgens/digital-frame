@@ -11,9 +11,9 @@
 # Extra arguments are passed through to the slideshow (e.g. --test-harness).
 #
 # Environment overrides:
-#   PIFRAME__SYNC__PROVIDER             (default: local)
-#   PIFRAME__SYNC__LOCAL__SOURCE_DIR   (default: tests/fixtures/stock)
-#   PIFRAME_LOG                         (default: /tmp/piframe-run.log)
+#   PIFRAME_SYNC__PROVIDER            (default: local)
+#   PIFRAME_SYNC__LOCAL__SOURCE_DIR   (default: tests/fixtures/stock)
+#   PIFRAME_LOG                       (default: /tmp/piframe-run.log)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -60,8 +60,8 @@ if [[ ! -f src/config.toml ]]; then
   echo "created src/config.toml from config.devcontainer.toml"
 fi
 
-export PIFRAME__SYNC__PROVIDER="${PIFRAME__SYNC__PROVIDER:-local}"
-export PIFRAME__SYNC__LOCAL__SOURCE_DIR="${PIFRAME__SYNC__LOCAL__SOURCE_DIR:-$PWD/tests/fixtures/stock}"
+export PIFRAME_SYNC__PROVIDER="${PIFRAME_SYNC__PROVIDER:-local}"
+export PIFRAME_SYNC__LOCAL__SOURCE_DIR="${PIFRAME_SYNC__LOCAL__SOURCE_DIR:-$PWD/tests/fixtures/stock}"
 
 # --- foreground mode ----------------------------------------------------------
 if [[ $fg -eq 1 ]]; then

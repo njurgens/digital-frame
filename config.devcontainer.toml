@@ -27,12 +27,12 @@ wake_time  = "07:00"
 
 [sync]
 # Which album provider to use: "onedrive", "local", or "google".
-# Override at runtime with PIFRAME__SYNC__PROVIDER (see .env.example).
+# Override at runtime with PIFRAME_SYNC__PROVIDER (see .env.example).
 provider         = "local"
 interval_minutes = 60
 
 [sync.onedrive]
-# share_url and password are injected via PIFRAME__SYNC__ONEDRIVE__*
+# share_url and password are injected via PIFRAME_SYNC__ONEDRIVE__*
 # environment variables; leave them empty here.
 share_url = ""
 password  = ""

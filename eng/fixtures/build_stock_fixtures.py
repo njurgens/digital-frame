@@ -27,7 +27,6 @@ Usage:
 from __future__ import annotations
 
 import math
-import shutil
 import sys
 import time
 from dataclasses import dataclass
@@ -63,8 +62,11 @@ class ExifProfile:
     progressive: bool = False
 
 
-def gps(lat: tuple[int, int, int], lon: tuple[int, int, int]) -> tuple[tuple[Fraction, ...], tuple[Fraction, ...]]:
+def gps(
+    lat: tuple[int, int, int], lon: tuple[int, int, int]
+) -> tuple[tuple[Fraction, ...], tuple[Fraction, ...]]:
     """Build GPS rationals from (deg, min, tenths-of-second) tuples."""
+
     def frac(t: tuple[int, int, int]) -> tuple[Fraction, ...]:
         return (Fraction(t[0]), Fraction(t[1]), Fraction(t[2], 10))
 
@@ -73,6 +75,8 @@ def gps(lat: tuple[int, int, int], lon: tuple[int, int, int]) -> tuple[tuple[Fra
 
 @dataclass
 class StockFile:
+    """Spec for one file in the stock fixture set: provenance, EXIF, and output name."""
+
     name: str
     kind: str  # "real" | "picsum" | "screenshot" | "transparent" | "gif"
     source: str = ""
@@ -89,27 +93,32 @@ class StockFile:
 SPEC: list[StockFile] = [
     # -- Real smartphone photos (Wikimedia Commons) -------------------------
     StockFile(
-        name="Михайлівський_Золотоверхий_монастир._Київ6.jpg",
-        kind="real", real_file="Михайлівський_Золотоверхий_монастир._Київ6.jpg",
+        name="Михайлівський_Золотоверхий_монастир._Київ6.jpg",  # noqa: RUF001
+        kind="real",
+        real_file="Михайлівський_Золотоверхий_монастир._Київ6.jpg",  # noqa: RUF001
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="Мандрівниця", license="CC BY-SA 4.0",
+        author="Мандрівниця",
+        license="CC BY-SA 4.0",
         credit="Author: Мандрівниця. License: CC BY-SA 4.0, via Wikimedia Commons.",
         note="4:3 portrait, real EXIF; Unicode filename",
     ),
     StockFile(
-        name="Bundesministerium_für_Verkehr_und_digitale_Infrastruktur_(Berlin)_–_Datensummit_2017_(2).jpg",
+        name="Bundesministerium_für_Verkehr_und_digitale_Infrastruktur_(Berlin)_–_Datensummit_2017_(2).jpg",  # noqa: RUF001
         kind="real",
-        real_file="Bundesministerium_für_Verkehr_und_digitale_Infrastruktur_(Berlin)_–_Datensummit_2017_(2).jpg",
+        real_file="Bundesministerium_für_Verkehr_und_digitale_Infrastruktur_(Berlin)_–_Datensummit_2017_(2).jpg",  # noqa: RUF001
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="ubahnverleih", license="CC0",
+        author="ubahnverleih",
+        license="CC0",
         credit="Author: ubahnverleih. CC0, via Wikimedia Commons.",
         note="4:3, real GPS + timestamp",
     ),
     StockFile(
         name="Estación_Ciudad_del_Futuro_L3_-_Agosto_2025_(3).jpg",
-        kind="real", real_file="Estación_Ciudad_del_Futuro_L3_-_Agosto_2025_(3).jpg",
+        kind="real",
+        real_file="Estación_Ciudad_del_Futuro_L3_-_Agosto_2025_(3).jpg",
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="José Chuito", license="CC BY 4.0",
+        author="José Chuito",
+        license="CC BY 4.0",
         credit="Author: José Chuito. License: CC BY 4.0, via Wikimedia Commons.",
         note="4:3, real GPS + timestamp",
     ),
@@ -118,149 +127,231 @@ SPEC: list[StockFile] = [
         kind="real",
         real_file="HK_CWB_銅鑼灣_Causeway_Bay_溫莎大廈_Windsor_House_mall_shop_August_2020_SS2_03.jpg",
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="Ahoi Yahgeum Windhuo", license="CC BY-SA 4.0",
+        author="Ahoi Yahgeum Windhuo",
+        license="CC BY-SA 4.0",
         credit="Author: Ahoi Yahgeum Windhuo. License: CC BY-SA 4.0, via Wikimedia Commons.",
         note="4:3, CJK filename",
     ),
     StockFile(
         name="Haçlar_tepesi_7.jpg",
-        kind="real", real_file="Haçlar_tepesi_7.jpg",
+        kind="real",
+        real_file="Haçlar_tepesi_7.jpg",
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="Zemxer", license="CC BY-SA 4.0",
+        author="Zemxer",
+        license="CC BY-SA 4.0",
         credit="Author: Zemxer. License: CC BY-SA 4.0, via Wikimedia Commons.",
         note="4:3",
     ),
     StockFile(
         name="Good-Samaritan-3-105224.jpg",
-        kind="real", real_file="Good-Samaritan-3-105224.jpg",
+        kind="real",
+        real_file="Good-Samaritan-3-105224.jpg",
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="Bukvoed", license="CC BY 4.0",
+        author="Bukvoed",
+        license="CC BY 4.0",
         credit="Author: Bukvoed. License: CC BY 4.0, via Wikimedia Commons.",
         note="wide 2.4:1, real GPS + timestamp",
     ),
     StockFile(
         name="Borgward_RS_(54329616959).jpg",
-        kind="real", real_file="Borgward_RS_(54329616959).jpg",
+        kind="real",
+        real_file="Borgward_RS_(54329616959).jpg",
         source="Wikimedia Commons (Category:Taken_with_iPhone_16)",
-        author="Thomas Vogt from Paderborn, Deutschland", license="CC BY 2.0",
+        author="Thomas Vogt from Paderborn, Deutschland",
+        license="CC BY 2.0",
         credit="Author: Thomas Vogt. License: CC BY 2.0, via Wikimedia Commons.",
         note="4:3 monochrome (high-contrast B&W)",
     ),
     # -- picsum (Unsplash) photos with synthesized phone EXIF ----------------
     StockFile(
-        name="landscape-valley.jpg", kind="picsum", picsum_id=11, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 11)", license="Unsplash License",
+        name="landscape-valley.jpg",
+        kind="picsum",
+        picsum_id=11,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 11)",
+        license="Unsplash License",
         note="16:9 nature; progressive JPEG encoding",
         exif=ExifProfile(datetime="2024:05:12 15:30:22", progressive=True),
     ),
     StockFile(
-        name="landscape-santorini.jpg", kind="picsum", picsum_id=49, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 49)", license="Unsplash License",
+        name="landscape-santorini.jpg",
+        kind="picsum",
+        picsum_id=49,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 49)",
+        license="Unsplash License",
         note="16:9 travel; GPS (fictional)",
         exif=ExifProfile(
             datetime="2024:06:01 08:15:44",
-            gps=gps((37, 58, 12), (23, 43, 48)), gps_ref=("N", "E"),
+            gps=gps((37, 58, 12), (23, 43, 48)),
+            gps_ref=("N", "E"),
         ),
     ),
     StockFile(
-        name="street-european.jpg", kind="picsum", picsum_id=57, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 57)", license="Unsplash License",
+        name="street-european.jpg",
+        kind="picsum",
+        picsum_id=57,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 57)",
+        license="Unsplash License",
         note="16:9 city street",
         exif=ExifProfile(datetime="2024:06:15 17:42:10"),
     ),
     StockFile(
-        name="night-bokeh.jpg", kind="picsum", picsum_id=56, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 56)", license="Unsplash License",
+        name="night-bokeh.jpg",
+        kind="picsum",
+        picsum_id=56,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 56)",
+        license="Unsplash License",
         note="night / dark content",
         exif=ExifProfile(datetime="2024:07:03 23:12:05"),
     ),
     StockFile(
-        name="night-city-bw.jpg", kind="picsum", picsum_id=43, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 43)", license="Unsplash License",
+        name="night-city-bw.jpg",
+        kind="picsum",
+        picsum_id=43,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 43)",
+        license="Unsplash License",
         note="B&W night city (high contrast, monochrome)",
         exif=ExifProfile(datetime="2024:07:19 22:47:33"),
     ),
     StockFile(
-        name="highcontrast-heels.jpg", kind="picsum", picsum_id=21, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 21)", license="Unsplash License",
+        name="highcontrast-heels.jpg",
+        kind="picsum",
+        picsum_id=21,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 21)",
+        license="Unsplash License",
         note="high-contrast color (white on red)",
         exif=ExifProfile(datetime="2024:08:08 11:24:51"),
     ),
     StockFile(
-        name="highcontrast-lighthouse-bw.jpg", kind="picsum", picsum_id=58, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 58)", license="Unsplash License",
+        name="highcontrast-lighthouse-bw.jpg",
+        kind="picsum",
+        picsum_id=58,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 58)",
+        license="Unsplash License",
         note="B&W dramatic sky (high contrast, monochrome)",
         exif=ExifProfile(datetime="2024:08:22 09:03:17"),
     ),
     StockFile(
-        name="people-cliff-sunset.jpg", kind="picsum", picsum_id=27, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 27)", license="Unsplash License",
+        name="people-cliff-sunset.jpg",
+        kind="picsum",
+        picsum_id=27,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 27)",
+        license="Unsplash License",
         note="incidental person (distant, non-prominent); GPS (fictional)",
         exif=ExifProfile(
             datetime="2024:09:05 20:38:46",
-            gps=gps((64, 8, 36), (21, 56, 36)), gps_ref=("N", "W"),
+            gps=gps((64, 8, 36), (21, 56, 36)),
+            gps_ref=("N", "W"),
         ),
     ),
     StockFile(
-        name="IMG_20240512_153022.jpg", kind="picsum", picsum_id=16, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 16)", license="Unsplash License",
+        name="IMG_20240512_153022.jpg",
+        kind="picsum",
+        picsum_id=16,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 16)",
+        license="Unsplash License",
         note="phone-style name; landscape pixels + orientation 6 (displays portrait)",
         exif=ExifProfile(orientation=6, datetime="2024:09:14 14:22:09"),
     ),
     StockFile(
-        name="portrait-peaks-orient8.jpg", kind="picsum", picsum_id=29, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 29)", license="Unsplash License",
+        name="portrait-peaks-orient8.jpg",
+        kind="picsum",
+        picsum_id=29,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 29)",
+        license="Unsplash License",
         note="landscape pixels + orientation 8 (displays portrait)",
         exif=ExifProfile(orientation=8, datetime="2024:10:02 07:55:30"),
     ),
     StockFile(
-        name="rotated-beach-orient3.jpg", kind="picsum", picsum_id=12, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 12)", license="Unsplash License",
+        name="rotated-beach-orient3.jpg",
+        kind="picsum",
+        picsum_id=12,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 12)",
+        license="Unsplash License",
         note="orientation 3 (180°)",
         exif=ExifProfile(orientation=3, datetime="2024:10:18 16:08:12"),
     ),
     StockFile(
-        name="rotated-shore-orient7.jpg", kind="picsum", picsum_id=14, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 14)", license="Unsplash License",
+        name="rotated-shore-orient7.jpg",
+        kind="picsum",
+        picsum_id=14,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 14)",
+        license="Unsplash License",
         note="orientation 7 (transverse)",
         exif=ExifProfile(orientation=7, datetime="2024:11:09 10:41:58"),
     ),
     StockFile(
-        name="noexif-book.jpg", kind="picsum", picsum_id=24, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 24)", license="Unsplash License",
+        name="noexif-book.jpg",
+        kind="picsum",
+        picsum_id=24,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 24)",
+        license="Unsplash License",
         note="no EXIF at all (stripped by some transfers)",
     ),
     StockFile(
-        name="noexif-coffee.jpg", kind="picsum", picsum_id=30, size=(1920, 1080),
-        source="Unsplash via picsum.photos (id 30)", license="Unsplash License",
+        name="noexif-coffee.jpg",
+        kind="picsum",
+        picsum_id=30,
+        size=(1920, 1080),
+        source="Unsplash via picsum.photos (id 30)",
+        license="Unsplash License",
         note="no EXIF at all",
     ),
     StockFile(
-        name="small-cat.jpg", kind="picsum", picsum_id=40, size=(320, 200),
-        source="Unsplash via picsum.photos (id 40)", license="Unsplash License",
+        name="small-cat.jpg",
+        kind="picsum",
+        picsum_id=40,
+        size=(320, 200),
+        source="Unsplash via picsum.photos (id 40)",
+        license="Unsplash License",
         note="tiny image (tests upscaling)",
         exif=ExifProfile(datetime="2024:11:27 13:19:44"),
     ),
     StockFile(
-        name="IMG-20240512-WA0001.jpg", kind="picsum", picsum_id=46, size=(3840, 2160),
-        source="Unsplash via picsum.photos (id 46)", license="Unsplash License",
+        name="IMG-20240512-WA0001.jpg",
+        kind="picsum",
+        picsum_id=46,
+        size=(3840, 2160),
+        source="Unsplash via picsum.photos (id 46)",
+        license="Unsplash License",
         note="WhatsApp-style name; oversized 4K (tests downscaling)",
         exif=ExifProfile(datetime="2024:12:04 18:36:27"),
     ),
     # -- Synthesized graphics --------------------------------------------------
     StockFile(
-        name="Screenshot 2024-05-12 at 15.30.22.png", kind="screenshot", size=(1179, 2556),
-        source="synthesized (Pillow)", license="original work",
+        name="Screenshot 2024-05-12 at 15.30.22.png",
+        kind="screenshot",
+        size=(1179, 2556),
+        source="synthesized (Pillow)",
+        license="original work",
         note="phone screenshot: portrait, text-heavy, spaces in filename",
     ),
     StockFile(
-        name="transparent-shape.png", kind="transparent", size=(1200, 800),
-        source="synthesized (Pillow)", license="original work",
+        name="transparent-shape.png",
+        kind="transparent",
+        size=(1200, 800),
+        source="synthesized (Pillow)",
+        license="original work",
         note="PNG with alpha channel (tests the RGBA path)",
     ),
     StockFile(
-        name="animated-gif.gif", kind="gif", size=(640, 400),
-        source="synthesized (Pillow)", license="original work",
+        name="animated-gif.gif",
+        kind="gif",
+        size=(640, 400),
+        source="synthesized (Pillow)",
+        license="original work",
         note="animated GIF (only animated format the provider accepts)",
     ),
 ]
@@ -307,8 +398,8 @@ def reencode_real(src: Path, dest: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def download_picsum(session: requests.Session, picsum_id: int, w: int, h: int,
-                    dest: Path) -> None:
+def download_picsum(session: requests.Session, picsum_id: int, w: int, h: int, dest: Path) -> None:
+    """Download a picsum.photos image at the target size, retrying with backoff."""
     url = f"https://picsum.photos/id/{picsum_id}/{w}/{h}"
     backoff = 2.0
     for attempt in range(1, 7):
@@ -364,17 +455,26 @@ def make_screenshot(dest: Path) -> None:
 
     # Photo grid: 2 columns x 3 rows of muted tiles
     colors = [
-        (94, 117, 148), (148, 120, 94), (94, 148, 110),
-        (148, 94, 94), (110, 94, 148), (148, 140, 94),
+        (94, 117, 148),
+        (148, 120, 94),
+        (94, 148, 110),
+        (148, 94, 94),
+        (110, 94, 148),
+        (148, 140, 94),
     ]
     tile_w, tile_h, gap = 535, 535, 24
     x0, y0 = 64, 480
     for i, c in enumerate(colors):
         r, col = divmod(i, 2)
         d.rounded_rectangle(
-            (x0 + col * (tile_w + gap), y0 + r * (tile_h + gap),
-             x0 + col * (tile_w + gap) + tile_w, y0 + r * (tile_h + gap) + tile_h),
-            radius=28, fill=c,
+            (
+                x0 + col * (tile_w + gap),
+                y0 + r * (tile_h + gap),
+                x0 + col * (tile_w + gap) + tile_w,
+                y0 + r * (tile_h + gap) + tile_h,
+            ),
+            radius=28,
+            fill=c,
         )
 
     # Text lines (placeholder copy)
@@ -387,8 +487,10 @@ def make_screenshot(dest: Path) -> None:
     d.rectangle((0, h - 160, w, h), fill=(20, 20, 22))
     for i in range(4):
         cx = 190 + i * 300
-        d.ellipse((cx - 34, h - 110, cx + 34, h - 42),
-                   fill=(235, 235, 235) if i == 0 else (110, 110, 115))
+        d.ellipse(
+            (cx - 34, h - 110, cx + 34, h - 42),
+            fill=(235, 235, 235) if i == 0 else (110, 110, 115),
+        )
     img.save(dest)  # PNG, no EXIF
 
 
@@ -414,8 +516,9 @@ def make_gif(dest: Path) -> None:
         y = int(h / 2 + 90 * math.sin(i * math.pi / 4))
         d.ellipse((x - 40, y - 40, x + 40, y + 40), fill=(255, 210, 90))
         frames.append(f.convert("P", palette=Image.Palette.ADAPTIVE))
-    frames[0].save(dest, save_all=True, append_images=frames[1:],
-                   duration=120, loop=0, optimize=True)
+    frames[0].save(
+        dest, save_all=True, append_images=frames[1:], duration=120, loop=0, optimize=True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -424,6 +527,7 @@ def make_gif(dest: Path) -> None:
 
 
 def write_attribution() -> None:
+    """Write ATTRIBUTION.md with per-file provenance and credit lines."""
     lines = [
         "# Stock images — attribution & provenance",
         "",
@@ -438,10 +542,10 @@ def write_attribution() -> None:
         "|------|--------|--------|---------|-------------|",
     ]
     cameras = {
-        "Михайлівський_Золотоверхий_монастир._Київ6.jpg": "Apple iPhone 11",
-        "Bundesministerium_für_Verkehr_und_digitale_Infrastruktur_(Berlin)_–_Datensummit_2017_(2).jpg": "Apple iPhone 7",
+        "Михайлівський_Золотоверхий_монастир._Київ6.jpg": "Apple iPhone 11",  # noqa: RUF001
+        "Bundesministerium_für_Verkehr_und_digitale_Infrastruktur_(Berlin)_–_Datensummit_2017_(2).jpg": "Apple iPhone 7",  # noqa: RUF001, E501
         "Estación_Ciudad_del_Futuro_L3_-_Agosto_2025_(3).jpg": "Xiaomi 220233L2G",
-        "HK_CWB_銅鑼灣_Causeway_Bay_溫莎大廈_Windsor_House_mall_shop_August_2020_SS2_03.jpg": "Samsung SM-A205GN",
+        "HK_CWB_銅鑼灣_Causeway_Bay_溫莎大廈_Windsor_House_mall_shop_August_2020_SS2_03.jpg": "Samsung SM-A205GN",  # noqa: E501
         "Haçlar_tepesi_7.jpg": "Samsung SM-A217F",
         "Good-Samaritan-3-105224.jpg": "Huawei GRA-L09",
         "Borgward_RS_(54329616959).jpg": "Google Pixel 7 Pro",
@@ -449,9 +553,7 @@ def write_attribution() -> None:
     for f in SPEC:
         if f.kind != "real":
             continue
-        lines.append(
-            f"| {f.name} | {cameras[f.name]} | {f.author} | {f.license} | {f.credit} |"
-        )
+        lines.append(f"| {f.name} | {cameras[f.name]} | {f.author} | {f.license} | {f.credit} |")
     lines += [
         "",
         "Real photos were re-encoded to JPEG q80 for a stable repo size; EXIF",
@@ -509,6 +611,7 @@ def write_attribution() -> None:
 
 
 def main() -> int:
+    """Build the stock fixture set; return the process exit code."""
     if not REAL_DIR.is_dir():
         print(f"missing {REAL_DIR} — run the Commons collector first", file=sys.stderr)
         return 1
@@ -547,8 +650,10 @@ def main() -> int:
 
     write_attribution()
     total = sum(p.stat().st_size for p in OUT_DIR.iterdir() if p.is_file())
-    print(f"\nWrote {len(list(OUT_DIR.iterdir()))} files, {total / 1024 / 1024:.1f} MB total "
-          f"in {OUT_DIR.relative_to(REPO)}/")
+    print(
+        f"\nWrote {len(list(OUT_DIR.iterdir()))} files, {total / 1024 / 1024:.1f} MB total "
+        f"in {OUT_DIR.relative_to(REPO)}/"
+    )
     return 0
 
 

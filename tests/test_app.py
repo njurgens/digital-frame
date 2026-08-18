@@ -16,10 +16,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def pid_file(tmp_path: Path) -> Path:
+    """Return a per-test path for the slideshow PID file."""
     return tmp_path / "slideshow.pid"
 
 
 def test_acquire_pid_file_writes_pid_and_holds_lock(pid_file: Path) -> None:
+    """Acquiring the PID file writes the PID and holds an exclusive lock."""
     fd = acquire_pid_file(pid_file)
     try:
         assert pid_file.read_text().strip() == str(os.getpid())
