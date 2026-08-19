@@ -508,8 +508,8 @@ a standard JSON-RPC client rather than a bespoke one.
 
 - Issue 60 (this work); issues 53 and 59 (related); issue 61 (the environment-prefix rename)
 - docs/hardware.md — the device, the frame user, the labwc launch
-- docs/pi-frame-lld.md — the app module, the config store, the initialization sequence
-- docs/pi-frame-hld.md — the PID-file acceptance criterion
+- docs/design/pi-frame-lld.md — the app module, the config store, the initialization sequence
+- docs/design/pi-frame-hld.md — the PID-file acceptance criterion
 - systemd: user@.service(5), systemd.exec(5), systemd.service(5), systemd.socket(5),
   pam_systemd(8); systemd source, core main and core manager modules (the user
   manager's environment behavior)

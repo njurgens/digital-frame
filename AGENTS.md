@@ -5,8 +5,8 @@ an **album provider** (OneDrive, a local directory, or a Google Photos stub),
 caches them, and plays a fullscreen slideshow on a Raspberry Pi 3A+ under
 Wayland/labwc. The device is described in [docs/hardware.md](docs/hardware.md)
 (including SSH access); the authoritative design docs are
-[docs/pi-frame-lld.md](docs/pi-frame-lld.md) (LLD),
-[docs/pi-frame-hld.md](docs/pi-frame-hld.md) (HLD), and
+[docs/design/pi-frame-lld.md](docs/design/pi-frame-lld.md) (LLD),
+[docs/design/pi-frame-hld.md](docs/design/pi-frame-hld.md) (HLD), and
 [docs/album-providers.md](docs/album-providers.md) (provider guide).
 
 ## Commands
@@ -64,8 +64,8 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
   providers — see docs/album-providers.md)
 - `tests/` — pytest suite; `eng/` — the scripts above; `eng/fixtures/` —
   one-off tools that build the test image set (see docs/stock-images.md)
-- `docs/` — public documentation: LLD (authoritative design), HLD, UX
-  requirements, album-providers guide, hardware target
+- `docs/` — public documentation: the design docs in `docs/design/` (HLD,
+  LLD), UX requirements, album-providers guide, hardware target
 - `.agents/` — agent config: `skills/`, `agents/`, and `prompts/` (prompt
   templates, e.g. `/create-issue` and `/dev-loop`; not auto-discovered by Pi —
   loaded via the `prompts` entry in `.pi/settings.json`)

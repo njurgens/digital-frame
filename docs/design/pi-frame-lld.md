@@ -147,11 +147,12 @@ digital-frame/
 ├── eng/
 │   └── install.sh          # Deployment script (idempotent)
 └── docs/
+    ├── design/
+    │   ├── pi-frame-hld.md
+    │   └── pi-frame-lld.md  # This document
     ├── pi-frame-ux-requirements.md
-    ├── pi-frame-hld.md
     ├── pi-frame-overlay-mockup.html
-    ├── pi-frame-settings-mockup.html
-    └── pi-frame-lld.md     # This document
+    └── pi-frame-settings-mockup.html
 ```
 
 ---
