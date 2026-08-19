@@ -65,7 +65,8 @@ ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 - `tests/` — pytest suite; `eng/` — the scripts above; `eng/fixtures/` —
   one-off tools that build the test image set (see docs/stock-images.md)
 - `docs/` — public documentation: the design docs in `docs/design/` (HLD,
-  LLD), UX requirements, album-providers guide, hardware target
+  LLD, per-feature design docs), UX requirements, album-providers guide,
+  hardware target
 - `.agents/` — agent config: `skills/`, `agents/`, and `prompts/` (prompt
   templates, e.g. `/create-issue` and `/dev-loop`; not auto-discovered by Pi —
   loaded via the `prompts` entry in `.pi/settings.json`)
