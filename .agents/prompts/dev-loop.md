@@ -82,15 +82,20 @@ where it applies to a design argument and skip items that only apply to code.
 
 ## What to do
 1. Read the design doc at the path above.
-2. Load the `review-standards` skill, then read its {domain}.md checklist.
-3. Review only the "{domain}" domain, using that checklist.
+2. Load the `design-docs` skill, then read its `review-rubric.md`; use that rubric —
+   its stance, passes, and severity scale — as your review standard for this design
+document.
+3. Load the `review-standards` skill and read its {domain}.md checklist to scope your
+   review to the "{domain}" domain only; apply the rubric's passes to that scope,
+   skipping items that only apply to code.
 
 Open any file you need for context with read, grep, or find. You have no shell:
 do not try to run git, the linter, or any other command. Do not modify any files.
 
-Follow the required output format from the `review-standards` skill exactly.
-Cite file:line for every finding — for the doc itself, cite the doc file and its
-line. Your final message must end with a single VERDICT line and nothing after it.
+Report in the `review-standards` output format (it takes precedence over the
+design-docs rubric's own output format). Cite file:line for every finding — for the
+doc itself, cite the doc file and its line. Your final message must end with a single
+VERDICT line and nothing after it.
 ```
 
 Placeholder rules:

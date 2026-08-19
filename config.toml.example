@@ -5,6 +5,12 @@
 [app]
 mock_wifi = false    # use MockWifiManager instead of WifiManager
 
+[ipc]
+# Enable the socket-based IPC API (JSON-RPC 2.0 on piframe.sock).  The
+# socket and PID file live in $XDG_RUNTIME_DIR (0600), or in
+# ~/.local/piframe when the runtime dir is unavailable.
+enabled = false
+
 [slideshow]
 interval    = 30        # seconds between slides
 fit_mode    = "fit"     # "fit" = blurred bars, "fill" = cropped

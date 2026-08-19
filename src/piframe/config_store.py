@@ -39,6 +39,7 @@ _LEGACY_SYNC_KEYS = ("share_url", "password", "output_dir", "cache_dir")
 
 _DEFAULTS = {
     "app": {"mock_wifi": False},
+    "ipc": {"enabled": False},
     "slideshow": {"interval": 30.0, "fit_mode": "fit", "shuffle": True, "transition": "crossfade"},
     "display": {"brightness": 72, "show_clock": True, "timezone_auto": True},
     "sleep": {"enabled": False, "sleep_time": "22:00", "wake_time": "07:00"},
@@ -112,6 +113,17 @@ class _AppCfg:
     @property
     def mock_wifi(self) -> bool:
         return bool(self._d.get("mock_wifi", False))
+
+
+class _IpcCfg:
+    """IPC API configuration values."""
+
+    def __init__(self, data: dict):
+        self._d = data
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self._d.get("enabled", False))
 
 
 class _SlideshowCfg:
@@ -584,6 +596,11 @@ class ConfigStore:
     def app(self) -> _AppCfg:
         """App-level configuration accessor."""
         return _AppCfg(self._data.setdefault("app", {}))
+
+    @property
+    def ipc(self) -> _IpcCfg:
+        """IPC API configuration accessor."""
+        return _IpcCfg(self._data.setdefault("ipc", {}))
 
     @property
     def slideshow(self) -> _SlideshowCfg:

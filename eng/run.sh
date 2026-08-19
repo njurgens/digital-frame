@@ -5,10 +5,10 @@
 #                           prints the PID; output goes to $PIFRAME_LOG
 #   eng/run.sh -f            run in the foreground (Ctrl-C to stop);
 #                           also accepted: --foreground, --fg
-#   eng/run.sh --kill        stop the background instance (via /tmp/slideshow.pid)
+#   eng/run.sh --kill        stop the background instance (via the PID file in the runtime dir)
 #   eng/run.sh --kill <PID>  stop a specific PID
 #
-# Extra arguments are passed through to the slideshow (e.g. --test-harness).
+# Extra arguments are passed through to the slideshow.
 #
 # Environment overrides:
 #   PIFRAME_SYNC__PROVIDER            (default: local)
@@ -17,22 +17,55 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PIDFILE=/tmp/slideshow.pid
+# Resolve the PID file the same way the app does: the per-user runtime dir
+# if it exists, else the user-creatable fallback dir (created 0700 if
+# absent).  A session that started the app may differ from this one, so the
+# kill and second-instance checks look at both candidate locations.
+PIFRAME_FALLBACK_DIR="${HOME}/.local/piframe"
+if [[ ! -d "$PIFRAME_FALLBACK_DIR" ]]; then
+  mkdir -p "$(dirname "$PIFRAME_FALLBACK_DIR")"
+  mkdir -m 700 "$PIFRAME_FALLBACK_DIR"
+fi
+if [[ -n "${XDG_RUNTIME_DIR:-}" && -d "$XDG_RUNTIME_DIR" ]]; then
+  PIDFILE="$XDG_RUNTIME_DIR/slideshow.pid"
+  PID_CANDIDATES=("$PIDFILE" "$PIFRAME_FALLBACK_DIR/slideshow.pid")
+else
+  PIDFILE="$PIFRAME_FALLBACK_DIR/slideshow.pid"
+  PID_CANDIDATES=("$PIDFILE")
+fi
 LOG="${PIFRAME_LOG:-/tmp/piframe-run.log}"
 
 # --- stop mode ---------------------------------------------------------------
 if [[ ${1:-} == "--kill" ]]; then
   pid="${2:-}"
   if [[ -z "$pid" ]]; then
-    [[ -f $PIDFILE ]] || { echo "no $PIDFILE — nothing to kill" >&2; exit 1; }
-    if flock -n "$PIDFILE" -c true 2>/dev/null; then
-      # No live holder (the app holds the lock for its lifetime): the file
-      # is stale — remove it rather than risk killing a recycled PID.
-      rm -f "$PIDFILE"
-      echo "removed stale $PIDFILE (no live slideshow)"
-      exit 0
+    found=0
+    pids=()
+    for f in "${PID_CANDIDATES[@]}"; do
+      [[ -f $f ]] || continue
+      found=1
+      if flock -n "$f" -c true 2>/dev/null; then
+        # No live holder (the app holds the lock for its lifetime): the file
+        # is stale — remove it rather than risk killing a recycled PID.
+        rm -f "$f"
+        echo "removed stale $f (no live slideshow)"
+      else
+        pids+=("$(cat "$f")")
+      fi
+    done
+    if [[ $found -eq 0 ]]; then
+      echo "no slideshow PID file found — nothing to kill" >&2
+      exit 1
     fi
-    pid=$(cat "$PIDFILE")
+    for p in "${pids[@]}"; do
+      if kill -0 "$p" 2>/dev/null; then
+        kill "$p"
+        echo "sent SIGTERM to $p"
+      else
+        echo "process $p is not running"
+      fi
+    done
+    exit 0
   fi
   if kill -0 "$pid" 2>/dev/null; then
     kill "$pid"
@@ -71,12 +104,18 @@ fi
 # --- background mode (default) -------------------------------------------------
 # Refuse to start a second instance: the app holds an exclusive flock on the
 # PID file for its lifetime, so a held lock means a live instance (the
-# kernel releases the lock on death, so a free one means the file is stale).
-if [[ -f $PIDFILE ]] && ! flock -n "$PIDFILE" -c true 2>/dev/null; then
-  echo "slideshow already running (pid $(cat "$PIDFILE")) — stop it first: $0 --kill" >&2
-  exit 1
-fi
-rm -f "$PIDFILE"
+# kernel releases the lock on death, so a free one means the file is
+# stale).  Both candidate locations are checked: the app may have been
+# started from a session with a different runtime dir.
+for f in "${PID_CANDIDATES[@]}"; do
+  if [[ -f $f ]] && ! flock -n "$f" -c true 2>/dev/null; then
+    echo "slideshow already running (pid $(cat "$f")) — stop it first: $0 --kill" >&2
+    exit 1
+  fi
+done
+for f in "${PID_CANDIDATES[@]}"; do
+  rm -f "$f"
+done
 # Launch in a new session with stdio redirected to the log so the process
 # survives this shell exiting.
 setsid uv run slideshow --windowed "${args[@]}" </dev/null >>"$LOG" 2>&1 &

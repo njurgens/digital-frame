@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from collections.abc import Generator
 from pathlib import Path
-from queue import SimpleQueue
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
@@ -54,11 +53,10 @@ def make_app(tmp_path: Path) -> App:
     app._sleep = MagicMock()
     app._backlight = MagicMock()
     app._dialog = None
-    app._harness_queue = SimpleQueue()
+    app._ipc = None
     app._swipe_start_pos = None
     app._swipe_start_time = None
     app._suppress_next_tap = False
-    app._args = MagicMock(test_harness=False)
     return app
 
 
@@ -280,7 +278,10 @@ def test_pointer_up_rejects_swipe_at_elapsed_boundary(
 
 
 def test_restart_calls_execve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """restart() calls os.execve to re-execute the process."""
+    """restart() re-executes the process via os.execve.
+
+    The restart environment derives XDG_RUNTIME_DIR from the process uid.
+    """
     import sys
 
     captured: list[tuple] = []
@@ -291,3 +292,4 @@ def test_restart_calls_execve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
     assert len(captured) == 1
     assert captured[0][0][0] == sys.executable
+    assert captured[0][0][2]["XDG_RUNTIME_DIR"] == f"/run/user/{os.getuid()}"

@@ -569,3 +569,33 @@ def test_flush_corrupt_file_keeps_in_memory_protected_values(tmp_path: Path) -> 
     assert data["sync"]["onedrive"]["share_url"] == "https://1drv.ms/f/x"
     assert data["sync"]["onedrive"]["password"] == "pw"
     assert data["display"]["brightness"] == 50
+
+
+def test_ipc_defaults_off(tmp_path: Path) -> None:
+    """The [ipc] section defaults to disabled."""
+    cfg = ConfigStore(tmp_path / "nonexistent.toml")
+    assert cfg.ipc.enabled is False
+
+
+def test_ipc_enabled_from_file(tmp_path: Path) -> None:
+    """[ipc] enabled = true in the config file enables the API."""
+    p = tmp_path / "config.toml"
+    write_toml(p, "[ipc]\nenabled = true\n")
+    cfg = ConfigStore(p)
+    assert cfg.ipc.enabled is True
+
+
+def test_ipc_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """PIFRAME_IPC__ENABLED overrides the [ipc] section."""
+    monkeypatch.setenv("PIFRAME_IPC__ENABLED", "1")
+    cfg = ConfigStore(tmp_path / "nonexistent.toml")
+    assert cfg.ipc.enabled is True
+
+
+def test_ipc_env_override_false(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """PIFRAME_IPC__ENABLED=false keeps the API off even when the file enables it."""
+    p = tmp_path / "config.toml"
+    write_toml(p, "[ipc]\nenabled = true\n")
+    monkeypatch.setenv("PIFRAME_IPC__ENABLED", "false")
+    cfg = ConfigStore(p)
+    assert cfg.ipc.enabled is False

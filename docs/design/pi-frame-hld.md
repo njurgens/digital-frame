@@ -776,7 +776,7 @@ logic without regressions.
 3. The time and date are visible in the top-left corner in `H:MM` and `Weekday, Month D`
    format.
 4. Escape key exits the app cleanly.
-5. PID is written to `/tmp/slideshow.pid` on startup and removed on exit.
+5. PID is written to `$XDG_RUNTIME_DIR/slideshow.pid` (0600) on startup and its lock is released on exit.
 6. After a full cycle the directory is rescanned; any new files added while the app runs
    appear in subsequent cycles.
 
