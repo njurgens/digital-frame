@@ -87,6 +87,19 @@ IPC_METHOD_NAMES: frozenset[str] = frozenset(
 CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
 
 
+def _config_path() -> Path:
+    """The config file to read: ``$PIFRAME_CONFIG_PATH`` if set, else the default.
+
+    ``eng/run.sh --config`` sets this so the devcontainer can point the app at
+    any toml (e.g. ``config.devcontainer.toml``) without copying it to
+    ``src/config.toml`` first.
+    """
+    override = os.environ.get("PIFRAME_CONFIG_PATH")
+    if override:
+        return Path(override).expanduser()
+    return CONFIG_PATH
+
+
 def acquire_pid_file(path: str | Path) -> int:
     """Open *path*, take an exclusive flock, and write our PID to it.
 
@@ -173,7 +186,7 @@ class App:
 
         self._assets = Assets.load()
 
-        self._config = ConfigStore(CONFIG_PATH)
+        self._config = ConfigStore(_config_path())
 
         # Modules construct services — conditional logic is encapsulated.
         # The provider is created first and shared by the sync and player
