@@ -196,6 +196,7 @@ def test_on_tap_routes_actions(tmp_path: Path) -> None:
     """On tap routes actions."""
     overlay = _make_overlay(tmp_path)
     overlay.show()
+    # Former dismiss-bar region: taps there now fall through to the scrim (no action).
     assert overlay.on_tap((640, 1)) is None
     assert overlay.on_tap(GEAR_RECT.center) == "settings"
     assert overlay.on_tap(PREV_RECT.center) == "prev"
