@@ -351,7 +351,8 @@ IC_CHEVRON_L = "\ue5c4"
 IC_CHEVRON_R = "\ue5c8"
 IC_EXPAND_MORE = "\ue5cf"
 IC_EXPAND_LESS = "\ue5ce"
-IC_BRIGHTNESS = "\ue896"
+IC_BRIGHTNESS_HIGH = "\ue1ac"
+IC_BRIGHTNESS_LOW = "\ue1ad"
 IC_SCHEDULE = "\ue8b5"
 IC_PERSON = "\ue7ef"
 IC_DELETE = "\ue872"
@@ -2188,7 +2189,8 @@ Font sizes used (pt):
 | `IC_CHEVRON_R` | `\ue5c8` | chevron_right | TimePicker |
 | `IC_EXPAND_MORE` | `\ue5cf` | expand_more | Dropdown expand |
 | `IC_EXPAND_LESS` | `\ue5ce` | expand_less | Dropdown collapse |
-| `IC_BRIGHTNESS` | `\ue896` | brightness_6 | Brightness icons |
+| `IC_BRIGHTNESS_HIGH` | `\ue1ac` | brightness_high | Brightness slider, top icon |
+| `IC_BRIGHTNESS_LOW` | `\ue1ad` | brightness_low | Brightness slider, bottom icon |
 | `IC_SCHEDULE` | `\ue8b5` | schedule | Sleep schedule row |
 | `IC_PERSON` | `\ue7ef` | person | Account / owner row |
 | `IC_DELETE` | `\ue872` | delete | Forget network |
