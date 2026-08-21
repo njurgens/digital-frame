@@ -2,7 +2,7 @@
 # Allows user 'frame' to run specific nmcli WiFi commands without a password.
 # The piframe app calls these to connect/disconnect WiFi on behalf of the UI.
 #
-# Installed by eng/install.sh (sudo visudo -f /etc/sudoers.d/piframe-wifi).
+# Deploy to /etc/sudoers.d/piframe-wifi (verify with: sudo visudo -f /etc/sudoers.d/piframe-wifi).
 
 frame ALL=(ALL) NOPASSWD: /usr/bin/nmcli dev wifi connect *
 frame ALL=(ALL) NOPASSWD: /usr/bin/nmcli dev disconnect *

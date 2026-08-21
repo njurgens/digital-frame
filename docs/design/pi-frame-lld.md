@@ -145,7 +145,17 @@ digital-frame/
 │   ├── golden/
 │   └── test_*.py
 ├── eng/
-│   └── install.sh          # Deployment script (idempotent)
+│   ├── check.sh            # lint + format check + type check
+│   ├── format.sh           # auto-format code (ruff)
+│   ├── test.sh             # run tests (90% diff-coverage gate)
+│   ├── run.sh              # run the app in the devcontainer
+│   ├── ipc.sh              # drive the running app over its IPC API
+│   ├── sync.sh             # one-time: create .venv, install deps
+│   ├── create-worktree.sh  # create a per-issue worktree
+│   ├── create-pr.sh        # open a PR for the current branch
+│   ├── get-pr.sh           # show a PR by number
+│   ├── update-pr.sh        # update a PR's body
+│   └── fixtures/           # one-off tools that build the test image set
 └── docs/
     ├── design/
     │   ├── pi-frame-hld.md
