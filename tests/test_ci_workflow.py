@@ -84,8 +84,11 @@ def test_workflow_exists_and_parses(workflow: dict) -> None:
 def test_triggers_on_every_pull_request_and_pushes_to_main(workflow: dict) -> None:
     """The gate runs on every pull request and on pushes to main."""
     triggers = _triggers(workflow)
-    # A bare ``pull_request:`` (null value) means every pull request event.
-    assert "pull_request" in triggers, "workflow must run on pull requests"
+    # A bare ``pull_request:`` (null value) means every pull request event;
+    # any filter (branches, types) would silently narrow the gate.
+    assert triggers.get("pull_request") is None, (
+        "pull_request trigger must be unrestricted (no branch/type filter)"
+    )
     push = triggers.get("push")
     assert isinstance(push, dict), "workflow must run on pushes"
     assert push.get("branches") == ["main"], "push trigger must cover main"
@@ -98,7 +101,7 @@ def test_jobs_are_exactly_build_check_test(workflow: dict) -> None:
 
 @pytest.mark.parametrize("job_id", sorted(JOB_SCRIPTS))
 def test_job_provisions_python_313_and_uv(workflow: dict, job_id: str) -> None:
-    """Every job checks out, provisions Python 3.13 and uv, in that order."""
+    """Every job checks out and provisions Python 3.13 and uv."""
     steps = _steps(workflow, job_id)
     assert _step_by_action(steps, "actions/checkout") is not None, (
         f"{job_id}: no actions/checkout step"
@@ -117,9 +120,9 @@ def test_job_provisions_python_313_and_uv(workflow: dict, job_id: str) -> None:
 @pytest.mark.parametrize("job_id", sorted(JOB_SCRIPTS))
 def test_job_runs_its_eng_script(workflow: dict, job_id: str) -> None:
     """Each job runs exactly its own eng/ script — the thin-wrapper contract."""
-    runs = [step.get("run") for step in _steps(workflow, job_id)]
+    runs = [step["run"] for step in _steps(workflow, job_id) if "run" in step]
     expected = f"bash {JOB_SCRIPTS[job_id]}"
-    assert expected in runs, f"{job_id} must run `{expected}`"
+    assert runs == [expected], f"{job_id} must run exactly one step: `{expected}`"
 
 
 def test_test_job_checkout_makes_origin_main_resolvable(workflow: dict) -> None:
