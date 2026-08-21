@@ -66,8 +66,6 @@ class FakeIpcServer:
             request = json.loads(data)
             self.requests.append(request)
             if self._delay:
-                import time
-
                 time.sleep(self._delay)
             line = self._handler(request)
             if line is not None:

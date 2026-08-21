@@ -20,7 +20,8 @@ import argparse
 import json
 import socket
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -29,27 +30,13 @@ from piframe.runtime_paths import SOCKET_NAME, candidate_dirs, fallback_dir, res
 #: Default read timeout for one request, in seconds.
 DEFAULT_TIMEOUT = 90.0
 
+#: Default swipe duration in milliseconds (the server bounds it to 60000).
+DEFAULT_SWIPE_MS = 300
+
 #: Max bytes of one response line before the client gives up: mirrors the
 #: server's request-line cap, so a hostile peer cannot exhaust the client's
 #: memory by streaming a newline-less line for the full read timeout.
 MAX_RESPONSE_LINE = 1 << 20  # 1 MiB
-
-#: The client's commands, one per JSON-RPC method; must match the app's
-#: IPC_METHOD_NAMES and docs/ipc.md's method table (a test pins all three).
-COMMANDS: frozenset[str] = frozenset(
-    {
-        "state",
-        "tap",
-        "swipe",
-        "play_pause",
-        "prev",
-        "next",
-        "screenshot",
-        "quit",
-        "set_config",
-        "trigger_sync",
-    }
-)
 
 
 class IpcRpcError(Exception):
@@ -181,7 +168,9 @@ class IpcClient:
         """Post a synthetic tap (down + up) at (x, y)."""
         return self.call("tap", {"x": x, "y": y})
 
-    def swipe(self, x: int, y: int, dx: int, dy: int, ms: int = 300) -> dict[str, Any]:
+    def swipe(
+        self, x: int, y: int, dx: int, dy: int, ms: int = DEFAULT_SWIPE_MS
+    ) -> dict[str, Any]:
         """Post a synthetic swipe from (x, y) by (dx, dy) over ms milliseconds."""
         return self.call("swipe", {"x": x, "y": y, "dx": dx, "dy": dy, "ms": ms})
 
@@ -227,6 +216,76 @@ def _parse_scalar(text: str) -> str | int | float | bool:
     return value
 
 
+@dataclass(frozen=True)
+class _CommandSpec:
+    """One CLI command: its help text, its arguments, and its handler.
+
+    Each argument spec is (name, type, default, help): a leading dash marks
+    an option (a None default makes it required); otherwise it is positional.
+    """
+
+    help: str
+    args: tuple[tuple[str, Callable[[str], object], object, str | None], ...]
+    handler: Callable[[IpcClient, argparse.Namespace], Any]
+
+
+#: The client's commands, one per JSON-RPC method.  This is the single
+#: source of truth for the CLI: the subparsers and the dispatcher are both
+#: built from it, and it must match the app's IPC_METHOD_NAMES and
+#: docs/ipc.md's method table (a test pins all three).
+_COMMANDS: dict[str, _CommandSpec] = {
+    "state": _CommandSpec("report the current app state", (), lambda c, a: c.state()),
+    "tap": _CommandSpec(
+        "post a synthetic tap at (x, y)",
+        (("x", int, None, None), ("y", int, None, None)),
+        lambda c, a: c.tap(a.x, a.y),
+    ),
+    "swipe": _CommandSpec(
+        "post a synthetic swipe from (x, y) by (dx, dy)",
+        (
+            ("x", int, None, None),
+            ("y", int, None, None),
+            ("dx", int, None, None),
+            ("dy", int, None, None),
+            (
+                "--ms",
+                int,
+                DEFAULT_SWIPE_MS,
+                f"duration in milliseconds (default {DEFAULT_SWIPE_MS})",
+            ),
+        ),
+        lambda c, a: c.swipe(a.x, a.y, a.dx, a.dy, ms=a.ms),
+    ),
+    "play_pause": _CommandSpec("toggle playback", (), lambda c, a: c.play_pause()),
+    "prev": _CommandSpec("go back one slide", (), lambda c, a: c.prev()),
+    "next": _CommandSpec("skip to the next slide", (), lambda c, a: c.next()),
+    "screenshot": _CommandSpec(
+        "save the current screen to a file",
+        (("--path", str, None, "where to save the screenshot"),),
+        lambda c, a: c.screenshot(a.path),
+    ),
+    "quit": _CommandSpec("quit the app (a notification: no response)", (), lambda c, a: c.quit()),
+    "set_config": _CommandSpec(
+        "set a config value (a JSON scalar)",
+        (
+            ("section", str, None, None),
+            ("key", str, None, None),
+            (
+                "value",
+                _parse_scalar,
+                None,
+                'the new value as a JSON scalar (e.g. 17, true, "night")',
+            ),
+        ),
+        lambda c, a: c.set_config(a.section, a.key, a.value),
+    ),
+    "trigger_sync": _CommandSpec("trigger a photo sync", (), lambda c, a: c.trigger_sync()),
+}
+
+#: The client's command names, derived from the spec above.
+COMMANDS: frozenset[str] = frozenset(_COMMANDS)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """The piframe-ipc argument parser: one subcommand per JSON-RPC method."""
     parser = argparse.ArgumentParser(
@@ -248,66 +307,25 @@ def _build_parser() -> argparse.ArgumentParser:
         help=f"read timeout in seconds (default {DEFAULT_TIMEOUT:g})",
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="command")
-
-    sub.add_parser("state", help="report the current app state")
-
-    p = sub.add_parser("tap", help="post a synthetic tap at (x, y)")
-    p.add_argument("x", type=int)
-    p.add_argument("y", type=int)
-
-    p = sub.add_parser("swipe", help="post a synthetic swipe from (x, y) by (dx, dy)")
-    p.add_argument("x", type=int)
-    p.add_argument("y", type=int)
-    p.add_argument("dx", type=int)
-    p.add_argument("dy", type=int)
-    p.add_argument("--ms", type=int, default=300, help="duration in milliseconds (default 300)")
-
-    sub.add_parser("play_pause", help="toggle playback")
-    sub.add_parser("prev", help="go back one slide")
-    sub.add_parser("next", help="skip to the next slide")
-
-    p = sub.add_parser("screenshot", help="save the current screen to a file")
-    p.add_argument("--path", required=True, help="where to save the screenshot")
-
-    sub.add_parser("quit", help="quit the app (a notification: no response)")
-
-    p = sub.add_parser("set_config", help="set a config value (a JSON scalar)")
-    p.add_argument("section")
-    p.add_argument("key")
-    p.add_argument(
-        "value", type=_parse_scalar, help='the new value as a JSON scalar (e.g. 17, true, "night")'
-    )
-
-    sub.add_parser("trigger_sync", help="trigger a photo sync")
+    for name, spec in _COMMANDS.items():
+        p = sub.add_parser(name, help=spec.help)
+        for arg_name, arg_type, default, arg_help in spec.args:
+            if arg_name.startswith("-"):
+                if default is None:
+                    p.add_argument(arg_name, type=arg_type, required=True, help=arg_help)
+                else:
+                    p.add_argument(arg_name, type=arg_type, default=default, help=arg_help)
+            else:
+                p.add_argument(arg_name, type=arg_type, help=arg_help)
     return parser
 
 
 def _run_command(client: IpcClient, args: argparse.Namespace) -> Any:
-    """Dispatch the parsed subcommand to the client's typed method."""
-    match args.command:
-        case "state":
-            return client.state()
-        case "tap":
-            return client.tap(args.x, args.y)
-        case "swipe":
-            return client.swipe(args.x, args.y, args.dx, args.dy, ms=args.ms)
-        case "play_pause":
-            return client.play_pause()
-        case "prev":
-            return client.prev()
-        case "next":
-            return client.next()
-        case "screenshot":
-            return client.screenshot(args.path)
-        case "quit":
-            client.quit()
-            return None
-        case "set_config":
-            return client.set_config(args.section, args.key, args.value)
-        case "trigger_sync":
-            return client.trigger_sync()
-        case _:
-            raise AssertionError(f"unhandled command: {args.command}")
+    """Dispatch the parsed subcommand to its handler."""
+    spec = _COMMANDS.get(args.command)
+    if spec is None:
+        raise AssertionError(f"unhandled command: {args.command}")
+    return spec.handler(client, args)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
