@@ -21,7 +21,8 @@ devcontainer.
 
 At startup the app logs one line naming the API's state:
 `IPC: listening on <path>` when bound, `IPC: disabled by config`, or
-`IPC: enabled but unavailable (...)` when the bind failed.
+`IPC: could not start the socket server: ...` (at error level) when the bind
+failed.
 
 ## Socket path
 
@@ -43,8 +44,9 @@ bash eng/ipc.sh <command> [args]
 
 It runs the `piframe-ipc` console script through uv, so no Python
 environment is needed beyond the project's. The client resolves the socket
-the same way the app resolves its runtime dir (the first existing candidate
-location), so it works from any session of the app's user.
+the same way the app does (the same runtime-dir resolution) and then probes
+the app's two candidate locations for an existing socket, so it works from
+any session of the app's user.
 
 Options: `--socket PATH` (override the socket) and `--timeout SECONDS`
 (read timeout, default 90).

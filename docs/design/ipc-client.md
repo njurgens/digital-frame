@@ -112,7 +112,7 @@ session, and the issue 53 integration tests will need a reusable one.
 | ID | Source | Stimulus | Environment | Response | Measure |
 |---|---|---|---|---|---|
 | QA-1 | Agent | Runs `bash eng/ipc.sh state` against a running app | Devcontainer, app in its main loop | Result JSON on stdout, exit 0 | Under 1 s (one frame is ~33 ms) |
-| QA-2 | Agent | Runs any command while the app is not running | Any | A clear error naming both locations, non-zero exit | Under 1 s (one connect per location, no retry) |
+| QA-2 | Agent | Runs any command while the app is not running | Any | A clear error naming the location, non-zero exit | Under 1 s (one connect, no retry) |
 | QA-3 | Agent | Sends a command whose params the server rejects | Any | The server's error message, exit 3 (distinct from transport failure, exit 1) | Under 1 s |
 
 ## 6. Solution strategy
@@ -161,7 +161,7 @@ sequenceDiagram
   S-->>C: one response line (none for a notification)
   C-->>Ag: result JSON on stdout, exit 0
   alt the app is not running
-    C--xC: both connects refused, name both locations, exit 1
+    C--xC: connect refused, name the location, exit 1
   end
   alt the server answers an error
     S--xC: error object, print code and message, exit 3
@@ -188,16 +188,17 @@ flowchart TD
   s0["piframe-ipc starts"] --> s1{"--socket given?"}
   s1 -->|yes| s2["use the given path"]
   s1 -->|no| s3["resolve the primary: runtime dir if usable, else the fallback dir"]
-  s3 --> s4{"connect to the primary?"}
-  s4 -->|yes| s5["send the request there"]
-  s4 -->|no| s6{"connect to the other candidate?"}
-  s6 -->|yes| s7["send the request there"]
-  s6 -->|no| s8["error naming both locations"]
+  s3 --> s4{"a socket exists in either candidate location?"}
+  s4 -->|yes| s5["connect to the first one found"]
+  s4 -->|no| s6["connect to the resolved dir's path"]
+  s5 --> s7["send the request; on refusal, error naming the location, exit 1"]
+  s6 --> s7
 ```
 
-*Figure 2 — The client tries the primary location and, on refusal, the other
-candidate — the same two locations the app's lock probe checks — so the socket
-is found regardless of which session the client runs in.*
+*Figure 2 — The client resolves the primary location the same way the app
+does, then probes the two candidate locations (the same pair the app's lock
+probe checks) for an existing socket, and connects once — so the socket is
+found regardless of which session the client runs in.*
 
 The fallback dir is created 0700 by the resolution logic if absent [verified:
 the runtime_paths module]; the client accepts that side effect because it is
@@ -277,12 +278,12 @@ prints nothing and the app's exit is the confirmation.
 > prose table and a code dispatch table, we chose a pinning test over a doc
 > that is merely written: the method names live in a module-level constant in
 > the app module (importable without instantiating the app, which the table
-> itself is not), and the test — which instantiates the app the way the
-> existing app tests do, under a dummy display driver — checks the dispatch
-> table's keys, the names parsed from docs/ipc.md, and the client's subcommand
-> set against it, to achieve a doc that cannot silently lie, accepting a small
-> format constraint on the doc's table, because the doc's value to an agent
-> is its truth.
+> itself is not), and a test compares the names parsed from docs/ipc.md
+> against that constant and the client's command set; a separate test
+> instantiates the app under a dummy display driver and checks the dispatch
+> table's keys against the same constant, to achieve a doc that cannot
+> silently lie, accepting a small format constraint on the doc's table,
+> because the doc's value to an agent is its truth.
 
 ### D-6 — run.sh reports the artifacts by observation, not by config parsing
 
@@ -390,10 +391,10 @@ created identically by the app itself.
 
 | ID | Failure | Trigger | Blast radius | Detection | Designed response | Residual risk |
 |---|---|---|---|---|---|---|
-| F-1 | App not running (or IPC disabled) | Both connects are refused (no socket, or the app is down) | The one command | The connect attempts | Error naming both locations; exit 1 | The client's message cannot distinguish the causes; the app's startup log names which (disabled by config, a bind failure, or a crash) |
+| F-1 | App not running (or IPC disabled) | No socket at the probed location (the app is down, or the API is disabled) | The one command | The single connect | Error naming the location; exit 1 | The client's message cannot distinguish the causes; the app's startup log names which (disabled by config, a bind failure, or a crash) |
 | F-2 | App alive but slow to answer (long swipe, busy main loop) | The executor runs past the read timeout | The one command | The client's read timeout (default 90 s, `--timeout`) | Timeout error, exit 1; the app is unharmed and finishes within its own 60 s swipe bound | A command timed out by the client may still execute in the app |
 | F-3 | Protocol error (bad params, unknown method) | The server answers an error object | The one command | The error object | Code and message to stderr; exit 3 | None — the server is the authority |
-| F-4 | The client's session cannot reach either location | A degenerate session (for example a different user) | The one command | Both connects fail | Error naming both locations; the `--socket` override is documented | A cross-user caller cannot use the API (by design, C-2) |
+| F-4 | The client's session cannot reach either location | A degenerate session (for example a different user) | The one command | The connect fails | Error naming the location; the `--socket` override is documented | A cross-user caller cannot use the API (by design, C-2) |
 
 The posture is fail-loud: the client never retries, never waits past its
 timeout, and never mutates app state beyond what the named command does.
@@ -452,7 +453,7 @@ test (D-5) makes any such drift a test failure, not a surprise.
 | ID | Claim | Evidence of success | Evidence of failure | Traces to |
 |---|---|---|---|---|
 | V-1 | The agent workflow is one command | `bash eng/ipc.sh state` against a running devcontainer app prints the state JSON and exits 0; `screenshot --path` writes a file; `quit` exits the app | Any of them needs a flag the doc does not show | G-1 |
-| V-2 | Failures are branchable | With no app, exit 1 and a message naming both locations; with a bad param, exit 3 and the server's message | One exit code for both classes | G-1, QA-2, QA-3 |
+| V-2 | Failures are branchable | With no app, exit 1 and a message naming the location; with a bad param, exit 3 and the server's message | One exit code for both classes | G-1, QA-2, QA-3 |
 | V-3 | The doc is a true contract | The pinning test passes: the doc's method set, the dispatch table's keys, and the CLI's subcommands all equal the method-name constant | The test is absent or skips the doc | G-2 |
 | V-4 | The entry point reports the artifacts | run.sh's success output names the PID-file path, the socket path (or a note that it is absent), and the client command | The agent still has to guess where the socket is | G-3 |
 | V-5 | The client is testable without the app | The client's tests run against a fake server socket with no display and no app; the diff-coverage gate passes | The tests need a running app | G-4 |

@@ -54,9 +54,9 @@ def candidate_dirs(primary: Path, fallback: Path) -> tuple[Path, Path]:
 
     The lock is per-resolved-dir, so two launches that resolve different
     locations (one session with XDG_RUNTIME_DIR, one without) would not
-    contend on the same file; the other candidate is the fallback when the
-    primary is the system runtime dir, and the system runtime dir when the
-    primary is the fallback, so the two launches still see each other.
+    contend on the same file; the other candidate is the fallback for any
+    primary other than the fallback itself, and the system runtime dir when
+    the primary is the fallback, so the two launches still see each other.
     """
     other = fallback if primary != fallback else system_runtime_dir()
     return (primary, other)
