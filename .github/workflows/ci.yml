@@ -1,0 +1,63 @@
+# CI — the merge gate for main (issue #58).
+#
+# Three jobs, each a thin wrapper around one existing eng/ script, so the
+# local and CI gates can never drift:
+#
+#   build — bash eng/sync.sh   : uv sync --frozen; the committed uv.lock
+#                                 installs cleanly on a clean runner
+#   check — bash eng/check.sh   : ruff lint, ruff format check, basedpyright
+#   test  — bash eng/test.sh   : pytest + 90% diff-coverage gate
+#
+# Notes:
+# - The test job checks out with fetch-depth 0: diff-cover diffs against
+#   origin/main by default, and actions/checkout's shallow (depth-1) PR
+#   checkout never creates that ref.
+# - On pushes to main, HEAD equals origin/main, so the diff-coverage gate
+#   sees an empty diff and passes; the gate only bites on PRs.
+# - External actions are pinned to commit SHAs (tag shown in the comment)
+#   so a new upstream release cannot silently change what the gate runs.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - run: bash eng/sync.sh
+
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - run: bash eng/check.sh
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - run: bash eng/test.sh
