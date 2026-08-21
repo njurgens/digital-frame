@@ -4,7 +4,7 @@
 #     cp config.devcontainer.toml src/config.toml
 #
 # Secrets (OneDrive credentials) are supplied via environment variables,
-# not this file — see .env.example.
+# not this file — see .devcontainer/.env.example.
 
 [app]
 mock_wifi = true    # no real Wi-Fi management inside the container
@@ -33,7 +33,7 @@ wake_time  = "07:00"
 
 [sync]
 # Which album provider to use: "onedrive", "local", or "google".
-# Override at runtime with PIFRAME_SYNC__PROVIDER (see .env.example).
+# Override at runtime with PIFRAME_SYNC__PROVIDER (see .devcontainer/.env.example).
 provider         = "local"
 interval_minutes = 60
 

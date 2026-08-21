@@ -66,7 +66,8 @@ source_dir = "/home/frame/Pictures/slideshow"
   `PIFRAME_SYNC__ONEDRIVE__SHARE_URL=...`). Unknown paths are silently
   ignored. Protected keys (provider selection, OneDrive credentials) are
   never written back to the config file, so env-var-injected secrets do not
-  leak into it.
+  leak into it. In the devcontainer these are set in `.devcontainer/.env`
+  (template: `.devcontainer/.env.example`).
 
 ## Sync behaviour
 
@@ -195,7 +196,7 @@ Worked example: adding a hypothetical `flickr` provider.
 4. **Document the config.** Add a `[sync.flickr]` section to
    `config.toml.example` (and to `config.devcontainer.toml` if the
    devcontainer uses it), and the matching env-var overrides to
-   `.env.example`.
+   `.devcontainer/.env.example`.
 
 5. **Test it.** Add cases to `tests/test_providers.py` following the
    existing pattern: a happy-path sync, a failure path (error recorded in

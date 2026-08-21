@@ -13,6 +13,8 @@
 # Environment overrides:
 #   PIFRAME_SYNC__PROVIDER            (default: local)
 #   PIFRAME_SYNC__LOCAL__SOURCE_DIR   (default: tests/fixtures/stock)
+#   PIFRAME_SYNC__ONEDRIVE__SHARE_URL (OneDrive share URL; required for onedrive)
+#   PIFRAME_SYNC__ONEDRIVE__PASSWORD  (OneDrive share password; protected shares only)
 #   PIFRAME_LOG                       (default: /tmp/piframe-run.log)
 set -euo pipefail
 cd "$(dirname "$0")/.."
