@@ -22,8 +22,9 @@ hand-roll a socket client every session, and the agent's entry point
 small client module with a `piframe-ipc` console script (wrapped by
 `eng/ipc.sh`), a `docs/ipc.md` documenting the protocol and full method set, a
 pointer in AGENTS.md (a Debugging-section line and a Commands-block entry for
-the new script), and a run.sh success report naming the PID file, the
-socket (or a note that it is absent), and the client command. The client and the app
+the new script), and a run.sh success report naming the PID file and
+reporting the app's own API-state line (the socket path, or disabled-by-
+config, or bind-failed), plus the client command. The client and the app
 share one candidate-set function in the runtime_paths module, so a bare SSH
 session finds the socket the labwc session bound. The trade-off is a small
 refactor of the app's startup path (its inline cross-location probe moves onto
@@ -285,24 +286,28 @@ prints nothing and the app's exit is the confirmation.
 > silently lie, accepting a small format constraint on the doc's table,
 > because the doc's value to an agent is its truth.
 
-### D-6 — run.sh reports the artifacts by observation, not by config parsing
+### D-6 — run.sh reports the API state from the app's own log line, not by config parsing or socket guessing
 
 > In the context of the run script's success output, facing the question of
-> whether the API is on, we chose checking for the socket file after a short
-> bounded wait — and reporting the PID-file path and a pointer to the client —
-> over parsing the config file from bash, to achieve a report that matches
-> what the client will find, accepting a wait of a few seconds in the rare case
-> the app binds its socket slowly, because the socket's presence is the ground
-> truth the client needs, and a bash TOML parser would be a second,
-> drift-prone config reader.
+> whether the API is on, we chose waiting for the app's own API-state log
+> line (listening on <path> / disabled by config / could not start the socket
+> server) and reporting it verbatim — over parsing the config file from bash,
+> or guessing from the socket file's presence after a bounded wait — to
+> achieve a report that is the app's own word about the API's state, accepting
+> a bounded wait at startup (the line is logged during app initialisation,
+> a few seconds after the PID file), because the app logs exactly one such
+> line at startup, and a bash TOML parser would be a second, drift-prone
+> config reader.
 
-The socket check looks in the dir run.sh already resolved for the PID file —
-the two artifacts always share a location. The app logs one line at startup
-keyed on the server's actual state — bound at the resolved path (warning),
-disabled by config (warning), or bind failed (error; the app has no logging
-configuration, so only warning and above reach the log) — so the report's
-absence note and the log together name the cause without ever asserting a path
-that does not exist; that log line is part of this change.
+The wait scans only the log content written since the launch (the log is
+appended across runs), so a line from a previous run can never be reported.
+The app logs one line at startup keyed on the server's actual state —
+listening on the resolved path (warning), disabled by config (warning), or
+bind failed (error; the app has no logging configuration, so only warning and
+above reach the log) — and the report maps that line to one of the three
+outcomes, so it never asserts a socket path that does not exist. If the line
+never appears (the app dies mid-startup), the report says so and points at
+the log; that log line is part of this change.
 
 ## 9. Alternatives considered
 
@@ -455,7 +460,7 @@ test (D-5) makes any such drift a test failure, not a surprise.
 | V-1 | The agent workflow is one command | `bash eng/ipc.sh state` against a running devcontainer app prints the state JSON and exits 0; `screenshot --path` writes a file; `quit` exits the app | Any of them needs a flag the doc does not show | G-1 |
 | V-2 | Failures are branchable | With no app, exit 1 and a message naming the location; with a bad param, exit 3 and the server's message | One exit code for both classes | G-1, QA-2, QA-3 |
 | V-3 | The doc is a true contract | The pinning test passes: the doc's method set, the dispatch table's keys, and the CLI's subcommands all equal the method-name constant | The test is absent or skips the doc | G-2 |
-| V-4 | The entry point reports the artifacts | run.sh's success output names the PID-file path, the socket path (or a note that it is absent), and the client command | The agent still has to guess where the socket is | G-3 |
+| V-4 | The entry point reports the artifacts | run.sh's success output names the PID-file path and reports the app's own API-state line (the socket path, or disabled-by-config, or bind-failed), plus the client command | The agent still has to guess where the socket is | G-3 |
 | V-5 | The client is testable without the app | The client's tests run against a fake server socket with no display and no app; the diff-coverage gate passes | The tests need a running app | G-4 |
 
 V-1, V-2, and V-4 were verified manually in the devcontainer: the repo has no
