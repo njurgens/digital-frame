@@ -19,6 +19,7 @@ bash eng/test.sh            # run tests (90% diff-coverage gate)
 bash eng/test.sh -k foo     # filter tests
 bash eng/run.sh             # run the app in the devcontainer: background (default),
                             #   -f for foreground, --kill to stop
+bash eng/ipc.sh <command>   # drive the running app over its IPC API (docs/ipc.md)
 bash eng/install.sh         # deploy to the Pi (idempotent, safe to re-run)
 ```
 
@@ -56,6 +57,9 @@ ssh frame@10.1.7.58 'cat /run/user/1000/slideshow.pid'      # app PID
 ssh frame@10.1.7.58 'ls /home/frame/.cache/piframe/surfaces/'  # surface cache
 ssh frame@10.1.7.58 'cat /etc/xdg/labwc/autostart'           # autostart config
 ```
+
+The app's IPC command API (state, tap, swipe, screenshot, quit, ...) is
+documented in [docs/ipc.md](docs/ipc.md); the client is `bash eng/ipc.sh`.
 
 ## Project structure
 

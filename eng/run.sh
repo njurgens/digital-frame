@@ -33,6 +33,7 @@ else
   PIDFILE="$PIFRAME_FALLBACK_DIR/slideshow.pid"
   PID_CANDIDATES=("$PIDFILE")
 fi
+SOCKFILE="$(dirname "$PIDFILE")/piframe.sock"
 LOG="${PIFRAME_LOG:-/tmp/piframe-run.log}"
 
 # --- stop mode ---------------------------------------------------------------
@@ -135,7 +136,20 @@ if [[ -f $PIDFILE ]]; then
   sleep 1
   pid=$(cat "$PIDFILE")
   if kill -0 "$pid" 2>/dev/null; then
-    echo "slideshow running (pid $pid) — log: $LOG"
+    echo "slideshow running (pid $pid)"
+    echo "  log:      $LOG"
+    echo "  pid file: $PIDFILE"
+    # The socket is bound later in startup than the PID file; give it a
+    # moment before reporting its state (the app's log is authoritative).
+    for _ in 1 2 3 4 5 6; do
+      [[ -S $SOCKFILE ]] && break
+      sleep 0.5
+    done
+    if [[ -S $SOCKFILE ]]; then
+      echo "  ipc:      $SOCKFILE (client: bash eng/ipc.sh — docs/ipc.md)"
+    else
+      echo "  ipc:      not present (API disabled by config, or the bind failed — see the log)"
+    fi
     echo "stop with: $0 --kill"
   else
     echo "slideshow failed to start — last log lines:" >&2
