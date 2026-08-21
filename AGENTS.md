@@ -17,8 +17,8 @@ bash eng/format.sh          # auto-format code (ruff)
 bash eng/check.sh           # lint + format check + type check
 bash eng/test.sh            # run tests (90% diff-coverage gate)
 bash eng/test.sh -k foo     # filter tests
-bash eng/run.sh             # run the app in the devcontainer: background (default),
-                            #   -f for foreground, --kill to stop
+bash eng/run.sh             # run the app in the devcontainer (background by default)
+                            #   usage: run.sh [-f|--foreground] [--provider <name>] [--config <path>] [--kill [<pid>]]
 bash eng/ipc.sh <command>   # drive the running app over its IPC API (docs/ipc.md)
 bash eng/install.sh         # deploy to the Pi (idempotent, safe to re-run)
 ```
