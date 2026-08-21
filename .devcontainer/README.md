@@ -24,10 +24,10 @@ and add the `ssh-agent` / `ssh-add` lines to `~/.bash_profile` or `~/.zprofile`.
 Copy the example env file and set your email:
 
 ```bash
-cp .env.example .env
+cp .devcontainer/.env.example .devcontainer/.env
 ```
 
-Then edit `.env` and set `DEVCONTAINER_GIT_EMAIL` to your GitHub
+Then edit `.devcontainer/.env` and set `DEVCONTAINER_GIT_EMAIL` to your GitHub
 noreply address (e.g. `1845727+username@users.noreply.github.com`). This avoids
 GitHub's email-privacy push rejection.
 
@@ -58,3 +58,26 @@ The token is stored in a named volume (`gh-config`) and survives rebuilds.
 The `postCreateCommand` runs `setup-volume-mounts.sh` then
 `setup-git-signing.sh` on every container create. Both are idempotent — they
 skip work if the target is already correct.
+
+## Running against a OneDrive share
+
+To play a OneDrive shared folder, set the provider and share in
+`.devcontainer/.env` (the template is `.devcontainer/.env.example`):
+
+```bash
+PIFRAME_SYNC__PROVIDER=onedrive
+PIFRAME_SYNC__ONEDRIVE__SHARE_URL=https://1drv.ms/f/...
+# Only for password-protected shares:
+# PIFRAME_SYNC__ONEDRIVE__PASSWORD=...
+```
+
+Then start the app:
+
+```bash
+bash eng/run.sh
+```
+
+Photos are downloaded to `~/.cache/piframe/onedrive` (the devcontainer
+default in `config.devcontainer.toml`). A missing or empty share URL fails
+the first sync with a clear "No OneDrive share URL configured" error — check
+the run log if the slideshow starts empty.
