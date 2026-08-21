@@ -128,7 +128,7 @@ graph TD
 | State | Description | Pygame surface(s) rendered |
 |---|---|---|
 | `SLIDESHOW` | Fullscreen photo cycling with transitions. No overlay chrome. Clock visible if configured. Paused-pip visible if playback is paused. | Photo layer, Clock layer (if enabled), Paused-pip layer (if paused) |
-| `OVERLAY` | Slideshow continues beneath a semi-transparent scrim. Playback controls, brightness slider, settings gear, and dismiss progress bar rendered above scrim. Clock above scrim. | Photo layer, Clock layer (if enabled), Scrim layer, Dismiss-progress layer, Overlay-controls layer (the play/pause button icon conveys paused state; the paused pip is hidden while the overlay is active) |
+| `OVERLAY` | Slideshow continues beneath a semi-transparent scrim. Playback controls, brightness slider, and settings gear rendered above scrim. Clock above scrim. | Photo layer, Clock layer (if enabled), Scrim layer, Overlay-controls layer (the play/pause button icon conveys paused state; the paused pip is hidden while the overlay is active) |
 | `SETTINGS` | Full-screen settings panel replaces the slideshow view. Slideshow rendering suspended (last photo surface held in memory). | Settings-panel layer |
 | `KEYBOARD` | Settings panel visible with the on-screen keyboard slid up from the bottom. Sub-state of SETTINGS; settings panel remains beneath. | Settings-panel layer, Keyboard layer |
 | `SLEEPING` | Backlight set to 0. Main loop runs at reduced poll rate (≤ 4 Hz) with no rendering. Touch events monitored for tap-to-wake. | None (display dark) |
@@ -175,15 +175,15 @@ The 5-second auto-dismiss timer is owned by `OverlayUI`.
   slideshow is not paused (tap, slider drag, button press). Each interaction restarts
   the 5-second countdown.
 - **Suspended:** When playback is paused (`SlideshowPlayer.is_paused` is `True`).
-  While suspended, the dismiss progress bar is hidden and the timer does not advance.
+  While suspended, the timer does not advance.
   The overlay remains visible indefinitely until the user explicitly acts (resumes
   playback or taps outside controls).
 - **Cancelled:** When the application leaves `OVERLAY` state for any reason
   (auto-dismiss, tap-outside, gear button, sleep event).
 
 The timer is implemented as a wall-clock timestamp (`time.monotonic()`) stored inside
-`OverlayUI`. Each frame, `OverlayUI.update()` computes remaining time and drives the
-progress bar width. When remaining time reaches zero and playback is not paused,
+`OverlayUI`. Each frame, `OverlayUI.update()` checks whether the remaining time has
+expired. When remaining time reaches zero and playback is not paused,
 `OverlayUI` emits a dismiss event that `App` handles by transitioning to `SLIDESHOW`.
 
 ---
@@ -204,7 +204,7 @@ Each active frame follows this compositing order:
    `SLIDESHOW` or `OVERLAY`.
 3. `SlideshowPlayer.draw_pip(screen)` — draws the paused-pip if paused and in
    `SLIDESHOW` state only (pip is suppressed while overlay is active).
-4. `OverlayUI.draw(screen)` — draws scrim, dismiss bar, and controls if state is
+4. `OverlayUI.draw(screen)` — draws scrim and controls if state is
    `OVERLAY`.
 5. `SettingsPanel.draw(screen)` — draws the full-screen settings panel if state is
    `SETTINGS` or `KEYBOARD`.
@@ -225,11 +225,10 @@ but it is not blitted.
 | Clock | 1 | Time and date text with drop-shadow backing | `SLIDESHOW`, `OVERLAY` (when `show_clock = true`) |
 | Paused pip | 2 | Small semi-transparent pause icon in bottom-left corner | `SLIDESHOW` only (when `SlideshowPlayer.is_paused`; hidden when overlay is active) |
 | Scrim | 3 | Full-screen semi-transparent black rect (`rgba(0,0,0,0.55)`) | `OVERLAY` |
-| Dismiss progress bar | 4 | 3 px rect at top edge, width proportional to remaining dismiss time | `OVERLAY` (hidden when timer suspended / paused) |
-| Overlay controls | 5 | Right column (gear icon button, brightness sun icons, vertical slider, percentage readout); bottom bar (Previous, Play/Pause, Next icon buttons) | `OVERLAY` |
-| Settings panel | 6 | Full-screen dark UI: left sidebar (Back, Slideshow, Display, Wi-Fi, System nav) + content area | `SETTINGS`, `KEYBOARD` |
-| Keyboard | 7 | On-screen keyboard widget sliding up from bottom edge | `KEYBOARD` |
-| Dialog | 8 | Modal confirmation dialog (shutdown, reboot, forget network) | Any state (rendered on top of all other layers) |
+| Overlay controls | 4 | Right column (gear icon button, brightness sun icons, vertical slider, percentage readout); bottom bar (Previous, Play/Pause, Next icon buttons) | `OVERLAY` |
+| Settings panel | 5 | Full-screen dark UI: left sidebar (Back, Slideshow, Display, Wi-Fi, System nav) + content area | `SETTINGS`, `KEYBOARD` |
+| Keyboard | 6 | On-screen keyboard widget sliding up from bottom edge | `KEYBOARD` |
+| Dialog | 7 | Modal confirmation dialog (shutdown, reboot, forget network) | Any state (rendered on top of all other layers) |
 
 ### 3.3 Transition rendering
 
@@ -353,14 +352,14 @@ to the rest of the application without blocking the render loop.
 
 ### 4.5 `OverlayUI`
 
-**Responsibility:** Renders the transient overlay (scrim, dismiss progress bar, playback
+**Responsibility:** Renders the transient overlay (scrim, playback
 controls, brightness slider, gear button) and manages the 5-second auto-dismiss timer.
 
 **Public interface:**
 - `show()` — makes the overlay visible and starts/restarts the dismiss timer.
 - `hide()` — immediately hides the overlay.
 - `update(delta_seconds)` — advances the dismiss timer; returns `True` if the timer has expired (signals `App` to transition to `SLIDESHOW`).
-- `draw(surface)` — blits all overlay layers (scrim, progress bar, controls).
+- `draw(surface)` — blits all overlay layers (scrim, controls).
 - `handle_event(event) -> bool` — processes touch events for overlay controls; returns `True` if the event was consumed.
 
 **Dependencies:** `BacklightController`, `ConfigStore`, `SlideshowPlayer`.
@@ -531,8 +530,7 @@ will formalise this as a base class, but the interface is defined here at the HL
 | `TextInput` | `SettingsPanel` — Wi-Fi password, timezone region | Single-line text display; focus ring when active; password mode (bullet masking + eye-icon toggle); eye toggle uses a 44×44 px minimum tap target with a 20 px rendered icon; tapping focuses and triggers `Keyboard.attach()` |
 | `Keyboard` | Anywhere a `TextInput` is focused | Three switchable layers; QWERTY layout; 44 px minimum key tap target; `Done` key commits and calls `Keyboard.detach()`; slides up/down with animation |
 | `WifiListItem` | `SettingsPanel` — Wi-Fi section | Displays SSID + signal-strength icon (3 levels); connected variant shows IP, "Connected" badge, "Forget" button; tapping an unconnected item triggers connect flow |
-| `ConfirmDialog` | `SettingsPanel` — Shutdown, Reboot, Forget network | Modal overlay; title + body text; "Cancel" and "Confirm" buttons; confirm callback is destructive-styled (red); rendered in Dialog layer (z=8) |
-| `DismissProgressBar` | `OverlayUI` — top edge of overlay | Full-width 3 px rect; width drains from 100 % to 0 % over 5 s; hidden when dismiss timer is suspended |
+| `ConfirmDialog` | `SettingsPanel` — Shutdown, Reboot, Forget network | Modal overlay; title + body text; "Cancel" and "Confirm" buttons; confirm callback is destructive-styled (red); rendered in Dialog layer (z=7) |
 | `TimePicker` | `SettingsPanel` — Display section sleep window | Two time pills (sleep time, wake time); tapping opens a scroll-drum or increment/decrement picker for HH:MM; grayed out when sleep schedule disabled |
 | `HorizontalSlider` | `SettingsPanel` — Display brightness | Wide horizontal drag control; value 0–100; touch-drag updates value live; emits `on_change(value)` callback |
 | `ScrollPicker` | `SettingsPanel` — Timezone region (manual) | Vertically scrollable list of IANA timezone strings from `zoneinfo`; momentum scrolling; selected item centred and highlighted |
@@ -795,11 +793,10 @@ and live brightness slider.
 
 **Acceptance criteria:**
 1. A single tap anywhere on the slideshow surface shows the overlay (scrim + controls).
-2. The dismiss progress bar drains over 5 seconds; overlay auto-dismisses when it
-   reaches zero.
+2. The overlay auto-dismisses after a 5-second timer.
 3. Play/Pause button toggles playback; the icon reflects the current state.
 4. Previous / Next buttons skip photos immediately.
-5. When paused, the dismiss timer stops and the progress bar disappears; the overlay
+5. When paused, the dismiss timer stops; the overlay
    persists until the user resumes or taps outside controls.
 6. After dismissal while paused, a pause pip is visible in the bottom-left corner.
 7. Dragging the brightness slider changes the display brightness in real time and the

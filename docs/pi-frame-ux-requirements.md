@@ -98,9 +98,8 @@ The overlay renders as a semi-transparent dark scrim over the current photo.
 All overlay controls are rendered above the scrim. The clock (Section 1, SH-04)
 sits above the scrim as well, so it remains readable when the overlay is active.
 
-A thin progress bar spanning the full top edge of the screen drains from full to empty
-over the 5-second dismiss window, giving visual feedback. It is hidden when the timer
-is suspended (paused state).
+There is no visual countdown for the dismiss window — the overlay simply disappears
+when the timer expires.
 
 ### 3.1 — Layout
 
