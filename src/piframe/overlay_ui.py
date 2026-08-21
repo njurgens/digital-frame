@@ -9,7 +9,8 @@ import pygame
 
 from piframe.assets import (
     FONT_SIZE_SECONDARY,
-    IC_BRIGHTNESS,
+    IC_BRIGHTNESS_HIGH,
+    IC_BRIGHTNESS_LOW,
     IC_PAUSE,
     IC_PLAY,
     IC_SETTINGS,
@@ -125,8 +126,8 @@ class OverlayUI:
         self._draw_overlay_button(screen, GEAR_RECT)
         self._draw_icon_centered(screen, IC_SETTINGS, ICON_SIZE_NORMAL, GEAR_CENTER)
 
-        self._draw_icon_centered(screen, IC_BRIGHTNESS, ICON_SIZE_NORMAL, SUN_HI_CENTER)
-        self._draw_icon_centered(screen, IC_BRIGHTNESS, ICON_SIZE_NORMAL, SUN_LO_CENTER)
+        self._draw_icon_centered(screen, IC_BRIGHTNESS_HIGH, ICON_SIZE_NORMAL, SUN_HI_CENTER)
+        self._draw_icon_centered(screen, IC_BRIGHTNESS_LOW, ICON_SIZE_NORMAL, SUN_LO_CENTER)
 
         self._slider.draw(screen)
 
