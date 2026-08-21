@@ -5,6 +5,10 @@
 #                           prints the PID; output goes to $PIFRAME_LOG
 #   eng/run.sh -f            run in the foreground (Ctrl-C to stop);
 #                           also accepted: --foreground, --fg
+#   eng/run.sh --provider P  select the album provider (onedrive|local|google);
+#                           sets PIFRAME_SYNC__PROVIDER, overriding the environment
+#   eng/run.sh --config F    read config from F instead of src/config.toml (no copy);
+#                           sets PIFRAME_CONFIG_PATH, overriding the environment
 #   eng/run.sh --kill        stop the background instance (via the PID file in the runtime dir)
 #   eng/run.sh --kill <PID>  stop a specific PID
 #
@@ -79,23 +83,64 @@ if [[ ${1:-} == "--kill" ]]; then
 fi
 
 # --- parse flags -------------------------------------------------------------
+# Precedence for --provider / --config: the flag wins over the matching
+# environment variable, which wins over the built-in default.
 fg=0
+provider=""
+config_path=""
 args=()
-for a in "$@"; do
-  case $a in
-    -f|--foreground|--fg) fg=1 ;;
-    *) args+=("$a") ;;
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -f|--foreground|--fg)
+      fg=1
+      shift
+      ;;
+    --provider)
+      if [[ $# -lt 2 ]]; then
+        echo "usage: run.sh --provider <onedrive|local|google>" >&2
+        exit 2
+      fi
+      provider="$2"
+      shift 2
+      ;;
+    --config)
+      if [[ $# -lt 2 ]]; then
+        echo "usage: run.sh --config <path-to-config.toml>" >&2
+        exit 2
+      fi
+      config_path="$2"
+      shift 2
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
   esac
 done
 
-# The app reads src/config.toml (gitignored); bootstrap it from the
-# devcontainer template on first run (see config.devcontainer.toml).
+# Always seed the default-path config from the devcontainer template (idempotent:
+# a no-op once present) so a launch that bypasses run.sh still gets the template's
+# values rather than the built-in defaults.
 if [[ ! -f src/config.toml ]]; then
   cp config.devcontainer.toml src/config.toml
   echo "created src/config.toml from config.devcontainer.toml"
 fi
 
-export PIFRAME_SYNC__PROVIDER="${PIFRAME_SYNC__PROVIDER:-local}"
+# Config file to read: --config flag > PIFRAME_CONFIG_PATH env > the default
+# src/config.toml.  When an explicit path is chosen the app reads it directly —
+# nothing is copied into src/config.toml for it.
+if [[ -n "$config_path" ]]; then
+  export PIFRAME_CONFIG_PATH="$config_path"
+elif [[ -n "${PIFRAME_CONFIG_PATH:-}" ]]; then
+  export PIFRAME_CONFIG_PATH="$PIFRAME_CONFIG_PATH"
+fi
+
+# Provider: --provider flag > PIFRAME_SYNC__PROVIDER env > default local.
+if [[ -n "$provider" ]]; then
+  export PIFRAME_SYNC__PROVIDER="$provider"
+else
+  export PIFRAME_SYNC__PROVIDER="${PIFRAME_SYNC__PROVIDER:-local}"
+fi
 export PIFRAME_SYNC__LOCAL__SOURCE_DIR="${PIFRAME_SYNC__LOCAL__SOURCE_DIR:-$PWD/tests/fixtures/stock}"
 
 # --- foreground mode ----------------------------------------------------------
