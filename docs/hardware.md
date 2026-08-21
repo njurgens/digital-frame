@@ -29,8 +29,7 @@ The app renders fullscreen at 1280×800 (see `SCREEN_W`/`SCREEN_H` in the LLD).
 
 - **SSH:** `frame@10.1.7.58` — all commands that touch the Pi run over SSH
 - **User:** `frame` (uid 1000); the app runs as this user
-- **App home:** `/home/frame/digital-frame` — the repo is rsynced here by
-  `eng/install.sh`
+- **App home:** `/home/frame/digital-frame`
 - **Launch:** the app is started from `/etc/xdg/labwc/autostart` (not
   systemd) and writes its PID to `$XDG_RUNTIME_DIR/slideshow.pid` (the
   per-user runtime dir; `~/.local/piframe` when that is unavailable)

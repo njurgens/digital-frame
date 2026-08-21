@@ -27,34 +27,13 @@
 
 - Raspberry Pi running Raspberry Pi OS Bookworm with a labwc Wayland session
 - SSH access: `frame@10.1.7.58`
-- Python 3.13 managed by uv (installed by `install.sh`)
-
----
-
-## Installation
-
-```bash
-# From repo root on your dev machine:
-bash eng/install.sh
-```
-
-`install.sh` rsyncs the repo to the Pi, installs apt packages, runs `uv sync`, writes the Wi-Fi sudoers entry, removes the retired sync-service install, and patches `/etc/xdg/labwc/autostart`. It is idempotent — safe to re-run.
-
-If the config was just created, edit it:
-```bash
-ssh frame@10.1.7.58 'nano /home/frame/digital-frame/config.toml'
-```
-
-Reboot the Pi to apply autostart changes:
-```bash
-ssh frame@10.1.7.58 'sudo reboot now'
-```
+- Python 3.13 managed by uv
 
 ---
 
 ## Configuration
 
-The app reads **`src/config.toml`** (gitignored). `install.sh` seeds the root `config.toml` from `config.toml.example` as a starting template — copy it to `src/config.toml` (or edit that file directly) to activate your settings. See `config.toml.example` for the full annotated template.
+The app reads **`src/config.toml`** (gitignored). Copy `config.toml.example` to `src/config.toml` (or edit that file directly) to activate your settings. See `config.toml.example` for the full annotated template.
 
 The sync section selects the album provider:
 
@@ -110,7 +89,7 @@ ssh frame@10.1.7.58 'XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 /h
 
 ## Retired components
 
-The first-generation mpv-based slideshow and the external OneDrive sync service predate the current app and are no longer in the repo; `install.sh` removes any leftover install of the sync service from the Pi. The old mpv IPC controls (`append/next/prev/...` against `/tmp/mpv-socket`) no longer apply.
+The first-generation mpv-based slideshow and the external OneDrive sync service predate the current app and are no longer in the repo. The old mpv IPC controls (`append/next/prev/...` against `/tmp/mpv-socket`) no longer apply.
 
 ---
 

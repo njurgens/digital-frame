@@ -1,5 +1,4 @@
 # This tracked file is a placeholder, not a template: the canonical
-# annotated template is config.toml.example, which install.sh copies to
-# this location on the Pi at first deploy (the app itself reads
+# annotated template is config.toml.example (the app itself reads
 # src/config.toml, which is gitignored).  Devcontainer users copy
 # config.devcontainer.toml to src/config.toml instead.

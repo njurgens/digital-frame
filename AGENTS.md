@@ -19,7 +19,6 @@ bash eng/test.sh -k foo     # filter tests
 bash eng/run.sh             # run the app in the devcontainer (background by default)
                             #   usage: run.sh [-f|--foreground] [--provider <name>] [--config <path>] [--kill [<pid>]]
 bash eng/ipc.sh <command>   # drive the running app over its IPC API (docs/ipc.md)
-bash eng/install.sh         # deploy to the Pi (idempotent, safe to re-run)
 ```
 
 Use the `eng/` scripts rather than invoking uv directly: they run through
@@ -96,8 +95,6 @@ documented in [docs/ipc.md](docs/ipc.md); the client is `bash eng/ipc.sh`.
   user-managed directory.
 - **Wayland env vars for SSH launches:** prefix with
   `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0`.
-- **`eng/install.sh` patches system files as root** (sudoers, labwc
-  autostart) — read the script before changing it.
 - **`.pi/tmp/` is the scratch working directory** for agent artifacts (issue
   drafts, review outputs). Its contents are gitignored; the folder is kept by
   `.gitkeep`.
