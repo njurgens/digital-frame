@@ -118,16 +118,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Config file: --config flag > PIFRAME_CONFIG_PATH env > default src/config.toml
-# (bootstrapped from the devcontainer template on first run).  When an explicit
-# path is used the app reads it directly, so nothing is copied.
+# Always seed the default-path config from the devcontainer template (idempotent:
+# a no-op once present) so a launch that bypasses run.sh still gets the template's
+# values rather than the built-in defaults.
+if [[ ! -f src/config.toml ]]; then
+  cp config.devcontainer.toml src/config.toml
+  echo "created src/config.toml from config.devcontainer.toml"
+fi
+
+# Config file to read: --config flag > PIFRAME_CONFIG_PATH env > the default
+# src/config.toml.  When an explicit path is chosen the app reads it directly —
+# nothing is copied into src/config.toml for it.
 if [[ -n "$config_path" ]]; then
   export PIFRAME_CONFIG_PATH="$config_path"
-elif [[ -z "${PIFRAME_CONFIG_PATH:-}" ]]; then
-  if [[ ! -f src/config.toml ]]; then
-    cp config.devcontainer.toml src/config.toml
-    echo "created src/config.toml from config.devcontainer.toml"
-  fi
+elif [[ -n "${PIFRAME_CONFIG_PATH:-}" ]]; then
+  export PIFRAME_CONFIG_PATH="$PIFRAME_CONFIG_PATH"
 fi
 
 # Provider: --provider flag > PIFRAME_SYNC__PROVIDER env > default local.
