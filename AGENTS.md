@@ -25,6 +25,12 @@ bash eng/install.sh         # deploy to the Pi (idempotent, safe to re-run)
 
 Agents should always use the `eng/` scripts rather than invoking uv directly.
 
+`.venv` management is outside the agent's concern: the venv lifecycle (creation,
+dependency sync, upgrades) is handled automatically by the `eng/*.sh` scripts.
+Do not create, delete, or modify `.venv` yourself, and do not invoke its
+binaries directly (e.g. `.venv/bin/python -m pytest`) — if the venv is missing,
+run `bash eng/sync.sh` once, then use the `eng/` scripts for everything else.
+
 ### Deploying and restarting on the Pi
 
 The app runs as the `frame` user, launched from `/etc/xdg/labwc/autostart`

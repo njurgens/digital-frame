@@ -9,7 +9,6 @@ import pytest
 from piframe.assets import IC_BRIGHTNESS_HIGH, IC_BRIGHTNESS_LOW, IC_PAUSE, IC_PLAY
 from piframe.config_store import ConfigStore
 from piframe.overlay_ui import (
-    DISMISS_BAR,
     GEAR_RECT,
     NEXT_RECT,
     PLAY_RECT,
@@ -18,7 +17,7 @@ from piframe.overlay_ui import (
     SUN_LO_CENTER,
     OverlayUI,
 )
-from piframe.types import COLOUR_OVERLAY_BTN_BG
+from piframe.types import COLOUR_OVERLAY_BTN_BG, COLOUR_OVERLAY_SCRIM
 
 
 class _StubFont:
@@ -107,31 +106,24 @@ def test_draw_noop_when_hidden(tmp_path: Path) -> None:
     assert screen.get_at((640, 400))[3] == 0
 
 
-def test_draw_visible_renders_scrim_and_progress_bar(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Draw visible renders scrim and progress bar."""
+def test_draw_visible_renders_scrim(tmp_path: Path) -> None:
+    """Draw visible renders scrim."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
-    monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
     overlay.show()
-    monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 102.5)
     overlay.draw(screen)
-    assert screen.get_at((640, 400))[3] > 0
-    assert screen.get_at((10, 1))[3] == 255
+    assert screen.get_at((640, 400))[3] == COLOUR_OVERLAY_SCRIM[3]
 
 
-def test_draw_hides_progress_bar_when_paused(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Draw hides progress bar when paused."""
+def test_draw_renders_scrim_when_paused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Draw renders scrim when paused (overlay stays visible)."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 10.0)
     overlay.show()
     overlay.set_paused(True)
     overlay.draw(screen)
-    assert screen.get_at((10, 1))[3] < 255
+    assert screen.get_at((640, 400))[3] == COLOUR_OVERLAY_SCRIM[3]
 
 
 def test_draw_uses_play_icon_when_paused_and_pause_when_playing(
@@ -201,7 +193,6 @@ def test_on_tap_routes_actions(tmp_path: Path) -> None:
     """On tap routes actions."""
     overlay = _make_overlay(tmp_path)
     overlay.show()
-    assert overlay.on_tap(DISMISS_BAR.center) == "dismiss"
     assert overlay.on_tap(GEAR_RECT.center) == "settings"
     assert overlay.on_tap(PREV_RECT.center) == "prev"
     assert overlay.on_tap(PLAY_RECT.center) == "play_pause"

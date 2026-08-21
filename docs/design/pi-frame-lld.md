@@ -288,7 +288,6 @@ All colours are 4-tuples `(R, G, B, A)`.
 COLOUR_SCRIM = (0, 0, 0, 140)
 COLOUR_OVERLAY_BTN_BG = (255, 255, 255, 30)
 COLOUR_OVERLAY_BTN_BD = (255, 255, 255, 51)
-COLOUR_PROGRESS_BAR = (255, 255, 255, 179)
 COLOUR_SIDEBAR_BG = (24, 24, 24, 255)
 COLOUR_CONTENT_BG = (17, 17, 17, 255)
 COLOUR_NAV_ACTIVE_BG = (255, 255, 255, 23)
@@ -869,7 +868,6 @@ BRIGHTNESS_LABEL_CENTER = (1240, 776)
 PREV_RECT = pygame.Rect(508, 732, 48, 48)
 PLAY_RECT = pygame.Rect(572, 728, 56, 56)
 NEXT_RECT = pygame.Rect(644, 732, 48, 48)
-DISMISS_BAR = pygame.Rect(0, 0, 1280, 3)
 ```
 
 #### `show()`
@@ -899,14 +897,13 @@ if _dismiss_at and time.monotonic() >= _dismiss_at:
 #### `draw(screen)`
 
 1. Draw semi-transparent scrim: fill `(0,0,SCREEN_W,SCREEN_H)` with `COLOUR_OVERLAY_SCRIM`.
-2. Draw 3 px dismiss bar at y=0 with `COLOUR_PROGRESS_BAR`.
-3. Draw right column:
+2. Draw right column:
    a. Gear button: filled rounded rect `COLOUR_OVERLAY_BTN_BG` + border `COLOUR_OVERLAY_BTN_BD`; draw settings icon at center.
    b. Sun-hi icon at `SUN_HI_CENTER`.
    c. `_slider.draw(screen)`.
    d. Sun-lo icon at `SUN_LO_CENTER`.
    e. Brightness percent label (14pt, `COLOUR_TEXT_PRIMARY`) at `BRIGHTNESS_LABEL_CENTER`.
-4. Draw bottom bar:
+3. Draw bottom bar:
    a. Previous button (48×48 rounded rect) at `PREV_RECT`.
    b. Play/Pause primary button (56×56) at `PLAY_RECT`.
    c. Next button (48×48) at `NEXT_RECT`.
@@ -922,7 +919,6 @@ Returns action string used by App to dispatch:
 | `PREV_RECT` | `"prev"` |
 | `PLAY_RECT` | `"play_pause"` |
 | `NEXT_RECT` | `"next"` |
-| `DISMISS_BAR` | `"dismiss"` |
 | elsewhere | `None` |
 
 #### `on_drag(pos)`
