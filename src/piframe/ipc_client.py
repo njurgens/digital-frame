@@ -29,6 +29,11 @@ from piframe.runtime_paths import SOCKET_NAME, candidate_dirs, fallback_dir, res
 #: Default read timeout for one request, in seconds.
 DEFAULT_TIMEOUT = 90.0
 
+#: Max bytes of one response line before the client gives up: mirrors the
+#: server's request-line cap, so a hostile peer cannot exhaust the client's
+#: memory by streaming a newline-less line for the full read timeout.
+MAX_RESPONSE_LINE = 1 << 20  # 1 MiB
+
 #: The client's commands, one per JSON-RPC method; must match the app's
 #: IPC_METHOD_NAMES and docs/ipc.md's method table (a test pins all three).
 COMMANDS: frozenset[str] = frozenset(
@@ -121,13 +126,15 @@ class IpcClient:
         return self._parse_response(data)
 
     def _read_response(self, s: socket.socket) -> bytes:
-        """Read the response line (until the newline or the server closes)."""
+        """Read the response line (until the newline, the cap, or the server closes)."""
         buf = b""
         while b"\n" not in buf:
             chunk = s.recv(4096)
             if not chunk:
                 break
             buf += chunk
+            if len(buf) > MAX_RESPONSE_LINE:
+                raise IpcTransportError(f"{self._socket_path}: response line exceeds 1 MiB")
         return buf
 
     def _parse_response(self, data: bytes) -> Any:

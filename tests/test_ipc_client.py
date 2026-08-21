@@ -183,6 +183,15 @@ def test_call_malformed_error_object_raises_transport_error(
         make_client(tmp_path).call("state")
 
 
+def test_call_response_over_cap_raises_transport_error(
+    server: FakeIpcServer, tmp_path: Path
+) -> None:
+    """A response line over the 1 MiB cap is a transport failure (memory bound)."""
+    server._handler = lambda req: b'{"jsonrpc": "2.0", "result": "' + b"x" * (2 << 20) + b'"}\n'
+    with pytest.raises(IpcTransportError, match="exceeds 1 MiB"):
+        make_client(tmp_path).call("state")
+
+
 # --- typed methods -----------------------------------------------------------
 
 
