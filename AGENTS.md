@@ -12,7 +12,6 @@ Wayland/labwc. The device is described in [docs/hardware.md](docs/hardware.md)
 ## Commands
 
 ```bash
-bash eng/sync.sh            # one-time: create .venv, install deps
 bash eng/format.sh          # auto-format code (ruff)
 bash eng/check.sh           # lint + format check + type check
 bash eng/test.sh            # run tests (90% diff-coverage gate)
@@ -25,11 +24,10 @@ bash eng/install.sh         # deploy to the Pi (idempotent, safe to re-run)
 
 Agents should always use the `eng/` scripts rather than invoking uv directly.
 
-`.venv` management is outside the agent's concern: the venv lifecycle (creation,
-dependency sync, upgrades) is handled automatically by the `eng/*.sh` scripts.
-Do not create, delete, or modify `.venv` yourself, and do not invoke its
-binaries directly (e.g. `.venv/bin/python -m pytest`) — if the venv is missing,
-run `bash eng/sync.sh` once, then use the `eng/` scripts for everything else.
+`.venv` management is outside the agent's concern: the `eng/*.sh` scripts all run
+through `uv run`, which implicitly creates and syncs the environment. Never check
+for, create, or sync the venv, and never invoke its binaries directly (e.g.
+`.venv/bin/python -m pytest`) — just run the `eng/` scripts.
 
 ### Deploying and restarting on the Pi
 
