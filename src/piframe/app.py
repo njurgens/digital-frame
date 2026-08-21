@@ -231,9 +231,9 @@ class App:
             )
         if self._ipc is None:
             if not self._config.ipc.enabled:
-                logging.info("IPC: disabled by config")
+                logging.warning("IPC: disabled by config")
         else:
-            logging.info("IPC: listening on %s", socket_path(self._runtime_dir))
+            logging.warning("IPC: listening on %s", socket_path(self._runtime_dir))
 
     def _on_brightness_change(self, value: int) -> None:
         self._backlight.set_brightness(value)
@@ -599,5 +599,4 @@ class App:
 
 def main() -> None:
     """Entry point for the slideshow CLI."""
-    logging.basicConfig(level=logging.INFO)
     App().run()

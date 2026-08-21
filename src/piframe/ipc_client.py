@@ -147,7 +147,17 @@ class IpcClient:
             raise IpcTransportError(f"{self._socket_path}: the response is not a JSON object")
         if "error" in response:
             err = response["error"]
-            raise IpcRpcError(int(err.get("code", 0)), str(err.get("message", "")))
+            if not isinstance(err, dict):
+                raise IpcTransportError(
+                    f"{self._socket_path}: malformed error object in the response"
+                )
+            try:
+                code = int(err.get("code", 0))
+            except (TypeError, ValueError):
+                raise IpcTransportError(
+                    f"{self._socket_path}: malformed error object in the response"
+                ) from None
+            raise IpcRpcError(code, str(err.get("message", "")))
         if "result" not in response:
             raise IpcTransportError(
                 f"{self._socket_path}: the response has neither a result nor an error"
@@ -207,9 +217,7 @@ def _parse_scalar(text: str) -> str | int | float | bool:
         raise argparse.ArgumentTypeError(f"not a JSON scalar: {text} ({err})") from err
     if value is None or isinstance(value, (dict, list)):
         raise argparse.ArgumentTypeError(f"not a JSON scalar: {text}")
-    if isinstance(value, (bool, int, float, str)):
-        return value
-    raise argparse.ArgumentTypeError(f"not a JSON scalar: {text}")
+    return value
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -307,10 +315,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         args = parser.parse_args(argv)
     except SystemExit as e:
         return int(e.code or 0)
-    client = IpcClient(socket_path=args.socket, timeout=args.timeout)
     try:
+        client = IpcClient(socket_path=args.socket, timeout=args.timeout)
         result = _run_command(client, args)
-    except IpcTransportError as e:
+    except (IpcTransportError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     except IpcRpcError as e:

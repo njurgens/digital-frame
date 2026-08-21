@@ -169,6 +169,15 @@ def test_call_response_without_result_or_error(server: FakeIpcServer, tmp_path: 
         make_client(tmp_path).call("state")
 
 
+def test_call_malformed_error_object_raises_transport_error(
+    server: FakeIpcServer, tmp_path: Path
+) -> None:
+    """An error member that is not a well-formed object is a transport failure."""
+    server._handler = lambda req: b'{"jsonrpc": "2.0", "error": null, "id": 1}\n'
+    with pytest.raises(IpcTransportError):
+        make_client(tmp_path).call("state")
+
+
 # --- typed methods -----------------------------------------------------------
 
 
