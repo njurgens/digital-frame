@@ -26,6 +26,18 @@ def pid_file(tmp_path: Path) -> Path:
     return tmp_path / "slideshow.pid"
 
 
+def test_config_path_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """PIFRAME_CONFIG_PATH, when set, overrides the default config path."""
+    target = tmp_path / "custom.toml"
+    monkeypatch.setenv("PIFRAME_CONFIG_PATH", str(target))
+    assert app_module._config_path() == target
+
+
+def test_config_path_defaults_when_no_env_override() -> None:
+    """Without PIFRAME_CONFIG_PATH, the default CONFIG_PATH is used."""
+    assert app_module._config_path() == app_module.CONFIG_PATH
+
+
 def test_acquire_pid_file_writes_pid_and_holds_lock(pid_file: Path) -> None:
     """Acquiring the PID file writes the PID, holds an exclusive lock, and is 0600."""
     fd = acquire_pid_file(pid_file)
