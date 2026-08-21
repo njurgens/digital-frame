@@ -457,6 +457,11 @@ test (D-5) makes any such drift a test failure, not a surprise.
 | V-4 | The entry point reports the artifacts | run.sh's success output names the PID-file path, the socket path (or a note that it is absent), and the client command | The agent still has to guess where the socket is | G-3 |
 | V-5 | The client is testable without the app | The client's tests run against a fake server socket with no display and no app; the diff-coverage gate passes | The tests need a running app | G-4 |
 
+V-1, V-2, and V-4 were verified manually in the devcontainer: the repo has no
+shell-test infrastructure, and run.sh's own behavior is untested by project
+convention, so the report branches are not covered by an automated check.
+V-3 and V-5 are pinned by automated tests.
+
 ## 16. Open questions
 
 | ID | Question | Blocking? | Resolved by |

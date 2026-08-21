@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from piframe import ipc_client
+from piframe import ipc_client, runtime_paths
 from piframe.ipc_client import IpcClient, IpcRpcError, IpcTransportError
 
 
@@ -39,6 +39,9 @@ class FakeIpcServer:
         self._server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._server.bind(str(path))
         self._server.listen(5)
+        # A short accept timeout keeps stop() fast: on Linux, close() does
+        # not wake a thread blocked in accept().
+        self._server.settimeout(0.25)
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
@@ -46,6 +49,8 @@ class FakeIpcServer:
         while True:
             try:
                 conn, _ = self._server.accept()
+            except TimeoutError:
+                continue  # no connection yet: re-check (stop() closes the listener)
             except OSError:
                 return
             threading.Thread(target=self._serve, args=(conn,), daemon=True).start()
@@ -292,6 +297,9 @@ def test_resolve_returns_resolved_dir_path_when_no_socket_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """With no socket in either location, the resolved dir's path is returned."""
+    # Sandbox the second candidate: without this the test probes the real
+    # /run/user/{uid} (not hermetic if the app runs in the same session).
+    monkeypatch.setattr(runtime_paths, "system_runtime_dir", lambda: tmp_path / "system")
     home = tmp_path / "home"
     (home / ".local" / "piframe").mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))

@@ -234,6 +234,8 @@ def test_app_logs_ipc_listening_when_bound(
         expected = f"IPC: listening on {tmp_path / 'piframe.sock'}"
         assert any(expected in m for m in caplog.messages)
     finally:
+        if app._ipc is not None:
+            app._ipc.stop()
         os.close(app._pid_fd)
 
 
