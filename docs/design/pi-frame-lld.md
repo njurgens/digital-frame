@@ -337,8 +337,8 @@ ICON_SIZE_OVERLAY = 32
 IC_SETTINGS = "\ue8b8"
 IC_PLAY = "\ue037"
 IC_PAUSE = "\ue034"
-IC_SKIP_PREV = "\ue044"
-IC_SKIP_NEXT = "\ue043"
+IC_SKIP_PREV = "\ue045"
+IC_SKIP_NEXT = "\ue044"
 IC_ARROW_BACK = "\ue5d5"
 IC_ARROW_FWD = "\ue5dc"
 IC_INFO = "\ue87d"
@@ -2172,8 +2172,8 @@ Font sizes used (pt):
 | `IC_SETTINGS` | `\ue8b8` | settings | Overlay gear button |
 | `IC_PLAY` | `\ue037` | play_arrow | Overlay play button |
 | `IC_PAUSE` | `\ue034` | pause | Overlay pause button |
-| `IC_SKIP_PREV` | `\ue044` | skip_previous | Overlay previous |
-| `IC_SKIP_NEXT` | `\ue043` | skip_next | Overlay next |
+| `IC_SKIP_PREV` | `\ue045` | skip_previous | Overlay previous |
+| `IC_SKIP_NEXT` | `\ue044` | skip_next | Overlay next |
 | `IC_ARROW_BACK` | `\ue5d5` | arrow_back | Settings back |
 | `IC_ARROW_FWD` | `\ue5dc` | arrow_forward | — |
 | `IC_INFO` | `\ue87d` | info | Info overlay (deferred) |

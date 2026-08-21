@@ -31,6 +31,16 @@ def test_brightness_icon_codepoints_are_distinct_sun_glyphs() -> None:
     assert not hasattr(assets_mod, "IC_BRIGHTNESS")
 
 
+def test_skip_icon_codepoints_are_material_skip_glyphs() -> None:
+    """Transport-row skip buttons use the correct Material skip glyphs."""
+    from piframe import assets as assets_mod
+
+    # In the bundled Material Icons font (v1.017), U+E045 is skip_previous
+    # and U+E044 is skip_next; U+E043 is shuffle.
+    assert assets_mod.IC_SKIP_PREV == "\ue045"
+    assert assets_mod.IC_SKIP_NEXT == "\ue044"
+
+
 def test_assets_load_creates_font_instances(monkeypatch: pytest.MonkeyPatch) -> None:
     """Assets.load() creates pygame.freetype.Font for each size/font."""
     from piframe import assets as assets_mod
