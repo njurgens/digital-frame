@@ -107,7 +107,7 @@ def test_draw_noop_when_hidden(tmp_path: Path) -> None:
 
 
 def test_draw_visible_renders_scrim(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Draw visible renders scrim only, with no dismiss progress bar."""
+    """Draw visible renders scrim only — no dismiss bar is drawn."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
     monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
