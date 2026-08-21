@@ -106,9 +106,7 @@ def test_draw_noop_when_hidden(tmp_path: Path) -> None:
     assert screen.get_at((640, 400))[3] == 0
 
 
-def test_draw_visible_renders_scrim(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_draw_visible_renders_scrim(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Draw visible renders scrim only, with no dismiss progress bar."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
@@ -120,9 +118,7 @@ def test_draw_visible_renders_scrim(
     assert screen.get_at((10, 1))[3] == COLOUR_OVERLAY_SCRIM[3]
 
 
-def test_draw_renders_scrim_when_paused(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_draw_renders_scrim_when_paused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Draw renders scrim when paused (overlay stays visible)."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
