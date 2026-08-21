@@ -41,7 +41,6 @@ BRIGHTNESS_LABEL_CENTER = (1240, 776)
 PREV_RECT = pygame.Rect(508, 732, 48, 48)
 PLAY_RECT = pygame.Rect(572, 728, 56, 56)
 NEXT_RECT = pygame.Rect(644, 732, 48, 48)
-DISMISS_BAR = pygame.Rect(0, 0, 1280, 3)
 
 
 class OverlayUI:
@@ -116,13 +115,6 @@ class OverlayUI:
         scrim.fill(COLOUR_OVERLAY_SCRIM)
         screen.blit(scrim, (0, 0))
 
-        # Drain the dismiss bar proportionally; hide entirely when paused
-        if not self._paused and self._dismiss_at is not None:
-            remaining = max(0.0, self._dismiss_at - time.monotonic())
-            bar_w = int(SCREEN_W * remaining / OVERLAY_DISMISS)
-            if bar_w > 0:
-                pygame.draw.rect(screen, COLOUR_OVERLAY_BTN_BD[:3], pygame.Rect(0, 0, bar_w, 3))
-
         self._draw_overlay_button(screen, GEAR_RECT)
         self._draw_icon_centered(screen, IC_SETTINGS, ICON_SIZE_NORMAL, GEAR_CENTER)
 
@@ -150,8 +142,6 @@ class OverlayUI:
         """Handle a tap on the overlay and return the action."""
         if not self._visible:
             return None
-        if DISMISS_BAR.collidepoint(pos):
-            return "dismiss"
         if GEAR_RECT.collidepoint(pos):
             self._extend_dismiss()
             return "settings"

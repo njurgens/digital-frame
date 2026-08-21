@@ -414,9 +414,6 @@ class App:
             elif action == "settings":
                 self._settings.open()
                 self._state = AppState.SETTINGS
-            elif action == "dismiss":
-                self._overlay.hide()
-                self._state = AppState.SLIDESHOW
             return
 
         if self._state == AppState.SETTINGS:
