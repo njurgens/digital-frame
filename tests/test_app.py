@@ -256,6 +256,6 @@ def test_app_logs_ipc_unavailable_when_server_fails(
         app = _boot_app(pid_file, tmp_path, monkeypatch, ipc_enabled=True)
     try:
         assert app._ipc is None
-        assert any("IPC: enabled but unavailable" in m for m in caplog.messages)
+        assert any("IPC: could not start the socket server" in m for m in caplog.messages)
     finally:
         os.close(app._pid_fd)

@@ -226,8 +226,9 @@ class App:
                 executors=self._ipc_executors,
             )
         except Exception as e:  # the API is auxiliary: the app runs without it (F-3)
-            logging.warning(
-                "IPC: enabled but unavailable (%s); the app is running without the API", e
+            logging.error(
+                "IPC: could not start the socket server: %s; the app is running without the API",
+                e,
             )
         if self._ipc is None:
             if not self._config.ipc.enabled:

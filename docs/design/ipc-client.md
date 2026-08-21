@@ -296,9 +296,9 @@ prints nothing and the app's exit is the confirmation.
 > drift-prone config reader.
 
 The socket check looks in the dir run.sh already resolved for the PID file —
-the two artifacts always share a location. The app logs one warning-level
-line at startup keyed on the server's actual state — bound at the resolved
-path, disabled by config, or bind failed (the app has no logging
+the two artifacts always share a location. The app logs one line at startup
+keyed on the server's actual state — bound at the resolved path (warning),
+disabled by config (warning), or bind failed (error; the app has no logging
 configuration, so only warning and above reach the log) — so the report's
 absence note and the log together name the cause without ever asserting a path
 that does not exist; that log line is part of this change.

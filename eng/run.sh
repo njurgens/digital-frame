@@ -136,8 +136,7 @@ if [[ -f $PIDFILE ]]; then
   sleep 1
   pid=$(cat "$PIDFILE")
   if kill -0 "$pid" 2>/dev/null; then
-    echo "slideshow running (pid $pid)"
-    echo "  log:      $LOG"
+    echo "slideshow running (pid $pid) — log: $LOG"
     echo "  pid file: $PIDFILE"
     # The socket is bound later in startup than the PID file; give it a
     # moment before reporting its state (the app's log is authoritative).
