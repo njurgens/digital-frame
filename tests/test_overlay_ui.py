@@ -6,9 +6,18 @@ from unittest.mock import Mock
 import pygame
 import pytest
 
-from piframe.assets import IC_PAUSE, IC_PLAY
+from piframe.assets import IC_BRIGHTNESS_HIGH, IC_BRIGHTNESS_LOW, IC_PAUSE, IC_PLAY
 from piframe.config_store import ConfigStore
-from piframe.overlay_ui import DISMISS_BAR, GEAR_RECT, NEXT_RECT, PLAY_RECT, PREV_RECT, OverlayUI
+from piframe.overlay_ui import (
+    DISMISS_BAR,
+    GEAR_RECT,
+    NEXT_RECT,
+    PLAY_RECT,
+    PREV_RECT,
+    SUN_HI_CENTER,
+    SUN_LO_CENTER,
+    OverlayUI,
+)
 from piframe.types import COLOUR_OVERLAY_BTN_BG
 
 
@@ -163,6 +172,29 @@ def test_draw_renders_visible_playback_icons(
         px = screen.get_at(center)
         assert px[:3] == (255, 255, 255)
         assert px[3] == 255
+
+
+def test_draw_uses_distinct_brightness_icons_at_slider_ends(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Draw uses brightness_high above and brightness_low below the slider."""
+    overlay = _make_overlay(tmp_path)
+    monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 1.0)
+    overlay.show()
+    captured: dict[tuple[int, int], str] = {}
+    original = overlay._draw_icon_centered
+
+    def _capture(screen: pygame.Surface, icon: str, size: int, center: tuple[int, int]):
+        if center in (SUN_HI_CENTER, SUN_LO_CENTER):
+            captured[center] = icon
+        return original(screen, icon, size, center)
+
+    overlay._draw_icon_centered = _capture  # type: ignore[assignment]
+    screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
+    overlay.draw(screen)
+    assert captured[SUN_HI_CENTER] == IC_BRIGHTNESS_HIGH
+    assert captured[SUN_LO_CENTER] == IC_BRIGHTNESS_LOW
+    assert captured[SUN_HI_CENTER] != captured[SUN_LO_CENTER]
 
 
 def test_on_tap_routes_actions(tmp_path: Path) -> None:

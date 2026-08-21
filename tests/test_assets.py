@@ -20,6 +20,17 @@ def pg() -> None:
     pygame.display.set_mode((1280, 800))
 
 
+def test_brightness_icon_codepoints_are_distinct_sun_glyphs() -> None:
+    """Brightness slider icons use distinct brightness_high/low codepoints."""
+    from piframe import assets as assets_mod
+
+    assert assets_mod.IC_BRIGHTNESS_HIGH == "\ue1ac"
+    assert assets_mod.IC_BRIGHTNESS_LOW == "\ue1ad"
+    assert assets_mod.IC_BRIGHTNESS_HIGH != assets_mod.IC_BRIGHTNESS_LOW
+    # The old U+E896 constant (the Material "list" glyph) must not come back.
+    assert not hasattr(assets_mod, "IC_BRIGHTNESS")
+
+
 def test_assets_load_creates_font_instances(monkeypatch: pytest.MonkeyPatch) -> None:
     """Assets.load() creates pygame.freetype.Font for each size/font."""
     from piframe import assets as assets_mod
