@@ -41,11 +41,6 @@
   .scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.55); opacity: 0; transition: opacity 0.2s; }
   .frame-screen.active .scrim { opacity: 1; }
 
-  .dismiss-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.15); opacity: 0; transition: opacity 0.2s; z-index: 30; }
-  .dismiss-progress { height: 100%; background: rgba(255,255,255,0.7); width: 100%; transition: width 5s linear; }
-  .frame-screen.active .dismiss-bar { opacity: 1; }
-  .frame-screen.counting .dismiss-progress { width: 0%; }
-
   .clock-display {
     position: absolute; top: 14px; left: 14px;
     color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 500; line-height: 1.3;
@@ -145,7 +140,6 @@
     <div class="photo-bg"></div>
     <div class="photo-label">photo</div>
     <div class="scrim"></div>
-    <div class="dismiss-bar"><div class="dismiss-progress" id="dprog"></div></div>
 
     <div class="clock-display" id="clockdisp">
       <div id="clock-time">10:42</div>
@@ -197,7 +191,7 @@
 
 <div class="annotation">
   <strong>Overlay behaviour:</strong> Single tap anywhere → dark scrim + controls appear.
-  Auto-dismisses after 5 s (progress bar at top edge). Timer suspends while paused.
+  Auto-dismisses after 5 s. Timer suspends while paused.
   Swipe left/right navigates photos independent of overlay state.
   <br><br>
   <strong>Right column:</strong> Settings gear (top) → vertical brightness slider with sun icons → brightness % readout.
@@ -225,10 +219,7 @@
     const f = document.getElementById('frame');
     f.classList.add('active'); overlayActive = true;
     clearTimeout(timer);
-    const prog = document.getElementById('dprog');
-    prog.style.transition = 'none'; prog.style.width = '100%';
     if (!paused) {
-      setTimeout(() => { prog.style.transition = 'width 5s linear'; prog.style.width = '0%'; f.classList.add('counting'); }, 30);
       timer = setTimeout(hideOverlay, 5000);
     }
     document.getElementById('statelabel').textContent = paused ? 'Overlay visible — paused (timer suspended)' : 'Overlay visible — auto-dismisses in 5 s';
@@ -236,7 +227,7 @@
 
   function hideOverlay() {
     const f = document.getElementById('frame');
-    f.classList.remove('active','counting'); overlayActive = false;
+    f.classList.remove('active'); overlayActive = false;
     document.getElementById('statelabel').textContent = paused ? 'Paused — tap to show overlay' : 'Playing — tap to show overlay';
   }
 
@@ -248,9 +239,6 @@
     document.getElementById('pausedpip').style.opacity = paused ? '1' : '0';
     if (paused) {
       clearTimeout(timer);
-      const prog = document.getElementById('dprog');
-      prog.style.transition = 'none'; prog.style.width = '100%';
-      document.getElementById('frame').classList.remove('counting');
       document.getElementById('statelabel').textContent = 'Paused — overlay timer suspended';
     } else {
       if (overlayActive) showOverlay();
