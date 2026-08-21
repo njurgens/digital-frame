@@ -40,7 +40,13 @@ from piframe.modules import (
     WifiModule,
 )
 from piframe.overlay_ui import OverlayUI
-from piframe.runtime_paths import fallback_dir, pid_file_path, resolve_runtime_dir, socket_path
+from piframe.runtime_paths import (
+    candidate_dirs,
+    fallback_dir,
+    pid_file_path,
+    resolve_runtime_dir,
+    socket_path,
+)
 from piframe.sleep_scheduler import SleepScheduler
 from piframe.types import (
     FPS,
@@ -58,6 +64,24 @@ _SWIPE_MIN_DX = 60
 _SWIPE_MAX_DT = 0.4
 _SWIPE_MAX_SLOPE = 0.5
 _TAP_MAX_DIST = 20.0
+
+#: The JSON-RPC method names the app's IPC API serves.  docs/ipc.md's
+#: method table and the piframe-ipc client's subcommands must match this set;
+#: a test pins all three (D-5).
+IPC_METHOD_NAMES: frozenset[str] = frozenset(
+    {
+        "state",
+        "tap",
+        "swipe",
+        "play_pause",
+        "prev",
+        "next",
+        "screenshot",
+        "quit",
+        "set_config",
+        "trigger_sync",
+    }
+)
 
 #: The app's config file (gitignored; bootstrapped by eng/run.sh).
 CONFIG_PATH = Path(__file__).parent.parent / "config.toml"
@@ -125,11 +149,7 @@ class App:
         self._runtime_dir = resolve_runtime_dir()
         # The lock is per-resolved-dir: also probe the other candidate
         # location so two launches that resolve different dirs still contend.
-        other_dir = (
-            fallback_dir()
-            if self._runtime_dir != fallback_dir()
-            else Path(f"/run/user/{os.getuid()}")
-        )
+        _, other_dir = candidate_dirs(self._runtime_dir, fallback_dir())
         _probe_other_instance(pid_file_path(other_dir))
         self._pid_fd = acquire_pid_file(pid_file_path(self._runtime_dir))
 
@@ -198,15 +218,23 @@ class App:
             "set_config": self._ipc_set_config,
             "trigger_sync": self._ipc_trigger_sync,
         }
+        self._ipc: IpcServer | None = None
         try:
-            self._ipc: IpcServer | None = IpcModule().create(
+            self._ipc = IpcModule().create(
                 self._config,
                 socket_path=socket_path(self._runtime_dir),
                 executors=self._ipc_executors,
             )
         except Exception as e:  # the API is auxiliary: the app runs without it (F-3)
-            logging.error("IPC API disabled: could not start the socket server: %s", e)
-            self._ipc = None
+            logging.error(
+                "IPC: could not start the socket server: %s; the app is running without the API",
+                e,
+            )
+        if self._ipc is None:
+            if not self._config.ipc.enabled:
+                logging.warning("IPC: disabled by config")
+        else:
+            logging.warning("IPC: listening on %s", socket_path(self._runtime_dir))
 
     def _on_brightness_change(self, value: int) -> None:
         self._backlight.set_brightness(value)

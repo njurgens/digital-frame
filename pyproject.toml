@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 slideshow = "piframe.app:main"
+piframe-ipc = "piframe.ipc_client:main"
 
 [dependency-groups]
 dev = [

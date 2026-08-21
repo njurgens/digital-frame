@@ -117,7 +117,9 @@ for f in "${PID_CANDIDATES[@]}"; do
   rm -f "$f"
 done
 # Launch in a new session with stdio redirected to the log so the process
-# survives this shell exiting.
+# survives this shell exiting.  Remember where the log ends so the report
+# below reads only this run's output (the log is appended across runs).
+LOG_OFFSET=$(stat -c%s "$LOG" 2>/dev/null || echo 0)
 setsid uv run slideshow --windowed "${args[@]}" </dev/null >>"$LOG" 2>&1 &
 disown || true
 
@@ -136,6 +138,31 @@ if [[ -f $PIDFILE ]]; then
   pid=$(cat "$PIDFILE")
   if kill -0 "$pid" 2>/dev/null; then
     echo "slideshow running (pid $pid) — log: $LOG"
+    echo "  pid file: $PIDFILE"
+    # The app logs exactly one line about the IPC API's state at startup
+    # (listening on <path> / disabled by config / could not start the socket
+    # server).  Wait for that line and report the app's own word, not a guess.
+    ipc_line=""
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      new_log=$(tail -c +"$((LOG_OFFSET + 1))" "$LOG" 2>/dev/null || true)
+      ipc_line=$(grep "IPC: " <<<"$new_log" | tail -n 1 || true)
+      [[ -n $ipc_line ]] && break
+      sleep 0.5
+    done
+    case "$ipc_line" in
+      *"listening on "*)
+        echo "  ipc:      ${ipc_line##*listening on } (client: bash eng/ipc.sh — docs/ipc.md)"
+        ;;
+      *"disabled by config"*)
+        echo "  ipc:      disabled by config"
+        ;;
+      *"could not start the socket server"*)
+        echo "  ipc:      bind failed — see the log"
+        ;;
+      *)
+        echo "  ipc:      no API-state line in the log yet — see the log"
+        ;;
+    esac
     echo "stop with: $0 --kill"
   else
     echo "slideshow failed to start — last log lines:" >&2
