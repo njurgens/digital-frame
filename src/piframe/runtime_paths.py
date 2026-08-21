@@ -44,6 +44,24 @@ def fallback_dir() -> Path:
     return Path.home() / ".local" / "piframe"
 
 
+def system_runtime_dir() -> Path:
+    """The system per-user runtime dir: ``/run/user/{uid}`` (XDG's default)."""
+    return Path("/run/user") / str(os.getuid())
+
+
+def candidate_dirs(primary: Path, fallback: Path) -> tuple[Path, Path]:
+    """The resolved dir and the other candidate location to probe.
+
+    The lock is per-resolved-dir, so two launches that resolve different
+    locations (one session with XDG_RUNTIME_DIR, one without) would not
+    contend on the same file; the other candidate is the fallback when the
+    primary is the system runtime dir, and the system runtime dir when the
+    primary is the fallback, so the two launches still see each other.
+    """
+    other = fallback if primary != fallback else system_runtime_dir()
+    return (primary, other)
+
+
 def resolve_runtime_dir() -> Path:
     """The directory for the runtime artifacts: the runtime dir if available.
 

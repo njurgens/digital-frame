@@ -138,3 +138,38 @@ def test_socket_and_pid_file_paths(tmp_path: Path) -> None:
     """The artifact paths are the resolved dir plus fixed file names."""
     assert runtime_paths.socket_path(tmp_path) == tmp_path / "piframe.sock"
     assert runtime_paths.pid_file_path(tmp_path) == tmp_path / "slideshow.pid"
+
+
+def test_system_runtime_dir_is_run_user_uid(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The system runtime dir is /run/user/{uid} (XDG's default location)."""
+    monkeypatch.setattr(runtime_paths.os, "getuid", lambda: 1000)
+    assert runtime_paths.system_runtime_dir() == Path("/run/user/1000")
+
+
+def test_candidate_dirs_other_is_fallback_when_primary_is_system(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A primary that is the system runtime dir probes the fallback."""
+    monkeypatch.setattr(runtime_paths.os, "getuid", lambda: 1000)
+    system = Path("/run/user/1000")
+    fallback = tmp_path / "fallback"
+    assert runtime_paths.candidate_dirs(system, fallback) == (system, fallback)
+
+
+def test_candidate_dirs_other_is_system_when_primary_is_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A primary that is the fallback probes the system runtime dir."""
+    monkeypatch.setattr(runtime_paths.os, "getuid", lambda: 1000)
+    fallback = tmp_path / "fallback"
+    assert runtime_paths.candidate_dirs(fallback, fallback) == (fallback, Path("/run/user/1000"))
+
+
+def test_candidate_dirs_other_is_fallback_for_any_other_primary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A primary that is neither the system dir nor the fallback probes the fallback."""
+    monkeypatch.setattr(runtime_paths.os, "getuid", lambda: 1000)
+    custom = tmp_path / "custom"
+    fallback = tmp_path / "fallback"
+    assert runtime_paths.candidate_dirs(custom, fallback) == (custom, fallback)

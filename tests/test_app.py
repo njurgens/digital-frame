@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import fcntl
 import json
+import logging
 import os
 import socket
 import stat
@@ -190,5 +191,69 @@ def test_app_continues_without_api_when_ipc_server_fails(
     try:
         assert app._ipc is None
         assert not (tmp_path / "piframe.sock").exists()
+    finally:
+        os.close(app._pid_fd)
+
+
+def test_ipc_executor_keys_match_method_names(
+    pid_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The dispatch table covers exactly the documented method names (D-5)."""
+    app = _boot_app(pid_file, tmp_path, monkeypatch)
+    try:
+        assert set(app._ipc_executors) == app_module.IPC_METHOD_NAMES
+    finally:
+        os.close(app._pid_fd)
+
+
+def test_app_logs_ipc_disabled_when_config_off(
+    pid_file: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With the API disabled by config, the startup log says so (D-6)."""
+    with caplog.at_level(logging.INFO):
+        app = _boot_app(pid_file, tmp_path, monkeypatch)
+    try:
+        assert any("IPC: disabled by config" in m for m in caplog.messages)
+    finally:
+        os.close(app._pid_fd)
+
+
+def test_app_logs_ipc_listening_when_bound(
+    pid_file: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With the API enabled and bound, the startup log names the socket path (D-6)."""
+    with caplog.at_level(logging.INFO):
+        app = _boot_app(pid_file, tmp_path, monkeypatch, ipc_enabled=True)
+    try:
+        expected = f"IPC: listening on {tmp_path / 'piframe.sock'}"
+        assert any(expected in m for m in caplog.messages)
+    finally:
+        os.close(app._pid_fd)
+
+
+def test_app_logs_ipc_unavailable_when_server_fails(
+    pid_file: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With the API enabled but the server failing, the startup log says unavailable (D-6)."""
+
+    class _FailingIpcModule:
+        def create(self, config: object, **deps: object) -> object:
+            raise OSError("simulated bind failure")
+
+    monkeypatch.setattr(app_module, "IpcModule", _FailingIpcModule)
+    with caplog.at_level(logging.INFO):
+        app = _boot_app(pid_file, tmp_path, monkeypatch, ipc_enabled=True)
+    try:
+        assert app._ipc is None
+        assert any("IPC: enabled but unavailable" in m for m in caplog.messages)
     finally:
         os.close(app._pid_fd)
