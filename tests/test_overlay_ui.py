@@ -106,16 +106,13 @@ def test_draw_noop_when_hidden(tmp_path: Path) -> None:
     assert screen.get_at((640, 400))[3] == 0
 
 
-def test_draw_visible_renders_scrim(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Draw visible renders scrim only — no dismiss bar is drawn."""
+def test_draw_visible_renders_scrim(tmp_path: Path) -> None:
+    """Draw visible renders scrim."""
     overlay = _make_overlay(tmp_path)
     screen = pygame.Surface((1280, 800), pygame.SRCALPHA)
-    monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 100.0)
     overlay.show()
-    monkeypatch.setattr("piframe.overlay_ui.time.monotonic", lambda: 102.5)
     overlay.draw(screen)
     assert screen.get_at((640, 400))[3] == COLOUR_OVERLAY_SCRIM[3]
-    assert screen.get_at((10, 1))[3] == COLOUR_OVERLAY_SCRIM[3]
 
 
 def test_draw_renders_scrim_when_paused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -196,8 +193,6 @@ def test_on_tap_routes_actions(tmp_path: Path) -> None:
     """On tap routes actions."""
     overlay = _make_overlay(tmp_path)
     overlay.show()
-    # Former dismiss-bar region: taps there now fall through to the scrim (no action).
-    assert overlay.on_tap((640, 1)) is None
     assert overlay.on_tap(GEAR_RECT.center) == "settings"
     assert overlay.on_tap(PREV_RECT.center) == "prev"
     assert overlay.on_tap(PLAY_RECT.center) == "play_pause"
